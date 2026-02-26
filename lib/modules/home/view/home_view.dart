@@ -77,6 +77,14 @@ Drawer _drawer() {
         ),
         ListTile(
           leading: const Icon(Icons.inventory),
+          title: const Text('Orders'),
+          onTap: () {
+            Get.back();
+            Get.toNamed(AppRoutes.orders);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.inventory),
           title: const Text('Products'),
           onTap: () {
             Get.back();
