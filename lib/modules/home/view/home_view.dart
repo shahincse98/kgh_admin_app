@@ -91,6 +91,15 @@ Drawer _drawer() {
             Get.toNamed(AppRoutes.products);
           },
         ),
+        ListTile(
+          leading: const Icon(Icons.inventory),
+          title: const Text('Users'),
+          onTap: () {
+            Get.back();
+            Get.toNamed(AppRoutes.users);
+          },
+        ),
+        
       ],
     ),
   );

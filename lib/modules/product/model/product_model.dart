@@ -62,60 +62,41 @@ class ProductModel {
     required this.createdAt,
   });
 
-  /// 🔥 Firestore → ProductModel (100% safe)
   factory ProductModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data();
-    if (data == null) {
-      throw Exception('Product data is null');
-    }
-
-    final map = data as Map<String, dynamic>;
+    final map = doc.data() as Map<String, dynamic>;
 
     return ProductModel(
       id: doc.id,
-
-      name: map['name']?.toString() ?? '',
-      brandName: map['brandName']?.toString() ?? '',
-      productCategory: map['productCategory']?.toString() ?? '',
-      productCode: map['productCode']?.toString() ?? '',
-      productModel: map['productModel']?.toString() ?? '',
-      productVideo: map['productVideo']?.toString() ?? '',
-      unit: map['unit']?.toString() ?? '',
-      warranty: map['warranty']?.toString() ?? '',
-
+      name: map['name'] ?? '',
+      brandName: map['brandName'] ?? '',
+      productCategory: map['productCategory'] ?? '',
+      productCode: map['productCode'] ?? '',
+      productModel: map['productModel'] ?? '',
+      productVideo: map['productVideo'] ?? '',
+      unit: map['unit'] ?? '',
+      warranty: map['warranty'] ?? '',
       purchasePrice: (map['purchasePrice'] as num?)?.toInt() ?? 0,
       wholesalePrice: (map['wholesalePrice'] as num?)?.toInt() ?? 0,
       retailPrice: (map['retailPrice'] as num?)?.toInt() ?? 0,
-
       stock: (map['stock'] as num?)?.toInt() ?? 0,
       pendingStock: (map['pendingStock'] as num?)?.toInt() ?? 0,
       totalSold: (map['totalSold'] as num?)?.toInt() ?? 0,
       totalOrders: (map['totalOrders'] as num?)?.toInt() ?? 0,
       monthlySold: (map['monthlySold'] as num?)?.toInt() ?? 0,
       replaceCount: (map['replaceCount'] as num?)?.toInt() ?? 0,
-
       isAvailable: map['isAvailable'] ?? false,
       isHot: map['isHot'] ?? false,
       isNew: map['isNew'] ?? false,
-
-      images: (map['images'] as List?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [],
-
-      productDetails: (map['productDetails'] as List?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [],
-
+      images: (map['images'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      productDetails:
+          (map['productDetails'] as List?)?.map((e) => e.toString()).toList() ??
+              [],
       quantityDiscount:
           (map['quantityDiscount'] as Map<String, dynamic>?) ?? {},
-
       createdAt: map['createdAt'] as Timestamp?,
     );
   }
 
-  /// (Optional) Model → Firestore
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -143,5 +124,41 @@ class ProductModel {
       'quantityDiscount': quantityDiscount,
       'createdAt': createdAt ?? FieldValue.serverTimestamp(),
     };
+  }
+
+  // 🔥 IMPORTANT: Local update support
+  ProductModel copyWithMap(Map<String, dynamic> map) {
+    return ProductModel(
+      id: id,
+      name: map['name'] ?? name,
+      brandName: map['brandName'] ?? brandName,
+      productCategory: map['productCategory'] ?? productCategory,
+      productCode: map['productCode'] ?? productCode,
+      productModel: map['productModel'] ?? productModel,
+      productVideo: map['productVideo'] ?? productVideo,
+      unit: map['unit'] ?? unit,
+      warranty: map['warranty'] ?? warranty,
+      purchasePrice: (map['purchasePrice'] as num?)?.toInt() ?? purchasePrice,
+      wholesalePrice:
+          (map['wholesalePrice'] as num?)?.toInt() ?? wholesalePrice,
+      retailPrice: (map['retailPrice'] as num?)?.toInt() ?? retailPrice,
+      stock: (map['stock'] as num?)?.toInt() ?? stock,
+      pendingStock: (map['pendingStock'] as num?)?.toInt() ?? pendingStock,
+      totalSold: (map['totalSold'] as num?)?.toInt() ?? totalSold,
+      totalOrders: (map['totalOrders'] as num?)?.toInt() ?? totalOrders,
+      monthlySold: (map['monthlySold'] as num?)?.toInt() ?? monthlySold,
+      replaceCount: (map['replaceCount'] as num?)?.toInt() ?? replaceCount,
+      isAvailable: map['isAvailable'] ?? isAvailable,
+      isHot: map['isHot'] ?? isHot,
+      isNew: map['isNew'] ?? isNew,
+      images: map['images'] != null
+          ? List<String>.from(map['images'])
+          : images,
+      productDetails: map['productDetails'] != null
+          ? List<String>.from(map['productDetails'])
+          : productDetails,
+      quantityDiscount: map['quantityDiscount'] ?? quantityDiscount,
+      createdAt: createdAt,
+    );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
-import 'package:kgh_admin_app/order/controller/order_controller.dart';
-import 'package:kgh_admin_app/order/view/order_list_view.dart';
+import 'package:kgh_admin_app/modules/order/controller/order_controller.dart';
+import 'package:kgh_admin_app/modules/order/view/order_list_view.dart';
+import 'package:kgh_admin_app/modules/user/view/user_list_view.dart';
 import '../modules/home/view/home_view.dart';
 import '../modules/home/controller/home_controller.dart';
 import '../modules/product/view/product_list_view.dart';
@@ -30,5 +31,13 @@ class AppPages {
         Get.lazyPut<ProductController>(() => ProductController());
       }),
     ),
+     GetPage(
+      name: AppRoutes.users,
+      page: () =>  UserListView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<ProductController>(() => ProductController());
+      }),
+    ),
+    
   ];
 }
