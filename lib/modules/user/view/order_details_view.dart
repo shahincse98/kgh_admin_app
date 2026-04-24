@@ -28,7 +28,7 @@ class OrderDetailsView extends StatelessWidget {
                     "Qty: ${item['quantity']} | Price: ${item['pricePerUnit']} | Total: ${item['totalPrice']}"),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

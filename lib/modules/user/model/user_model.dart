@@ -10,6 +10,7 @@ class UserModel {
   final String deliveryDay;
   final int totalDue;
   final int totalPayableToCustomer;
+  final bool isBlocked;
   final Timestamp? createdAt;
 
   UserModel({
@@ -22,6 +23,7 @@ class UserModel {
     required this.deliveryDay,
     required this.totalDue,
     required this.totalPayableToCustomer,
+    required this.isBlocked,
     required this.createdAt,
   });
 
@@ -39,6 +41,7 @@ class UserModel {
       totalDue: (map['totalDue'] as num?)?.toInt() ?? 0,
       totalPayableToCustomer:
           (map['totalPayableToCustomer'] as num?)?.toInt() ?? 0,
+      isBlocked: map['isBlocked'] as bool? ?? false,
       createdAt: map['createdAt'] as Timestamp?,
     );
   }

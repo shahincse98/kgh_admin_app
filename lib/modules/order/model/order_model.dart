@@ -27,6 +27,15 @@ class OrderItem {
       totalPrice: map['totalPrice'] ?? 0,
     );
   }
+
+  Map<String, dynamic> toMap() => {
+        'productId': productId,
+        'productName': productName,
+        'image': image,
+        'quantity': quantity,
+        'pricePerUnit': pricePerUnit,
+        'totalPrice': totalPrice,
+      };
 }
 
 class OrderModel {
@@ -38,6 +47,9 @@ class OrderModel {
   final num paidAmount;
   final String shopName;
   final String shopAddress;
+  final String shopPhone;
+  final String userId;      // Firebase Auth UID of the ordering user
+  String userPhone;         // resolved after load from users collection
 
   OrderModel({
     required this.id,
@@ -48,6 +60,9 @@ class OrderModel {
     required this.paidAmount,
     required this.shopName,
     required this.shopAddress,
+    this.shopPhone = '',
+    this.userId = '',
+    this.userPhone = '',
   });
 
   factory OrderModel.fromFirestore(DocumentSnapshot doc) {
@@ -61,6 +76,9 @@ class OrderModel {
       paidAmount: data['paidAmount'] ?? 0,
       shopName: data['shopName'] ?? '',
       shopAddress: data['shopAddress'] ?? '',
+      shopPhone: data['shopPhone'] ?? data['phone'] ?? '',
+      userId: data['userId'] ?? data['uid'] ?? data['orderedBy'] ?? '',
+      userPhone: data['userPhone'] ?? data['orderedByPhone'] ?? '',
       items: (data['items'] as List? ?? [])
           .map((e) => OrderItem.fromMap(e))
           .toList(),
