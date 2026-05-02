@@ -154,6 +154,8 @@ class HomeView extends GetView<HomeController> {
                       children: [
                         _actionButton('Orders', Icons.receipt_long_rounded,
                             const Color(0xFF0EA5E9), () => Get.toNamed(AppRoutes.orders)),
+                        _actionButton('নতুন অর্ডার', Icons.add_shopping_cart_rounded,
+                            const Color(0xFF7C3AED), () => Get.toNamed(AppRoutes.createOrder)),
                         _actionButton('Products', Icons.inventory_2_rounded,
                             const Color(0xFF10B981), () => Get.toNamed(AppRoutes.products)),
                         _actionButton('Users', Icons.people_alt_rounded,
@@ -163,7 +165,7 @@ class HomeView extends GetView<HomeController> {
                         _actionButton('Expenses', Icons.receipt_long_rounded,
                             const Color(0xFFD97706), () => Get.toNamed(AppRoutes.expenses)),
                         _actionButton('SR', Icons.person_pin_circle_rounded,
-                            const Color(0xFF0891B2), () => Get.toNamed(AppRoutes.sr)),
+                            const Color(0xFF0891B2), () => Get.toNamed(AppRoutes.srManagement)),
                         _actionButton('Purchase', Icons.shopping_cart_rounded,
                             const Color(0xFF6366F1), () => Get.toNamed(AppRoutes.purchases)),
                         _actionButton('Sales', Icons.bar_chart_rounded,

@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:kgh_admin_app/modules/order/controller/order_controller.dart';
+import 'package:kgh_admin_app/modules/order/controller/create_order_controller.dart';
 import 'package:kgh_admin_app/modules/order/view/order_list_view.dart';
+import 'package:kgh_admin_app/modules/order/view/create_order_view.dart';
 import 'package:kgh_admin_app/modules/user/view/user_list_view.dart';
 import 'package:kgh_admin_app/modules/user/controller/user_controller.dart';
 import 'package:kgh_admin_app/modules/auth/view/login_view.dart';
@@ -11,6 +13,10 @@ import 'package:kgh_admin_app/modules/expense/view/expense_view.dart';
 import 'package:kgh_admin_app/modules/expense/controller/expense_controller.dart';
 import 'package:kgh_admin_app/modules/sr/view/sr_view.dart';
 import 'package:kgh_admin_app/modules/sr/controller/sr_controller.dart';
+import 'package:kgh_admin_app/modules/sr/view/sr_management_view.dart';
+import 'package:kgh_admin_app/modules/sr/view/sr_detail_view.dart';
+import 'package:kgh_admin_app/modules/sr/controller/sr_management_controller.dart';
+import 'package:kgh_admin_app/modules/sr_panel/view/sr_panel_shell.dart';
 import 'package:kgh_admin_app/modules/purchase/view/purchase_view.dart';
 import 'package:kgh_admin_app/modules/purchase/controller/purchase_controller.dart';
 import 'package:kgh_admin_app/modules/sales/view/sales_view.dart';
@@ -26,9 +32,6 @@ class AppPages {
     GetPage(
       name: AppRoutes.login,
       page: () => const LoginView(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<AuthController>(() => AuthController());
-      }),
     ),
     GetPage(
       name: AppRoutes.home,
@@ -42,6 +45,13 @@ class AppPages {
       page: () => const OrderListView(),
       binding: BindingsBuilder(() {
         Get.lazyPut<OrderController>(() => OrderController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.createOrder,
+      page: () => const CreateOrderView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<CreateOrderController>(() => CreateOrderController());
       }),
     ),
     GetPage(
@@ -80,6 +90,20 @@ class AppPages {
       }),
     ),
     GetPage(
+      name: AppRoutes.srManagement,
+      page: () => const SrManagementView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<SrManagementController>(() => SrManagementController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.srDetail,
+      page: () => const SrDetailView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<SrManagementController>(() => SrManagementController());
+      }),
+    ),
+    GetPage(
       name: AppRoutes.purchases,
       page: () => const PurchaseView(),
       binding: BindingsBuilder(() {
@@ -92,6 +116,10 @@ class AppPages {
       binding: BindingsBuilder(() {
         Get.lazyPut<SalesController>(() => SalesController());
       }),
+    ),
+    GetPage(
+      name: AppRoutes.srPanel,
+      page: () => const SrPanelShell(),
     ),
   ];
 }

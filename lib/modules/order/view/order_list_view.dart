@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../controller/order_controller.dart';
 import '../model/order_model.dart';
 import 'order_details_view.dart';
+import '../../../routes/app_routes.dart';
 
 class OrderListView extends StatefulWidget {
   const OrderListView({super.key});
@@ -40,6 +41,13 @@ class _OrderListViewState extends State<OrderListView> {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Get.toNamed(AppRoutes.createOrder),
+        icon: const Icon(Icons.add_shopping_cart_rounded),
+        label: const Text('নতুন অর্ডার',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        tooltip: 'কাস্টমারের পক্ষে অর্ডার করুন',
+      ),
       appBar: AppBar(
         title: Obx(() => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,6 +157,7 @@ class _OrderListViewState extends State<OrderListView> {
       ('approved', 'Approved'),
       ('delivered', 'Delivered'),
       ('cancelled', 'বাতিল'),
+      ('scheduled', 'নির্ধারিত'),
     ];
     return SizedBox(
       height: 44,
@@ -158,7 +167,7 @@ class _OrderListViewState extends State<OrderListView> {
             children: filters.map((pair) {
               final (val, label) = pair;
               final selected = controller.selectedStatus.value == val;
-              final color = val == 'all'
+              final color = val == 'all' || val == 'scheduled'
                   ? const Color(0xFF0891B2)
                   : _statusColor(val);
               return Padding(
@@ -238,6 +247,7 @@ class _OrderListViewState extends State<OrderListView> {
         },
         child: IntrinsicHeight(
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Status color strip on left
               Container(width: 5, color: statusColor),
@@ -299,9 +309,7 @@ class _OrderListViewState extends State<OrderListView> {
                         children: [
                           _chip(
                               Icons.tag_rounded,
-                              order.id.length > 8
-                                  ? '#${order.id.substring(0, 8)}'
-                                  : '#${order.id}',
+                              '#${order.id}',
                               scheme),
                           _chip(Icons.schedule_rounded, time, scheme),
                           _chip(Icons.shopping_bag_outlined,
@@ -309,6 +317,27 @@ class _OrderListViewState extends State<OrderListView> {
                           if (order.userPhone.isNotEmpty)
                             _chip(Icons.phone_rounded,
                                 order.userPhone, scheme),
+                          if (order.userDue > 0)
+                            _chip(
+                              Icons.account_balance_wallet_outlined,
+                              'বাকি: ৳${_fmt.format(order.userDue)}',
+                              scheme,
+                              labelColor: const Color(0xFFDC2626),
+                            ),
+                          if (order.orderedByEmail.isNotEmpty)
+                            _chip(
+                              Icons.support_agent_rounded,
+                              order.orderedByEmail,
+                              scheme,
+                              labelColor: const Color(0xFF7C3AED),
+                            ),
+                          if (order.scheduledDeliveryDate != null)
+                            _chip(
+                              Icons.local_shipping_rounded,
+                              _scheduledLabel(order),
+                              scheme,
+                              labelColor: _scheduledChipColor(order),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -389,22 +418,33 @@ class _OrderListViewState extends State<OrderListView> {
     );
   }
 
-  Widget _chip(IconData icon, String label, ColorScheme scheme) {
+  Widget _chip(IconData icon, String label, ColorScheme scheme,
+      {Color? labelColor}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
+        color: labelColor != null
+            ? labelColor.withAlpha(18)
+            : scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(8),
+        border: labelColor != null
+            ? Border.all(color: labelColor.withAlpha(80), width: 1)
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: scheme.onSurface.withAlpha(160)),
+          Icon(icon,
+              size: 13,
+              color: labelColor ?? scheme.onSurface.withAlpha(160)),
           const SizedBox(width: 5),
           Text(label,
               style: TextStyle(
                   fontSize: 12,
-                  color: scheme.onSurface.withAlpha(180))),
+                  fontWeight: labelColor != null
+                      ? FontWeight.w700
+                      : FontWeight.normal,
+                  color: labelColor ?? scheme.onSurface.withAlpha(180))),
         ],
       ),
     );
@@ -423,6 +463,30 @@ class _OrderListViewState extends State<OrderListView> {
       default:
         return const Color(0xFF64748B);
     }
+  }
+
+  String _scheduledLabel(OrderModel order) {
+    final d = order.scheduledDeliveryDate!;
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final delivDateOnly = DateTime(d.year, d.month, d.day);
+    if (delivDateOnly == todayDate) return 'আজকের ডেলিভারি';
+    if (delivDateOnly.isBefore(todayDate) && order.status != 'delivered') {
+      return 'মিস: ${DateFormat('dd MMM').format(d)}';
+    }
+    return 'ডেলিভারি: ${DateFormat('dd MMM').format(d)}';
+  }
+
+  Color? _scheduledChipColor(OrderModel order) {
+    final d = order.scheduledDeliveryDate!;
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final delivDateOnly = DateTime(d.year, d.month, d.day);
+    if (delivDateOnly == todayDate) return const Color(0xFF0891B2);
+    if (delivDateOnly.isBefore(todayDate) && order.status != 'delivered') {
+      return const Color(0xFFDC2626);
+    }
+    return null;
   }
 
   Map<String, List<OrderModel>> _groupByDate(List<OrderModel> orders) {

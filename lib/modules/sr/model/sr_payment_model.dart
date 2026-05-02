@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SrPaymentModel {
   final String id;
+  final String srId;
   final String month; // YYYY-MM
   final double amount;
   final String note;
@@ -9,6 +10,7 @@ class SrPaymentModel {
 
   SrPaymentModel({
     required this.id,
+    this.srId = '',
     required this.month,
     required this.amount,
     required this.note,
@@ -20,6 +22,7 @@ class SrPaymentModel {
     final data = doc.data();
     return SrPaymentModel(
       id: doc.id,
+      srId: (data['srId'] as String?) ?? '',
       month: (data['month'] as String?) ?? '',
       amount: (data['amount'] as num?)?.toDouble() ?? 0,
       note: (data['note'] as String?) ?? '',

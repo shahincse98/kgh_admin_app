@@ -11,6 +11,9 @@ import 'bindings/initial_binding.dart';
 import 'theme/app_theme.dart';
 import 'firebase_options.dart';
 
+String _initialRoute = AppRoutes.login;
+String? srDocIdForStartup;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -21,6 +24,24 @@ void main() async {
   );
 
   await _initFirestore();
+
+  // Determine initial route based on role
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final db = FirebaseFirestore.instance;
+    final srSnap = await db
+        .collection('sr_staff')
+        .where('email', isEqualTo: user.email)
+        .where('isActive', isEqualTo: true)
+        .limit(1)
+        .get();
+    if (srSnap.docs.isNotEmpty) {
+      _initialRoute = AppRoutes.srPanel;
+      srDocIdForStartup = srSnap.docs.first.id;
+    } else {
+      _initialRoute = AppRoutes.home;
+    }
+  }
 
   runApp(const MyApp());
 }
@@ -48,12 +69,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLoggedIn = FirebaseAuth.instance.currentUser != null;
-
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       initialBinding: InitialBinding(),
-      initialRoute: isLoggedIn ? AppRoutes.home : AppRoutes.login,
+      initialRoute: _initialRoute,
       getPages: AppPages.pages,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

@@ -48,8 +48,14 @@ class OrderModel {
   final String shopName;
   final String shopAddress;
   final String shopPhone;
-  final String userId;      // Firebase Auth UID of the ordering user
-  String userPhone;         // resolved after load from users collection
+  final String userId;         // Customer's user document ID
+  final String orderedBy;      // UID of SR/admin who placed the order
+  final String orderedByEmail; // Email of SR/admin who placed the order
+  final String deliveredBySrId;     // SR doc ID that delivered this order
+  final bool commissionConfirmed;   // Admin confirmed delivery for commission
+  final DateTime? scheduledDeliveryDate; // Admin-set delivery date for SR
+  String userPhone;            // resolved after load from users collection
+  int userDue;                 // resolved after load from users collection
 
   OrderModel({
     required this.id,
@@ -62,7 +68,13 @@ class OrderModel {
     required this.shopAddress,
     this.shopPhone = '',
     this.userId = '',
+    this.orderedBy = '',
+    this.orderedByEmail = '',
+    this.deliveredBySrId = '',
+    this.commissionConfirmed = false,
+    this.scheduledDeliveryDate,
     this.userPhone = '',
+    this.userDue = 0,
   });
 
   factory OrderModel.fromFirestore(DocumentSnapshot doc) {
@@ -77,7 +89,14 @@ class OrderModel {
       shopName: data['shopName'] ?? '',
       shopAddress: data['shopAddress'] ?? '',
       shopPhone: data['shopPhone'] ?? data['phone'] ?? '',
-      userId: data['userId'] ?? data['uid'] ?? data['orderedBy'] ?? '',
+      userId: data['userId'] ?? data['uid'] ?? '',
+      orderedBy: data['orderedBy'] ?? '',
+      orderedByEmail: data['orderedByEmail'] ?? '',
+      deliveredBySrId: data['deliveredBySrId'] ?? '',
+      commissionConfirmed: data['commissionConfirmed'] as bool? ?? false,
+      scheduledDeliveryDate: data['scheduledDeliveryDate'] is Timestamp
+          ? (data['scheduledDeliveryDate'] as Timestamp).toDate()
+          : null,
       userPhone: data['userPhone'] ?? data['orderedByPhone'] ?? '',
       items: (data['items'] as List? ?? [])
           .map((e) => OrderItem.fromMap(e))

@@ -6,6 +6,55 @@ import 'user_details_view.dart';
 class UserListView extends StatelessWidget {
   const UserListView({super.key});
 
+  Future<void> _showEditDueDialog(
+      BuildContext context, UserController controller, dynamic user) async {
+    final ctrl = TextEditingController(text: user.totalDue.toString());
+    final formKey = GlobalKey<FormState>();
+
+    final ok = await Get.dialog<bool>(
+      AlertDialog(
+        title: Text('${user.shopName}\nবাকি পাওনা সম্পাদনা'),
+        titleTextStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: Colors.black87),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: ctrl,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'পরিমাণ',
+              prefixText: '৳ ',
+              border: OutlineInputBorder(),
+            ),
+            validator: (v) =>
+                int.tryParse(v?.trim() ?? '') == null
+                    ? 'সঠিক সংখ্যা লিখুন'
+                    : null,
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Get.back(result: false),
+              child: const Text('বাতিল')),
+          ElevatedButton(
+            onPressed: () {
+              if (!formKey.currentState!.validate()) return;
+              Get.back(result: true);
+            },
+            child: const Text('সংরক্ষণ'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+    final newAmt = int.parse(ctrl.text.trim());
+    await controller.updateTotalDue(user.id, newAmt);
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<UserController>();
@@ -33,6 +82,67 @@ class UserListView extends StatelessWidget {
               ),
             ),
           ),
+          Obx(() {
+            final totalDue = controller.users
+                .fold<int>(0, (sum, u) => sum + u.totalDue);
+            final dueCount =
+                controller.users.where((u) => u.totalDue > 0).length;
+            if (controller.loading.value || controller.users.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            return Container(
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFDC2626), Color(0xFFB91C1C)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.account_balance_wallet_rounded,
+                      color: Colors.white, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'মোট বাকি পাওনা',
+                          style: TextStyle(
+                              color: Colors.white70, fontSize: 11),
+                        ),
+                        Text(
+                          '৳$totalDue',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '$dueCount জন',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700),
+                      ),
+                      const Text(
+                        'বাকি আছে',
+                        style: TextStyle(color: Colors.white70, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
           Expanded(
             child: Obx(() {
               if (controller.loading.value) {
@@ -122,11 +232,65 @@ class UserListView extends StatelessWidget {
                                       ],
                                     ),
                                     const SizedBox(height: 6),
-                                    Text('Owner: ${user.proprietorName}'),
-                                    Text('Phone: ${user.phone}'),
-                                    Text(
-                                      'Due: ৳${user.totalDue}',
-                                      style: const TextStyle(fontWeight: FontWeight.w600),
+                                    Text('মালিক: ${user.proprietorName}'),
+                                    Text('ফোন: ${user.phone}'),
+                                    if (user.address.isNotEmpty)
+                                      Text(
+                                        'ঠিকানা: ${user.address}',
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'বাকি: ৳${user.totalDue}',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              color: user.totalDue > 0
+                                                  ? Colors.red
+                                                  : Colors.green),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        GestureDetector(
+                                          onTap: () => _showEditDueDialog(
+                                              context, controller, user),
+                                          child: Container(
+                                            padding:
+                                                const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.red
+                                                  .withAlpha(20),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              border: Border.all(
+                                                  color: Colors.red
+                                                      .withAlpha(60)),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize:
+                                                  MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.edit_rounded,
+                                                    size: 11,
+                                                    color: Colors.red),
+                                                SizedBox(width: 3),
+                                                Text('এডিট',
+                                                    style: TextStyle(
+                                                        fontSize: 10,
+                                                        color: Colors.red,
+                                                        fontWeight:
+                                                            FontWeight.w600)),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),

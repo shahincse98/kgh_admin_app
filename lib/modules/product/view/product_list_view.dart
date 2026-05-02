@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../controller/product_controller.dart';
 import '../model/product_model.dart';
+import 'replace_management_view.dart';
 
 class ProductListView extends GetView<ProductController> {
   const ProductListView({super.key});
@@ -88,30 +89,7 @@ class ProductListView extends GetView<ProductController> {
   }
 
   void _showReplaceList(BuildContext context) {
-    final all = controller.products.where((p) => p.replaceCount > 0).toList()
-      ..sort((a, b) => b.replaceCount.compareTo(a.replaceCount));
-    if (all.isEmpty) {
-      Get.snackbar('Replace List', 'কোনো replace product নেই',
-          snackPosition: SnackPosition.BOTTOM);
-      return;
-    }
-    final text = all
-        .map((p) => '${p.name}: ${p.replaceCount}টি')
-        .join('\n');
-
-    _showCopyableList(
-      context: context,
-      title: 'Replace List (${all.length})',
-      text: text,
-      rows: all
-          .map((p) => _ListRow(
-                label: p.name,
-                sublabel: p.productCategory,
-                value: '${p.replaceCount}টি',
-                valueColor: Colors.orange.shade700,
-              ))
-          .toList(),
-    );
+    Get.to(() => const ReplaceManagementView());
   }
 
   void _showCopyableList({

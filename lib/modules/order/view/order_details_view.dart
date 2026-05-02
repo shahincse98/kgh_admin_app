@@ -37,7 +37,9 @@ class _EditItem {
 // ─── Details View ────────────────────────────────────────────────
 class OrderDetailsView extends StatefulWidget {
   final OrderModel order;
-  const OrderDetailsView({super.key, required this.order});
+  /// If provided, marks this SR as deliverer when order status set to 'delivered'
+  final String? srDocId;
+  const OrderDetailsView({super.key, required this.order, this.srDocId});
 
   @override
   State<OrderDetailsView> createState() => _OrderDetailsViewState();
@@ -53,6 +55,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   late num _savedTotal;
   bool _editMode = false;
   bool _saving = false;
+  late num _currentPaid;
+  DateTime? _scheduledDate;
 
   // Product search for adding new products in edit mode
   List<ProductModel> _allProducts = [];
@@ -76,11 +80,13 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   void initState() {
     super.initState();
     controller = Get.find<OrderController>();
+    _currentPaid = widget.order.paidAmount;
     _paidCtrl =
-        TextEditingController(text: widget.order.paidAmount.toString());
+        TextEditingController(text: widget.order.paidAmount.toStringAsFixed(0));
     _currentStatus = _statuses.contains(widget.order.status)
         ? widget.order.status
         : 'pending';
+    _scheduledDate = widget.order.scheduledDeliveryDate;
     _savedItems = List<OrderItem>.from(widget.order.items);
     _savedTotal = widget.order.totalAmount;
     _initEditItems();
@@ -214,6 +220,14 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           // ── Shop & order info ──────────────────────────────
           _shopCard(scheme, statusColor),
           const SizedBox(height: 12),
+          // ── SR info + commission confirm (admin only) ──────
+          if (widget.srDocId == null && widget.order.deliveredBySrId.isNotEmpty)
+            _srInfoCard(scheme),
+          if (widget.srDocId == null && widget.order.deliveredBySrId.isNotEmpty)
+            const SizedBox(height: 12),
+          // ── Scheduled delivery (admin can set, SR sees) ────
+          _scheduledDeliveryCard(scheme),
+          const SizedBox(height: 12),
           // ── Status change ──────────────────────────────────
           _statusCard(scheme),
           const SizedBox(height: 12),
@@ -312,10 +326,31 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             padding: const EdgeInsets.all(14),
             child: Column(
               children: [
-                if (widget.order.shopAddress.isNotEmpty)
+                if (widget.order.shopAddress.isNotEmpty) ...[  
                   _infoRow(Icons.location_on_outlined,
                       widget.order.shopAddress, scheme),
-                const SizedBox(height: 6),
+                  const SizedBox(height: 6),
+                ],
+                if (widget.order.shopPhone.isNotEmpty ||  
+                    widget.order.userPhone.isNotEmpty) ...[  
+                  _infoRow(
+                    Icons.phone_android_rounded,
+                    widget.order.shopPhone.isNotEmpty
+                        ? widget.order.shopPhone
+                        : widget.order.userPhone,
+                    scheme,
+                  ),
+                  const SizedBox(height: 6),
+                ],
+                if (widget.order.userDue > 0) ...[  
+                  _infoRow(
+                    Icons.account_balance_wallet_outlined,
+                    'বকেয়া: ৳ ${_fmt.format(widget.order.userDue)}',
+                    scheme,
+                    textColor: const Color(0xFFDC2626),
+                  ),
+                  const SizedBox(height: 6),
+                ],
                 _infoRow(Icons.calendar_today_outlined, '$date, $time', scheme),
                 const SizedBox(height: 6),
                 _infoRow(Icons.tag_rounded, widget.order.id, scheme),
@@ -327,17 +362,24 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     );
   }
 
-  Widget _infoRow(IconData icon, String text, ColorScheme scheme) {
+  Widget _infoRow(IconData icon, String text, ColorScheme scheme,
+      {Color? textColor}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 15, color: scheme.onSurface.withAlpha(140)),
+        Icon(icon,
+            size: 15,
+            color: textColor ?? scheme.onSurface.withAlpha(140)),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
             style: TextStyle(
-                fontSize: 13, color: scheme.onSurface.withAlpha(180)),
+                fontSize: 13,
+                fontWeight: textColor != null
+                    ? FontWeight.w700
+                    : FontWeight.normal,
+                color: textColor ?? scheme.onSurface.withAlpha(180)),
           ),
         ),
       ],
@@ -370,19 +412,23 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 return GestureDetector(
                   onTap: () async {
                     if (s == _currentStatus) return;
-                    final prev = _currentStatus;
-                    setState(() => _currentStatus = s);
-                    await controller.updateOrderStatus(
-                      widget.order.id,
-                      s,
-                      previousStatus: prev,
-                      items: widget.order.items
-                          .map((i) => {
-                                'productId': i.productId,
-                                'quantity': i.quantity,
-                              })
-                          .toList(),
-                    );
+                    if (s == 'delivered') {
+                      await _showDeliveryPaymentDialog(_currentStatus);
+                    } else {
+                      final prev = _currentStatus;
+                      setState(() => _currentStatus = s);
+                      await controller.updateOrderStatus(
+                        widget.order.id,
+                        s,
+                        previousStatus: prev,
+                        items: widget.order.items
+                            .map((i) => {
+                                  'productId': i.productId,
+                                  'quantity': i.quantity,
+                                })
+                            .toList(),
+                      );
+                    }
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
@@ -1154,6 +1200,196 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     });
   }
 
+  // ── Delivery confirmation + payment dialog ─────────────────
+
+  Future<void> _showDeliveryPaymentDialog(String previousStatus) async {
+    final scheme = Theme.of(context).colorScheme;
+    final total = _savedTotal;
+    final orderDue = total - _currentPaid;
+    final payCtrl =
+        TextEditingController(text: _currentPaid.toStringAsFixed(0));
+    final totalDue = (widget.order.userDue + orderDue.toInt()).clamp(0, 9999999);
+    final dueCtrl = TextEditingController(
+        text: totalDue > 0 ? totalDue.toString() : '');
+
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(
+          children: [
+            Icon(Icons.local_shipping_rounded,
+                color: Color(0xFF16A34A), size: 22),
+            SizedBox(width: 8),
+            Text('ডেলিভারি পেমেন্ট',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    _dialogPayRow('অর্ডার আইডি',
+                        '#${widget.order.id}',
+                        const Color(0xFF0891B2)),
+                    const SizedBox(height: 6),
+                    _dialogPayRow('মোট অর্ডার',
+                        '৳ ${_fmt.format(total.toInt())}',
+                        const Color(0xFF0891B2)),
+                    const SizedBox(height: 6),
+                    _dialogPayRow('আগে দেওয়া',
+                        '৳ ${_fmt.format(_currentPaid.toInt())}',
+                        const Color(0xFF16A34A)),
+                    const SizedBox(height: 6),
+                    _dialogPayRow('এই অর্ডারে বাকি',
+                        '৳ ${_fmt.format(orderDue.toInt())}',
+                        orderDue > 0
+                            ? const Color(0xFFDC2626)
+                            : const Color(0xFF16A34A)),
+                    if (widget.order.userDue > 0) ...[
+                      const SizedBox(height: 6),
+                      _dialogPayRow('কাস্টমারের মোট বাকি',
+                          '৳ ${_fmt.format(widget.order.userDue)}',
+                          const Color(0xFFDC2626)),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              StatefulBuilder(builder: (ctx, setSt) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('পেমেন্ট পাওয়া গেছে',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black54)),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: payCtrl,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        prefixText: '৳ ',
+                        hintText: 'পরিমাণ',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('কাস্টমারের মোট বাকি আপডেট করুন',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black54)),
+                    const SizedBox(height: 4),
+                    TextField(
+                      controller: dueCtrl,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(
+                        prefixText: '৳ ',
+                        hintText: 'নতুন মোট বাকি (০ হলে খালি রাখুন)',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Get.back(result: false),
+              child: const Text('বাতিল')),
+          ElevatedButton.icon(
+            onPressed: () => Get.back(result: true),
+            icon: const Icon(Icons.check_rounded, size: 16),
+            label: const Text('ডেলিভার্ড করুন'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF16A34A),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final amount =
+          num.tryParse(payCtrl.text.trim()) ?? _currentPaid;
+      final newDue = int.tryParse(dueCtrl.text.trim()) ?? totalDue;
+      setState(() => _currentStatus = 'delivered');
+      await controller.updateOrderStatus(
+        widget.order.id,
+        'delivered',
+        previousStatus: previousStatus,
+        deliveredBySrId: widget.srDocId,
+        items: widget.order.items
+            .map((i) => {
+                  'productId': i.productId,
+                  'quantity': i.quantity,
+                })
+            .toList(),
+      );
+      if (amount != _currentPaid) {
+        await controller.updatePaidAmount(widget.order.id, amount);
+        setState(() {
+          _currentPaid = amount;
+          _paidCtrl.text = amount.toStringAsFixed(0);
+        });
+      }
+      if (widget.order.userId.isNotEmpty) {
+        await controller.updateUserDue(widget.order.userId, newDue);
+      }
+      Get.snackbar(
+        'সফল',
+        'ডেলিভারি সম্পন্ন এবং পেমেন্ট আপডেট হয়েছে',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF16A34A),
+        colorText: Colors.white,
+      );
+      payCtrl.dispose();
+      dueCtrl.dispose();
+    }
+  }
+
+  Widget _dialogPayRow(String label, String value, Color valueColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 13, color: Colors.black54)),
+        Text(value,
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: valueColor)),
+      ],
+    );
+  }
+
   Widget _imgPlaceholder(double size, ColorScheme scheme) => Container(
         width: size,
         height: size,
@@ -1184,13 +1420,209 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     );
   }
 
+  // ── Scheduled delivery card ───────────────────────────────────
+
+  Widget _scheduledDeliveryCard(ColorScheme scheme) {
+    final date = _scheduledDate;
+    final dateFmt = DateFormat('dd MMMM yyyy');
+    final hasDate = date != null;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: hasDate
+                    ? const Color(0xFF0891B2).withAlpha(20)
+                    : scheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.local_shipping_rounded,
+                  color: hasDate
+                      ? const Color(0xFF0891B2)
+                      : scheme.onSurface.withAlpha(120),
+                  size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('নির্ধারিত ডেলিভারি তারিখ',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500)),
+                  Text(
+                    hasDate ? dateFmt.format(date) : 'তারিখ নির্ধারিত নেই',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: hasDate
+                            ? const Color(0xFF0891B2)
+                            : scheme.onSurface.withAlpha(160)),
+                  ),
+                ],
+              ),
+            ),
+            // Both admin and SR can set/change the scheduled delivery date
+            if (hasDate)
+              IconButton(
+                icon: const Icon(Icons.clear_rounded, size: 18),
+                tooltip: 'তারিখ মুছুন',
+                color: Colors.red.shade400,
+                onPressed: () async {
+                  await controller.setScheduledDelivery(widget.order.id, null);
+                  setState(() => _scheduledDate = null);
+                },
+              ),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: date ?? DateTime.now(),
+                  firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                  lastDate:
+                      DateTime.now().add(const Duration(days: 365)),
+                );
+                if (picked == null) return;
+                await controller.setScheduledDelivery(
+                    widget.order.id, picked);
+                setState(() => _scheduledDate = picked);
+              },
+              icon: const Icon(Icons.calendar_month_rounded, size: 16),
+              label: Text(hasDate ? 'পরিবর্তন' : 'তারিখ দিন'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 8),
+                textStyle: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── SR info + commission confirm card ─────────────────────
+
+  Widget _srInfoCard(ColorScheme scheme) {
+    final srId = widget.order.deliveredBySrId;
+    final confirmed = widget.order.commissionConfirmed;
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7C3AED).withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.person_pin_rounded,
+                      color: Color(0xFF7C3AED), size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('SR দ্বারা ডেলিভার করা হয়েছে',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500)),
+                      Text(srId,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                if (confirmed)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF16A34A).withAlpha(20),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text('কমিশন নিশ্চিত',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF16A34A),
+                            fontWeight: FontWeight.w700)),
+                  ),
+              ],
+            ),
+            if (!confirmed) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _saving
+                      ? null
+                      : () async {
+                          final ok = await _confirm(
+                            'কমিশন নিশ্চিত করুন',
+                            'এই SR-এর কমিশন চূড়ান্ত করবেন? এটি SR-এর পেমেন্ট রেকর্ডে যুক্ত হবে।',
+                          );
+                          if (ok != true) return;
+                          setState(() => _saving = true);
+                          await controller.confirmDeliveryWithCommission(
+                            orderId: widget.order.id,
+                            srDocId: srId,
+                            orderTotal: _savedTotal,
+                          );
+                          setState(() => _saving = false);
+                          Get.snackbar(
+                            'কমিশন নিশ্চিত হয়েছে',
+                            'SR-এর কমিশন রেকর্ড আপডেট হয়েছে',
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: const Color(0xFF7C3AED),
+                            colorText: Colors.white,
+                          );
+                        },
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.verified_rounded),
+                  label:
+                      Text(_saving ? 'প্রক্রিয়া চলছে…' : 'কমিশন নিশ্চিত করুন'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7C3AED),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Payment card ──────────────────────────────────────────────
 
   Widget _paymentCard(ColorScheme scheme) {
-    final total = _editMode
-        ? _editTotal
-        : _savedTotal;
-    final paid = widget.order.paidAmount;
+    final total = _editMode ? _editTotal : _savedTotal;
+    final paid = _currentPaid;
     final due = total - paid;
 
     return Card(
@@ -1234,11 +1666,11 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () async {
+                  final amount = num.tryParse(_paidCtrl.text.trim()) ??
+                      _currentPaid;
                   await controller.updatePaidAmount(
-                    widget.order.id,
-                    num.tryParse(_paidCtrl.text) ??
-                        widget.order.paidAmount,
-                  );
+                      widget.order.id, amount);
+                  setState(() => _currentPaid = amount);
                   Get.snackbar(
                     'আপডেট হয়েছে',
                     'পেমেন্ট তথ্য সেভ হয়েছে',

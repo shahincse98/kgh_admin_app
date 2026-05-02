@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/order_model.dart';
 import '../../user/controller/user_controller.dart';
+import '../../user/model/user_model.dart';
 
 class OrderController extends GetxController {
   final _db = FirebaseFirestore.instance;
@@ -22,6 +23,12 @@ class OrderController extends GetxController {
     super.onInit();
     fetchOrders();
     _listenPendingCount();
+    // Re-enrich phones & due whenever users list changes (handles load-order
+    // race: orders may arrive before UserController finishes fetching users)
+    try {
+      final uc = Get.find<UserController>();
+      ever(uc.users, (_) => _enrichUserPhones());
+    } catch (_) {/* UserController not ready — enrichment runs via try/catch in _enrichUserPhones */}
   }
 
   void _listenPendingCount() {
@@ -71,25 +78,56 @@ class OrderController extends GetxController {
     loading.value = false;
   }
 
-  /// Fills in userPhone from the permanently-loaded UserController.
+  /// Fills in userPhone/userDue from the permanently-loaded UserController.
+  /// Tries userId match first, then shopName, then shopPhone ↔ user.phone.
   void _enrichUserPhones() {
     try {
       final uc = Get.find<UserController>();
+      bool changed = false;
       for (final order in orders) {
-        if (order.userPhone.isNotEmpty) continue;
-        if (order.userId.isEmpty) continue;
-        final user = uc.users.firstWhereOrNull((u) => u.id == order.userId);
-        if (user != null && user.phone.isNotEmpty) {
-          order.userPhone = user.phone;
+        // Already fully enriched
+        if (order.userPhone.isNotEmpty && order.userDue != 0) continue;
+
+        UserModel? user;
+
+        // 1. Match by userId (Firebase Auth UID)
+        if (order.userId.isNotEmpty) {
+          user = uc.users.firstWhereOrNull((u) => u.id == order.userId);
+        }
+
+        // 2. Fallback: match by shopName
+        if (user == null && order.shopName.isNotEmpty) {
+          final nameKey = order.shopName.trim().toLowerCase();
+          user = uc.users.firstWhereOrNull(
+              (u) => u.shopName.trim().toLowerCase() == nameKey);
+        }
+
+        // 3. Fallback: match shopPhone against user.phone
+        if (user == null && order.shopPhone.isNotEmpty) {
+          user = uc.users
+              .firstWhereOrNull((u) => u.phone == order.shopPhone);
+        }
+
+        if (user != null) {
+          if (order.userPhone.isEmpty && user.phone.isNotEmpty) {
+            order.userPhone = user.phone;
+            changed = true;
+          }
+          if (user.totalDue != 0) {
+            order.userDue = user.totalDue;
+            changed = true;
+          }
         }
       }
-      orders.refresh();
+      if (changed) orders.refresh();
     } catch (_) {/* UserController not ready yet, skip */}
   }
 
   List<OrderModel> get filteredOrders {
     List<OrderModel> list = orders;
-    if (selectedStatus.value != 'all') {
+    if (selectedStatus.value == 'scheduled') {
+      list = list.where((o) => o.scheduledDeliveryDate != null).toList();
+    } else if (selectedStatus.value != 'all') {
       list = list.where((o) => o.status == selectedStatus.value).toList();
     }
     final q = searchText.value.trim().toLowerCase();
@@ -106,8 +144,12 @@ class OrderController extends GetxController {
   }
 
   Future<void> updateOrderStatus(String id, String status,
-      {String? previousStatus, List items = const []}) async {
-    await _db.collection('orders').doc(id).update({'status': status});
+      {String? previousStatus, List items = const [], String? deliveredBySrId}) async {
+    final data = <String, dynamic>{'status': status};
+    if (status == 'delivered' && deliveredBySrId != null && deliveredBySrId.isNotEmpty) {
+      data['deliveredBySrId'] = deliveredBySrId;
+    }
+    await _db.collection('orders').doc(id).update(data);
 
     // Deduct stock when order moves TO 'approved' (only once)
     if (status == 'approved' && previousStatus != 'approved' && items.isNotEmpty) {
@@ -131,6 +173,40 @@ class OrderController extends GetxController {
     await _db.collection('orders').doc(id).update({'paidAmount': amount});
   }
 
+  Future<void> setScheduledDelivery(String id, DateTime? date) async {
+    await _db.collection('orders').doc(id).update({
+      'scheduledDeliveryDate':
+          date != null ? Timestamp.fromDate(date) : FieldValue.delete(),
+    });
+    final idx = orders.indexWhere((o) => o.id == id);
+    if (idx != -1) await fetchOrders();
+  }
+
+  Future<void> updateUserDue(String userId, int newDue) async {
+    await _db.collection('users').doc(userId).update({'totalDue': newDue});
+    // Update local UserController cache
+    try {
+      final uc = Get.find<UserController>();
+      final idx = uc.users.indexWhere((u) => u.id == userId);
+      if (idx != -1) {
+        final u = uc.users[idx];
+        uc.users[idx] = UserModel(
+          id: u.id,
+          shopName: u.shopName,
+          proprietorName: u.proprietorName,
+          phone: u.phone,
+          email: u.email,
+          address: u.address,
+          deliveryDay: u.deliveryDay,
+          totalDue: newDue,
+          totalPayableToCustomer: u.totalPayableToCustomer,
+          isBlocked: u.isBlocked,
+          createdAt: u.createdAt,
+        );
+      }
+    } catch (_) {}
+  }
+
   Future<void> updateOrderItems(String id, List<OrderItem> items) async {
     final newTotal =
         items.fold<num>(0, (s, i) => s + i.totalPrice);
@@ -149,5 +225,45 @@ class OrderController extends GetxController {
 
   void changeFilter(String value) {
     selectedStatus.value = value;
+  }
+
+  /// Admin confirms delivery and credits SR commission.
+  /// Sets commissionConfirmed=true and records the SR doc ID on the order.
+  Future<void> confirmDeliveryWithCommission({
+    required String orderId,
+    required String srDocId,
+    required num orderTotal,
+  }) async {
+    // 1. Mark commission confirmed on the order
+    await _db.collection('orders').doc(orderId).update({
+      'commissionConfirmed': true,
+      'deliveredBySrId': srDocId,
+      'commissionConfirmedAt': FieldValue.serverTimestamp(),
+    });
+
+    // 2. Fetch SR profile to get commission %
+    final srDoc = await _db.collection('sr_staff').doc(srDocId).get();
+    if (!srDoc.exists) return;
+    final commPct = (srDoc.data()?['commissionPercent'] as num?)?.toDouble() ?? 0;
+    final commission = orderTotal * (commPct / 100.0);
+
+    // 3. Write a commission entry in sr_payments
+    final now = DateTime.now();
+    final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    await _db.collection('sr_payments').add({
+      'srId': srDocId,
+      'orderId': orderId,
+      'type': 'commission',
+      'amount': commission,
+      'month': monthKey,
+      'note': 'অর্ডার ডেলিভারি কমিশন',
+      'paidAt': FieldValue.serverTimestamp(),
+    });
+
+    // Refresh local list
+    final idx = orders.indexWhere((o) => o.id == orderId);
+    if (idx != -1) {
+      await fetchOrders();
+    }
   }
 }
