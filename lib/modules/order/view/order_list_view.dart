@@ -301,7 +301,69 @@ class _OrderListViewState extends State<OrderListView> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          _statusBadge(order.status, statusColor),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _statusBadge(order.status, statusColor),
+                              if (order.status != 'delivered' &&
+                                  order.status != 'cancelled') ...[
+                                const SizedBox(height: 5),
+                                GestureDetector(
+                                  onTap: () async {
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate:
+                                          order.scheduledDeliveryDate ??
+                                              DateTime.now(),
+                                      firstDate: DateTime.now()
+                                          .subtract(const Duration(days: 1)),
+                                      lastDate: DateTime.now()
+                                          .add(const Duration(days: 365)),
+                                    );
+                                    if (picked == null) return;
+                                    await controller.setScheduledDelivery(
+                                        order.id, picked);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0891B2)
+                                          .withAlpha(15),
+                                      borderRadius:
+                                          BorderRadius.circular(8),
+                                      border: Border.all(
+                                          color: const Color(0xFF0891B2)
+                                              .withAlpha(60)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                            Icons.calendar_month_rounded,
+                                            size: 11,
+                                            color: Color(0xFF0891B2)),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          order.scheduledDeliveryDate !=
+                                                  null
+                                              ? DateFormat('dd MMM').format(
+                                                  order
+                                                      .scheduledDeliveryDate!)
+                                              : 'তারিখ',
+                                          style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Color(0xFF0891B2),
+                                              fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ],
                       ),
                       const SizedBox(height: 10),

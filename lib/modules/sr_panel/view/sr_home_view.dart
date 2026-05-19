@@ -98,6 +98,9 @@ class SrHomeView extends GetView<SrPanelController> {
               _quickActions(context, scheme),
               const SizedBox(height: 20),
 
+              // Today's deliveries
+              _todayDeliveries(context, scheme),
+
               // Recent orders preview
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -394,6 +397,117 @@ class SrHomeView extends GetView<SrPanelController> {
             ),
           );
         }).toList(),
+      );
+    });
+  }
+
+  Widget _todayDeliveries(BuildContext context, ColorScheme scheme) {
+    return Obx(() {
+      final today = DateTime.now();
+      final todayDate = DateTime(today.year, today.month, today.day);
+      final todayOrders = controller.myOrders.where((o) {
+        if (o.scheduledDeliveryDate == null) return false;
+        final d = o.scheduledDeliveryDate!;
+        return DateTime(d.year, d.month, d.day) == todayDate &&
+            o.status != 'delivered';
+      }).toList();
+
+      if (todayOrders.isEmpty) return const SizedBox();
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0891B2).withAlpha(20),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.local_shipping_rounded,
+                    color: Color(0xFF0891B2), size: 18),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'আজকের ডেলিভারি',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0891B2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${todayOrders.length}',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700),
+                ),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () =>
+                    Get.find<SrNavController>(tag: 'sr_nav').tabIndex.value =
+                        2,
+                child: const Text('সব দেখুন'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...todayOrders.map((o) => Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                elevation: 0,
+                color: const Color(0xFF0891B2).withAlpha(10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                      color: const Color(0xFF0891B2).withAlpha(80),
+                      width: 0.8),
+                ),
+                child: ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.storefront_rounded,
+                      color: Color(0xFF0891B2), size: 20),
+                  title: Text(
+                    o.shopName.isEmpty ? 'Unknown' : o.shopName,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                  subtitle: Text(
+                    '${o.items.length} পণ্য  •  ৳ ${_fmt.format(o.totalAmount.toInt())}',
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _statusColor(o.status).withAlpha(20),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      {
+                            'pending': 'Pending',
+                            'approved': 'Approved',
+                          }[o.status] ??
+                          o.status,
+                      style: TextStyle(
+                          color: _statusColor(o.status),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11),
+                    ),
+                  ),
+                ),
+              )),
+          const SizedBox(height: 20),
+        ],
       );
     });
   }

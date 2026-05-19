@@ -178,8 +178,30 @@ class OrderController extends GetxController {
       'scheduledDeliveryDate':
           date != null ? Timestamp.fromDate(date) : FieldValue.delete(),
     });
+    // Update locally so the list view reflects the change immediately
     final idx = orders.indexWhere((o) => o.id == id);
-    if (idx != -1) await fetchOrders();
+    if (idx != -1) {
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: o.createdAt,
+        items: o.items,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        shopName: o.shopName,
+        shopAddress: o.shopAddress,
+        shopPhone: o.shopPhone,
+        userId: o.userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: o.deliveredBySrId,
+        commissionConfirmed: o.commissionConfirmed,
+        scheduledDeliveryDate: date,
+        userPhone: o.userPhone,
+        userDue: o.userDue,
+      );
+    }
   }
 
   Future<void> updateUserDue(String userId, int newDue) async {
