@@ -5,6 +5,8 @@ import '../controller/order_controller.dart';
 import '../model/order_model.dart';
 import 'order_details_view.dart';
 import '../../../routes/app_routes.dart';
+import '../../../widgets/call_button.dart';
+import '../../../widgets/responsive.dart';
 
 class OrderListView extends StatefulWidget {
   const OrderListView({super.key});
@@ -64,7 +66,7 @@ class _OrderListViewState extends State<OrderListView> {
               ],
             )),
       ),
-      body: Column(
+      body: ResponsiveWrapper(child: Column(
         children: [
           _searchBar(scheme),
           _statusChips(),
@@ -121,7 +123,7 @@ class _OrderListViewState extends State<OrderListView> {
             }),
           ),
         ],
-      ),
+      )),
     );
   }
 
@@ -291,6 +293,7 @@ class _OrderListViewState extends State<OrderListView> {
                                             color: scheme.onSurface
                                                 .withAlpha(160)),
                                       ),
+                                      CallButton(phone: order.shopPhone),
                                     ],
                                   ),
                                 ],
@@ -315,8 +318,11 @@ class _OrderListViewState extends State<OrderListView> {
                           _chip(Icons.shopping_bag_outlined,
                               '${order.items.length} পণ্য', scheme),
                           if (order.userPhone.isNotEmpty)
-                            _chip(Icons.phone_rounded,
-                                order.userPhone, scheme),
+                            GestureDetector(
+                              onTap: () => launchPhone(order.userPhone),
+                              child: _chip(Icons.phone_rounded,
+                                  order.userPhone, scheme),
+                            ),
                           if (order.userDue > 0)
                             _chip(
                               Icons.account_balance_wallet_outlined,

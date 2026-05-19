@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../controller/sr_management_controller.dart';
 import '../model/sr_model.dart';
 import '../../../routes/app_routes.dart';
+import '../../../widgets/call_button.dart';
+import '../../../widgets/responsive.dart';
 
 class SrManagementView extends GetView<SrManagementController> {
   const SrManagementView({super.key});
@@ -33,7 +35,7 @@ class SrManagementView extends GetView<SrManagementController> {
         label: const Text('নতুন SR যোগ করুন',
             style: TextStyle(fontWeight: FontWeight.w700)),
       ),
-      body: Column(
+      body: ResponsiveWrapper(child: Column(
         children: [
           // Search bar
           Padding(
@@ -90,7 +92,7 @@ class SrManagementView extends GetView<SrManagementController> {
             }),
           ),
         ],
-      ),
+      )),
     );
   }
 
@@ -332,10 +334,15 @@ class _SrCard extends StatelessWidget {
                             style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 16)),
-                        Text(sr.phone,
-                            style: TextStyle(
-                                color: scheme.onSurface.withAlpha(160),
-                                fontSize: 13)),
+                        Row(
+                          children: [
+                            Text(sr.phone,
+                                style: TextStyle(
+                                    color: scheme.onSurface.withAlpha(160),
+                                    fontSize: 13)),
+                            CallButton(phone: sr.phone),
+                          ],
+                        ),
                       ],
                     ),
                   ),

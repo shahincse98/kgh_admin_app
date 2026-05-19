@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controller/expense_controller.dart';
 import '../model/expense_model.dart';
+import '../../../widgets/responsive.dart';
 
 class ExpenseView extends GetView<ExpenseController> {
   const ExpenseView({super.key});
@@ -51,7 +52,7 @@ class ExpenseView extends GetView<ExpenseController> {
           ),
         ],
       ),
-      body: Obx(() {
+      body: ResponsiveWrapper(child: Obx(() {
         return Column(
           children: [
             _monthNavigator(context, scheme),
@@ -90,7 +91,7 @@ class ExpenseView extends GetView<ExpenseController> {
               ),
           ],
         );
-      }),
+      })),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context),
         icon: const Icon(Icons.add),

@@ -8,6 +8,8 @@ import '../model/user_model.dart';
 import '../model/user_order_model.dart';
 import '../model/user_replace_model.dart';
 import 'order_details_view.dart';
+import '../../../widgets/call_button.dart';
+import '../../../widgets/responsive.dart';
 
 class UserDetailsView extends StatefulWidget {
   final UserModel user;
@@ -90,7 +92,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
           );
         },
       ),
-      body: loading
+      body: ResponsiveWrapper(child: loading
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
               controller: _tabs,
@@ -98,7 +100,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
                 _ordersTab(u),
                 _replacesTab(),
               ],
-            ),
+            )),
     );
   }
 
@@ -210,7 +212,12 @@ class _UserDetailsViewState extends State<UserDetailsView>
                     fontWeight: FontWeight.w800, fontSize: 16)),
             const SizedBox(height: 8),
             Text('Owner: ${u.proprietorName}'),
-            Text('Phone: ${u.phone}'),
+            Row(
+              children: [
+                Text('Phone: ${u.phone}'),
+                CallButton(phone: u.phone),
+              ],
+            ),
             Text('Email: ${u.email}'),
             Text('Address: ${u.address}'),
             Text('Delivery: ${u.deliveryDay}'),

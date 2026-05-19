@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controller/user_controller.dart';
 import 'user_details_view.dart';
+import '../../../widgets/call_button.dart';
+import '../../../widgets/responsive.dart';
 
 class UserListView extends StatelessWidget {
   const UserListView({super.key});
@@ -70,7 +72,7 @@ class UserListView extends StatelessWidget {
           ),
         ],
       ),
-      body: Column(
+      body: ResponsiveWrapper(child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
@@ -233,7 +235,12 @@ class UserListView extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 6),
                                     Text('মালিক: ${user.proprietorName}'),
-                                    Text('ফোন: ${user.phone}'),
+                                    Row(
+                                      children: [
+                                        Text('ফোন: ${user.phone}'),
+                                        CallButton(phone: user.phone),
+                                      ],
+                                    ),
                                     if (user.address.isNotEmpty)
                                       Text(
                                         'ঠিকানা: ${user.address}',
@@ -344,7 +351,7 @@ class UserListView extends StatelessWidget {
             }),
           ),
         ],
-      ),
+      )),
     );
   }
 }

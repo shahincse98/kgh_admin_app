@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../controller/purchase_controller.dart';
 import '../model/purchase_entry_model.dart';
 import '../../product/model/product_model.dart';
+import '../../../widgets/responsive.dart';
 
 class PurchaseView extends GetView<PurchaseController> {
   const PurchaseView({super.key});
@@ -24,7 +25,7 @@ class PurchaseView extends GetView<PurchaseController> {
           ),
         ],
       ),
-      body: Obx(() {
+      body: ResponsiveWrapper(child: Obx(() {
         return Column(
           children: [
             _monthNav(context, scheme),
@@ -65,7 +66,7 @@ class PurchaseView extends GetView<PurchaseController> {
               ),
           ],
         );
-      }),
+      })),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddSheet(context),
         icon: const Icon(Icons.add),

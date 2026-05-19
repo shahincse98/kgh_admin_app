@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import '../controller/sr_panel_controller.dart';
 import '../../user/controller/user_controller.dart';
 import '../../user/model/user_model.dart';
+import '../../../widgets/call_button.dart';
+import '../../../widgets/responsive.dart';
 
 // Visit status options
 const _visitStatuses = [
@@ -104,7 +106,7 @@ class _AssignedShopList extends StatelessWidget {
           ),
         );
       }
-      return RefreshIndicator(
+      return ResponsiveWrapper(child: RefreshIndicator(
         onRefresh: () => ctrl.loadVisitLogs(),
         child: ListView.separated(
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 80),
@@ -113,7 +115,7 @@ class _AssignedShopList extends StatelessWidget {
           itemBuilder: (_, i) =>
               _AssignedShopCard(user: shops[i], ctrl: ctrl, scheme: scheme),
         ),
-      );
+      ));
     });
   }
 }
@@ -328,7 +330,7 @@ class _SearchableUserListState extends State<_SearchableUserList> {
   @override
   Widget build(BuildContext context) {
     final scheme = widget.scheme;
-    return Column(
+    return ResponsiveWrapper(child: Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
@@ -386,7 +388,7 @@ class _SearchableUserListState extends State<_SearchableUserList> {
           }),
         ),
       ],
-    );
+    ));
   }
 }
 
@@ -420,12 +422,12 @@ class _CustomerList extends StatelessWidget {
         ),
       );
     }
-    return ListView.separated(
+    return ResponsiveWrapper(child: ListView.separated(
       padding: const EdgeInsets.all(14),
       itemCount: users.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (_, i) => _UserCard(user: users[i], scheme: scheme),
-    );
+    ));
   }
 }
 
@@ -478,6 +480,7 @@ class _UserCard extends StatelessWidget {
                           style: TextStyle(
                               fontSize: 12,
                               color: scheme.onSurface.withAlpha(160))),
+                      CallButton(phone: user.phone),
                     ],
                   ),
                   if (user.address.isNotEmpty) ...[

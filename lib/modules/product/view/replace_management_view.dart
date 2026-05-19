@@ -5,6 +5,7 @@ import '../controller/replace_controller.dart';
 import '../model/global_replace_model.dart';
 import '../model/delivered_replace_model.dart';
 import '../model/product_model.dart';
+import '../../../widgets/responsive.dart';
 
 class ReplaceManagementView extends StatefulWidget {
   const ReplaceManagementView({super.key});
@@ -71,14 +72,14 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
                 )),
         ],
       ),
-      body: TabBarView(
+      body: ResponsiveWrapper(child: TabBarView(
         controller: _tabs,
         children: [
           _pendingTab(),
           _deliveredTab(),
           _productSummaryTab(),
         ],
-      ),
+      )),
     );
   }
 

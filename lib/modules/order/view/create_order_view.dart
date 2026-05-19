@@ -8,6 +8,7 @@ import '../../product/controller/product_controller.dart';
 import '../../product/model/product_model.dart';
 import '../controller/create_order_controller.dart';
 import '../controller/order_controller.dart';
+import '../../../widgets/responsive.dart';
 
 class CreateOrderView extends StatelessWidget {
   const CreateOrderView({super.key});
@@ -58,7 +59,7 @@ class CreateOrderView extends StatelessWidget {
         floatingActionButtonLocation:
             FloatingActionButtonLocation.centerFloat,
         floatingActionButton: CreateOrderFab(ctrl: ctrl),
-        body: Obx(() {
+        body: ResponsiveWrapper(child: Obx(() {
           switch (ctrl.currentStep.value) {
             case 0:
               return _CustomerStep(ctrl: ctrl, scheme: scheme, fmt: _fmt);
@@ -69,7 +70,7 @@ class CreateOrderView extends StatelessWidget {
             default:
               return const SizedBox();
           }
-        }),
+        })),
       ),
     );
   }

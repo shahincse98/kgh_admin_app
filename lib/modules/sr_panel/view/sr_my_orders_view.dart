@@ -6,6 +6,8 @@ import '../../order/controller/order_controller.dart';
 import '../../order/model/order_model.dart';
 import '../../order/view/order_details_view.dart';
 import 'sr_panel_shell.dart';
+import '../../../widgets/call_button.dart';
+import '../../../widgets/responsive.dart';
 
 class SrMyOrdersView extends StatefulWidget {
   const SrMyOrdersView({super.key});
@@ -159,7 +161,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
           ),
         ),
       ),
-      body: Column(
+      body: ResponsiveWrapper(child: Column(
         children: [
           _searchBar(scheme),
           _statusChips(),
@@ -229,7 +231,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
             }),
           ),
         ],
-      ),
+      )),
     );
   }
 
@@ -490,6 +492,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
                                             color: scheme.onSurface
                                                 .withAlpha(160)),
                                       ),
+                                      CallButton(phone: order.shopPhone),
                                     ],
                                   ),
                                 ],
@@ -511,8 +514,11 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
                           _chip(Icons.shopping_bag_outlined,
                               '${order.items.length} পণ্য', scheme),
                           if (order.userPhone.isNotEmpty)
-                            _chip(Icons.phone_rounded, order.userPhone,
-                                scheme),
+                            GestureDetector(
+                              onTap: () => launchPhone(order.userPhone),
+                              child: _chip(Icons.phone_rounded,
+                                  order.userPhone, scheme),
+                            ),
                           if (order.userDue > 0)
                             _chip(
                               Icons.account_balance_wallet_outlined,

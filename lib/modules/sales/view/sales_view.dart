@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controller/sales_controller.dart';
+import '../../../widgets/call_button.dart';
 
 class SalesView extends GetView<SalesController> {
   const SalesView({super.key});
@@ -406,9 +407,14 @@ class SalesView extends GetView<SalesController> {
             ],
           ),
           if (o.shopPhone.isNotEmpty)
-            Text(o.shopPhone,
-                style: TextStyle(
-                    fontSize: 11, color: Colors.grey.shade600)),
+            Row(
+              children: [
+                Text(o.shopPhone,
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.grey.shade600)),
+                CallButton(phone: o.shopPhone, size: 14),
+              ],
+            ),
           const SizedBox(height: 6),
           // Items list
           ...o.items.map((item) {

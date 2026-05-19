@@ -1,11 +1,11 @@
 {
-    "name": "kgh_admin_app",
-    "short_name": "kgh_admin_app",
+    "name": "KGH Admin Panel",
+    "short_name": "KGH Admin",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1565C0",
+    "theme_color": "#1565C0",
+    "description": "KGH Business Admin Panel",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

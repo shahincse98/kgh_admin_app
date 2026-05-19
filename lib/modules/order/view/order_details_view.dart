@@ -5,6 +5,8 @@ import '../model/order_model.dart';
 import '../controller/order_controller.dart';
 import '../../product/model/product_model.dart';
 import '../../product/controller/product_controller.dart';
+import '../../../widgets/call_button.dart';
+import '../../../widgets/responsive.dart';
 
 // ─── Editable item state ────────────────────────────────────────
 class _EditItem {
@@ -214,7 +216,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             ),
         ],
       ),
-      body: ListView(
+      body: ResponsiveWrapper(child: ListView(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
         children: [
           // ── Shop & order info ──────────────────────────────
@@ -237,7 +239,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           // ── Payment ───────────────────────────────────────
           _paymentCard(scheme),
         ],
-      ),
+      )),
     );
   }
 
@@ -298,6 +300,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                             Text(widget.order.shopPhone,
                                 style: const TextStyle(
                                     color: Colors.white70, fontSize: 13)),
+                            CallButton(
+                                phone: widget.order.shopPhone,
+                                color: Colors.white70),
                           ],
                         ),
                       ],
@@ -311,6 +316,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                             Text('ক্রেতা: ${widget.order.userPhone}',
                                 style: const TextStyle(
                                     color: Colors.white70, fontSize: 13)),
+                            CallButton(
+                                phone: widget.order.userPhone,
+                                color: Colors.white70),
                           ],
                         ),
                       ],
@@ -333,12 +341,29 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 ],
                 if (widget.order.shopPhone.isNotEmpty ||  
                     widget.order.userPhone.isNotEmpty) ...[  
-                  _infoRow(
-                    Icons.phone_android_rounded,
-                    widget.order.shopPhone.isNotEmpty
-                        ? widget.order.shopPhone
-                        : widget.order.userPhone,
-                    scheme,
+                  Row(
+                    children: [
+                      Icon(Icons.phone_android_rounded,
+                          size: 15,
+                          color: scheme.onSurface.withAlpha(140)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.order.shopPhone.isNotEmpty
+                              ? widget.order.shopPhone
+                              : widget.order.userPhone,
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: scheme.onSurface.withAlpha(180)),
+                        ),
+                      ),
+                      CallButton(
+                        phone: widget.order.shopPhone.isNotEmpty
+                            ? widget.order.shopPhone
+                            : widget.order.userPhone,
+                        size: 18,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 6),
                 ],

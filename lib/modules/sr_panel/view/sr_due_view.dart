@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../controller/sr_panel_controller.dart';
 import '../../user/controller/user_controller.dart';
 import '../../user/model/user_model.dart';
+import '../../../widgets/responsive.dart';
 
 class SrDueView extends StatefulWidget {
   const SrDueView({super.key});
@@ -45,7 +46,7 @@ class _SrDueViewState extends State<SrDueView> {
           ),
         ],
       ),
-      body: Obx(() {
+      body: ResponsiveWrapper(child: Obx(() {
         if (userCtrl.loading.value) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -271,7 +272,7 @@ class _SrDueViewState extends State<SrDueView> {
             ),
           ],
         );
-      }),
+      })),
     );
   }
 
