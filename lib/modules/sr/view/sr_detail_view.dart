@@ -7,6 +7,7 @@ import '../model/sr_model.dart';
 import '../model/sr_payment_model.dart';
 import '../../user/model/user_model.dart';
 import '../../user/controller/user_controller.dart';
+import '../../../widgets/call_button.dart';
 
 class SrDetailView extends StatefulWidget {
   const SrDetailView({super.key});
@@ -26,6 +27,7 @@ class _SrDetailViewState extends State<SrDetailView>
   final stats = Rxn<SrMonthStats>();
   final payments = <SrPaymentModel>[].obs;
   final loading = false.obs;
+  late final RxString selectedDeliveryDay;
 
   // Always-fresh sr derived from ctrl.srList so UI reflects mutations immediately
   SrModel get sr =>
@@ -42,7 +44,8 @@ class _SrDetailViewState extends State<SrDetailView>
     if (!ctrl.srList.any((s) => s.id == _srId)) {
       ctrl.srList.add(initial);
     }
-    _tabs = TabController(length: 3, vsync: this);
+    selectedDeliveryDay = _todayDayName().obs;
+    _tabs = TabController(length: 4, vsync: this);
     _loadMonth();
   }
 
@@ -88,6 +91,7 @@ class _SrDetailViewState extends State<SrDetailView>
             Tab(text: 'পারফরম্যান্স'),
             Tab(text: 'ভিজিট তালিকা'),
             Tab(text: 'কল তালিকা'),
+            Tab(text: 'ডেলিভারি তালিকা'),
           ],
         ),
       ),
@@ -97,6 +101,7 @@ class _SrDetailViewState extends State<SrDetailView>
           _performanceTab(context, scheme),
           _shopListTab(context, scheme, isCall: false),
           _shopListTab(context, scheme, isCall: true),
+          _deliveryListTab(context, scheme),
         ],
       ),
     );
@@ -1105,6 +1110,225 @@ class _SrDetailViewState extends State<SrDetailView>
           ],
         );
       }),
+    );
+  }
+
+  // ── Tab 4: Delivery list ─────────────────────────────────────────────────
+
+  static const _weekdays = [
+    'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার',
+    'শুক্রবার', 'শনিবার', 'রবিবার',
+  ];
+
+  String _todayDayName() => _weekdays[DateTime.now().weekday - 1];
+
+  Widget _deliveryListTab(BuildContext context, ColorScheme scheme) {
+    return Obx(() {
+      final currentSr = sr;
+      final day = selectedDeliveryDay.value;
+      final deliveryShops = ctrl
+          .getAssignedShops(currentSr)
+          .where((u) => currentSr.shopDeliveryDays[u.id] == day)
+          .toList();
+
+      return Scaffold(
+        backgroundColor: scheme.surfaceContainerLowest,
+        body: Column(
+          children: [
+            _daySelectorRow(scheme),
+            if (deliveryShops.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: scheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.local_shipping_rounded,
+                              size: 14, color: scheme.primary),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${deliveryShops.length}টি দোকানে ডেলিভারি',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: scheme.primary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: deliveryShops.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.local_shipping_outlined,
+                              size: 56,
+                              color: scheme.onSurface.withAlpha(60)),
+                          const SizedBox(height: 12),
+                          Text('$day — কোনো ডেলিভারি নেই',
+                              style: TextStyle(
+                                  color: scheme.onSurface.withAlpha(120))),
+                          const SizedBox(height: 6),
+                          Text(
+                            'ভিজিট তালিকায় দোকানের ডেলিভারি দিন নির্ধারণ করুন',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: scheme.onSurface.withAlpha(80)),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(14, 10, 14, 80),
+                      itemCount: deliveryShops.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 6),
+                      itemBuilder: (_, i) =>
+                          _deliveryShopTile(context, deliveryShops[i], scheme),
+                    ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _daySelectorRow(ColorScheme scheme) {
+    return Container(
+      color: scheme.surface,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+        child: Obx(() {
+          final selected = selectedDeliveryDay.value;
+          final today = _todayDayName();
+          return Row(
+            children: _weekdays.map((d) {
+              final isSelected = d == selected;
+              final isToday = d == today;
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: FilterChip(
+                  label: Text(d),
+                  selected: isSelected,
+                  onSelected: (_) => selectedDeliveryDay.value = d,
+                  avatar: isToday
+                      ? Icon(Icons.today_rounded,
+                          size: 14,
+                          color: isSelected
+                              ? scheme.onPrimary
+                              : scheme.primary)
+                      : null,
+                  selectedColor: scheme.primary,
+                  labelStyle: TextStyle(
+                    color: isSelected ? scheme.onPrimary : scheme.onSurface,
+                    fontWeight:
+                        isSelected ? FontWeight.w700 : FontWeight.normal,
+                    fontSize: 12,
+                  ),
+                ),
+              );
+            }).toList(),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _deliveryShopTile(
+      BuildContext context, UserModel u, ColorScheme scheme) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.local_shipping_rounded,
+                  color: scheme.primary, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    u.shopName.isNotEmpty ? u.shopName : u.proprietorName,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${u.proprietorName}  •  ${u.phone}',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurface.withAlpha(160)),
+                  ),
+                  if (u.address.isNotEmpty) ...[  
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_outlined,
+                            size: 12,
+                            color: scheme.onSurface.withAlpha(120)),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            u.address,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: scheme.onSurface.withAlpha(140)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (u.totalDue > 0) ...[  
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withAlpha(20),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Text(
+                        'বাকি: ৳${u.totalDue}',
+                        style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.red,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (u.phone.isNotEmpty) CallButton(phone: u.phone),
+          ],
+        ),
+      ),
     );
   }
 }
