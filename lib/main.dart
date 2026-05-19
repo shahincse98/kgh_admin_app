@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -16,6 +17,7 @@ String? srDocIdForStartup;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy(); // Remove # from web URLs
 
   await GetStorage.init();
 
@@ -26,7 +28,8 @@ void main() async {
   await _initFirestore();
 
   // Determine initial route based on role
-  final user = FirebaseAuth.instance.currentUser;
+  // authStateChanges().first waits for persistent auth state to restore from IndexedDB (web)
+  final user = await FirebaseAuth.instance.authStateChanges().first;
   if (user != null) {
     final db = FirebaseFirestore.instance;
     final srSnap = await db
