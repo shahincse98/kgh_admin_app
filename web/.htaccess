@@ -1,12 +1,13 @@
-Options -MultiViews
+Options -MultiViews +FollowSymLinks
 RewriteEngine On
+RewriteBase /
 
 # Serve existing files and directories directly
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
 # Route all other requests to index.html (SPA)
-RewriteRule ^ index.html [L]
+RewriteRule . /index.html [L]
 
 # Security headers
 <IfModule mod_headers.c>
