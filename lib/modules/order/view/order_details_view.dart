@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -59,6 +60,10 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   bool _saving = false;
   late num _currentPaid;
   DateTime? _scheduledDate;
+  String _assignedSrId = '';
+  String _assignedSrName = '';
+  List<Map<String, String>> _allSrs = [];
+  bool _loadingSrs = false;
 
   // Product search for adding new products in edit mode
   List<ProductModel> _allProducts = [];
@@ -89,10 +94,121 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         ? widget.order.status
         : 'pending';
     _scheduledDate = widget.order.scheduledDeliveryDate;
+    _assignedSrId = widget.order.deliveryAssignedSrId;
+    _assignedSrName = widget.order.deliveryAssignedSrName;
+    if (widget.srDocId == null) _loadSrs();
     _savedItems = List<OrderItem>.from(widget.order.items);
     _savedTotal = widget.order.totalAmount;
     _initEditItems();
     _loadProducts();
+  }
+
+  Future<void> _loadSrs() async {
+    if (_allSrs.isNotEmpty || _loadingSrs) return;
+    if (mounted) setState(() => _loadingSrs = true);
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('sr_staff')
+          .where('isActive', isEqualTo: true)
+          .get();
+      if (mounted) {
+        setState(() {
+          _allSrs = snap.docs
+              .map((d) => {
+                    'id': d.id,
+                    'name': (d.data()['name'] ?? '') as String,
+                    'phone': (d.data()['phone'] ?? '') as String,
+                  })
+              .toList();
+          _loadingSrs = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingSrs = false);
+    }
+  }
+
+  Future<void> _pickSrForDelivery(ColorScheme scheme) async {
+    if (_allSrs.isEmpty && !_loadingSrs) await _loadSrs();
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.55,
+          maxChildSize: 0.85,
+          builder: (_, scrollCtrl) => Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(children: [
+                  const Icon(Icons.person_search_rounded),
+                  const SizedBox(width: 10),
+                  Text('SR নির্বাচন করুন',
+                      style: Theme.of(ctx)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700)),
+                ]),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: _allSrs.isEmpty
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.builder(
+                        controller: scrollCtrl,
+                        itemCount: _allSrs.length,
+                        itemBuilder: (_, i) {
+                          final sr = _allSrs[i];
+                          final isSelected = sr['id'] == _assignedSrId;
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor:
+                                  scheme.primaryContainer,
+                              child: Text(
+                                (sr['name'] ?? '').isNotEmpty
+                                    ? sr['name']![0].toUpperCase()
+                                    : '?',
+                                style: TextStyle(
+                                    color: scheme.primary,
+                                    fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            title: Text(sr['name'] ?? '',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600)),
+                            subtitle: Text(sr['phone'] ?? ''),
+                            trailing: isSelected
+                                ? Icon(Icons.check_circle_rounded,
+                                    color: scheme.primary)
+                                : null,
+                            onTap: () async {
+                              Navigator.of(ctx).pop();
+                              final srId = sr['id']!;
+                              final srName = sr['name']!;
+                              await controller.assignDelivery(
+                                  widget.order.id, srId, srName,
+                                  _scheduledDate);
+                              if (mounted) {
+                                setState(() {
+                                  _assignedSrId = srId;
+                                  _assignedSrName = srName;
+                                });
+                              }
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _initEditItems() {
@@ -1451,83 +1567,157 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     final date = _scheduledDate;
     final dateFmt = DateFormat('dd MMMM yyyy');
     final hasDate = date != null;
+    final isAdmin = widget.srDocId == null;
+    final hasAssignedSr = _assignedSrId.isNotEmpty;
 
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Row(
+        child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: hasDate
-                    ? const Color(0xFF0891B2).withAlpha(20)
-                    : scheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(Icons.local_shipping_rounded,
-                  color: hasDate
-                      ? const Color(0xFF0891B2)
-                      : scheme.onSurface.withAlpha(120),
-                  size: 18),
+            // ── Date row ──────────────────────────────────────
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: hasDate
+                        ? const Color(0xFF0891B2).withAlpha(20)
+                        : scheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.local_shipping_rounded,
+                      color: hasDate
+                          ? const Color(0xFF0891B2)
+                          : scheme.onSurface.withAlpha(120),
+                      size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('নির্ধারিত ডেলিভারি তারিখ',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500)),
+                      Text(
+                        hasDate ? dateFmt.format(date) : 'তারিখ নির্ধারিত নেই',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: hasDate
+                                ? const Color(0xFF0891B2)
+                                : scheme.onSurface.withAlpha(160)),
+                      ),
+                    ],
+                  ),
+                ),
+                if (hasDate)
+                  IconButton(
+                    icon: const Icon(Icons.clear_rounded, size: 18),
+                    tooltip: 'তারিখ মুছুন',
+                    color: Colors.red.shade400,
+                    onPressed: () async {
+                      await controller.setScheduledDelivery(widget.order.id, null);
+                      setState(() => _scheduledDate = null);
+                    },
+                  ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: date ?? DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked == null) return;
+                    await controller.setScheduledDelivery(widget.order.id, picked);
+                    setState(() => _scheduledDate = picked);
+                  },
+                  icon: const Icon(Icons.calendar_month_rounded, size: 16),
+                  label: Text(hasDate ? 'পরিবর্তন' : 'তারিখ দিন'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    textStyle: const TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // ── SR assignment row (admin only) ─────────────────
+            if (isAdmin) ...[
+              const Divider(height: 20),
+              Row(
                 children: [
-                  const Text('নির্ধারিত ডেলিভারি তারিখ',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w500)),
-                  Text(
-                    hasDate ? dateFmt.format(date) : 'তারিখ নির্ধারিত নেই',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: hasDate
-                            ? const Color(0xFF0891B2)
-                            : scheme.onSurface.withAlpha(160)),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: hasAssignedSr
+                          ? const Color(0xFF7C3AED).withAlpha(20)
+                          : scheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.person_pin_rounded,
+                        color: hasAssignedSr
+                            ? const Color(0xFF7C3AED)
+                            : scheme.onSurface.withAlpha(120),
+                        size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('ডেলিভারি SR',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.w500)),
+                        Text(
+                          hasAssignedSr ? _assignedSrName : 'SR নির্বাচিত নেই',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                              color: hasAssignedSr
+                                  ? const Color(0xFF7C3AED)
+                                  : scheme.onSurface.withAlpha(160)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (hasAssignedSr)
+                    IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      tooltip: 'SR সরান',
+                      color: Colors.red.shade400,
+                      onPressed: () async {
+                        await controller.assignDelivery(
+                            widget.order.id, '', '', null);
+                        setState(() {
+                          _assignedSrId = '';
+                          _assignedSrName = '';
+                        });
+                      },
+                    ),
+                  OutlinedButton.icon(
+                    onPressed: () => _pickSrForDelivery(scheme),
+                    icon: Icon(_loadingSrs
+                        ? Icons.hourglass_top_rounded
+                        : Icons.person_search_rounded,
+                        size: 16),
+                    label: Text(hasAssignedSr ? 'পরিবর্তন' : 'SR দিন'),
+                    style: OutlinedButton.styleFrom(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
                   ),
                 ],
               ),
-            ),
-            // Both admin and SR can set/change the scheduled delivery date
-            if (hasDate)
-              IconButton(
-                icon: const Icon(Icons.clear_rounded, size: 18),
-                tooltip: 'তারিখ মুছুন',
-                color: Colors.red.shade400,
-                onPressed: () async {
-                  await controller.setScheduledDelivery(widget.order.id, null);
-                  setState(() => _scheduledDate = null);
-                },
-              ),
-            OutlinedButton.icon(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: date ?? DateTime.now(),
-                  firstDate: DateTime.now().subtract(const Duration(days: 1)),
-                  lastDate:
-                      DateTime.now().add(const Duration(days: 365)),
-                );
-                if (picked == null) return;
-                await controller.setScheduledDelivery(
-                    widget.order.id, picked);
-                setState(() => _scheduledDate = picked);
-              },
-              icon: const Icon(Icons.calendar_month_rounded, size: 16),
-              label: Text(hasDate ? 'পরিবর্তন' : 'তারিখ দিন'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
-                textStyle: const TextStyle(fontSize: 12),
-              ),
-            ),
+            ],
           ],
         ),
       ),

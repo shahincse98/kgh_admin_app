@@ -66,7 +66,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
         break;
       case 2:
         base = all
-            .where((o) => o.scheduledDeliveryDate != null)
+            .where((o) => o.deliveryAssignedSrId == srDocId)
             .toList()
           ..sort((a, b) {
             final da = DateTime(

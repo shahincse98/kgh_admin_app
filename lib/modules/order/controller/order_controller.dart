@@ -198,6 +198,49 @@ class OrderController extends GetxController {
         deliveredBySrId: o.deliveredBySrId,
         commissionConfirmed: o.commissionConfirmed,
         scheduledDeliveryDate: date,
+        deliveryAssignedSrId: o.deliveryAssignedSrId,
+        deliveryAssignedSrName: o.deliveryAssignedSrName,
+        userPhone: o.userPhone,
+        userDue: o.userDue,
+      );
+    }
+  }
+
+  Future<void> assignDelivery(
+      String orderId, String srId, String srName, DateTime? date) async {
+    final updates = <String, dynamic>{};
+    if (srId.isNotEmpty) {
+      updates['deliveryAssignedSrId'] = srId;
+      updates['deliveryAssignedSrName'] = srName;
+    } else {
+      updates['deliveryAssignedSrId'] = FieldValue.delete();
+      updates['deliveryAssignedSrName'] = FieldValue.delete();
+    }
+    if (date != null) {
+      updates['scheduledDeliveryDate'] = Timestamp.fromDate(date);
+    }
+    await _db.collection('orders').doc(orderId).update(updates);
+    final idx = orders.indexWhere((o) => o.id == orderId);
+    if (idx != -1) {
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: o.createdAt,
+        items: o.items,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        shopName: o.shopName,
+        shopAddress: o.shopAddress,
+        shopPhone: o.shopPhone,
+        userId: o.userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: o.deliveredBySrId,
+        commissionConfirmed: o.commissionConfirmed,
+        scheduledDeliveryDate: date ?? o.scheduledDeliveryDate,
+        deliveryAssignedSrId: srId,
+        deliveryAssignedSrName: srName,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );

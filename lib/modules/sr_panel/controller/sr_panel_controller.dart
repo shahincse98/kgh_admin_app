@@ -202,12 +202,26 @@ class SrPanelController extends GetxController {
     loadingOrders.value = true;
     ordersLoading.value = true;
     try {
-      final snap = await _db
+      // Orders placed by this SR
+      final snap1 = await _db
           .collection('orders')
           .where('orderedBy', isEqualTo: srDocId)
           .limit(50)
           .get();
-      final orders = snap.docs.map(OrderModel.fromFirestore).toList()
+      // Orders assigned to this SR for delivery
+      final snap2 = await _db
+          .collection('orders')
+          .where('deliveryAssignedSrId', isEqualTo: srDocId)
+          .limit(50)
+          .get();
+      // Merge and deduplicate by doc ID
+      final allDocs = <String, DocumentSnapshot>{};
+      for (final doc in [...snap1.docs, ...snap2.docs]) {
+        allDocs[doc.id] = doc;
+      }
+      final orders = allDocs.values
+          .map(OrderModel.fromFirestore)
+          .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       myOrders.value = orders;
     } finally {

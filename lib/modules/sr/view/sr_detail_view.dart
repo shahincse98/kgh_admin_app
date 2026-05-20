@@ -7,6 +7,8 @@ import '../model/sr_model.dart';
 import '../model/sr_payment_model.dart';
 import '../../user/model/user_model.dart';
 import '../../user/controller/user_controller.dart';
+import '../../order/controller/order_controller.dart';
+import '../../order/model/order_model.dart';
 import '../../../widgets/call_button.dart';
 
 class SrDetailView extends StatefulWidget {
@@ -45,7 +47,7 @@ class _SrDetailViewState extends State<SrDetailView>
       ctrl.srList.add(initial);
     }
     selectedDeliveryDay = _todayDayName().obs;
-    _tabs = TabController(length: 4, vsync: this);
+    _tabs = TabController(length: 5, vsync: this);
     _loadMonth();
   }
 
@@ -92,6 +94,7 @@ class _SrDetailViewState extends State<SrDetailView>
             Tab(text: 'ভিজিট তালিকা'),
             Tab(text: 'কল তালিকা'),
             Tab(text: 'ডেলিভারি তালিকা'),
+            Tab(text: 'ডেলিভারি অ্যাসাইন'),
           ],
         ),
       ),
@@ -102,6 +105,7 @@ class _SrDetailViewState extends State<SrDetailView>
           _shopListTab(context, scheme, isCall: false),
           _shopListTab(context, scheme, isCall: true),
           _deliveryListTab(context, scheme),
+          _assignDeliveryTab(context, scheme),
         ],
       ),
     );
@@ -1330,5 +1334,172 @@ class _SrDetailViewState extends State<SrDetailView>
         ),
       ),
     );
+  }
+
+  // ── Tab 5: Delivery Assign ───────────────────────────────────────────────
+
+  Widget _assignDeliveryTab(BuildContext context, ColorScheme scheme) {
+    final orderCtrl = Get.find<OrderController>();
+    return Obx(() {
+      final orders = orderCtrl.orders
+          .where((o) =>
+              o.status != 'delivered' && o.status != 'cancelled')
+          .toList();
+
+      if (orders.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.assignment_outlined,
+                  size: 56, color: scheme.onSurface.withAlpha(60)),
+              const SizedBox(height: 12),
+              Text('কোনো অর্ডার নেই',
+                  style: TextStyle(color: scheme.onSurface.withAlpha(120))),
+            ],
+          ),
+        );
+      }
+
+      return Scaffold(
+        backgroundColor: scheme.surfaceContainerLowest,
+        body: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 80),
+          itemCount: orders.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 6),
+          itemBuilder: (_, i) =>
+              _assignOrderTile(context, orders[i], scheme, orderCtrl),
+        ),
+      );
+    });
+  }
+
+  Widget _assignOrderTile(BuildContext context, OrderModel order,
+      ColorScheme scheme, OrderController orderCtrl) {
+    final isAssigned = order.deliveryAssignedSrId == sr.id;
+    final dateFmt = DateFormat('dd MMM');
+    final assignedDate = isAssigned && order.scheduledDeliveryDate != null
+        ? dateFmt.format(order.scheduledDeliveryDate!)
+        : null;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isAssigned
+                    ? const Color(0xFF7C3AED).withAlpha(20)
+                    : scheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                isAssigned
+                    ? Icons.local_shipping_rounded
+                    : Icons.store_outlined,
+                color: isAssigned
+                    ? const Color(0xFF7C3AED)
+                    : scheme.onSurface.withAlpha(120),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(order.shopName,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 14)),
+                  const SizedBox(height: 2),
+                  Text(
+                    '৳${_fmt.format(order.totalAmount.toInt())} • ${_statusLabel(order.status)}',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurface.withAlpha(160)),
+                  ),
+                  if (isAssigned && assignedDate != null) ...[
+                    const SizedBox(height: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7C3AED).withAlpha(18),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                            color:
+                                const Color(0xFF7C3AED).withAlpha(80)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle_rounded,
+                              size: 11, color: Color(0xFF7C3AED)),
+                          const SizedBox(width: 4),
+                          Text('অ্যাসাইন — $assignedDate',
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF7C3AED))),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (isAssigned)
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline_rounded,
+                    color: Colors.red, size: 20),
+                tooltip: 'অ্যাসাইন সরান',
+                onPressed: () async {
+                  await orderCtrl.assignDelivery(order.id, '', '', null);
+                },
+              )
+            else
+              TextButton.icon(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: order.scheduledDeliveryDate ?? DateTime.now(),
+                    firstDate:
+                        DateTime.now().subtract(const Duration(days: 1)),
+                    lastDate:
+                        DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (picked == null) return;
+                  await orderCtrl.assignDelivery(
+                      order.id, sr.id, sr.name, picked);
+                },
+                icon: const Icon(Icons.add_task_rounded, size: 16),
+                label: const Text('অ্যাসাইন', style: TextStyle(fontSize: 12)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'pending':
+        return 'অপেক্ষারত';
+      case 'approved':
+        return 'অনুমোদিত';
+      case 'delivered':
+        return 'ডেলিভারি হয়েছে';
+      case 'cancelled':
+        return 'বাতিল';
+      default:
+        return status;
+    }
   }
 }

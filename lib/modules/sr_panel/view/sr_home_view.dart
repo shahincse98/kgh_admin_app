@@ -406,6 +406,7 @@ class SrHomeView extends GetView<SrPanelController> {
       final today = DateTime.now();
       final todayDate = DateTime(today.year, today.month, today.day);
       final todayOrders = controller.myOrders.where((o) {
+        if (o.deliveryAssignedSrId != controller.srDocId) return false;
         if (o.scheduledDeliveryDate == null) return false;
         final d = o.scheduledDeliveryDate!;
         return DateTime(d.year, d.month, d.day) == todayDate &&

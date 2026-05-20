@@ -54,6 +54,8 @@ class OrderModel {
   final String deliveredBySrId;     // SR doc ID that delivered this order
   final bool commissionConfirmed;   // Admin confirmed delivery for commission
   final DateTime? scheduledDeliveryDate; // Admin-set delivery date for SR
+  final String deliveryAssignedSrId;   // SR assigned to deliver this order
+  final String deliveryAssignedSrName; // SR display name for delivery
   String userPhone;            // resolved after load from users collection
   int userDue;                 // resolved after load from users collection
 
@@ -73,6 +75,8 @@ class OrderModel {
     this.deliveredBySrId = '',
     this.commissionConfirmed = false,
     this.scheduledDeliveryDate,
+    this.deliveryAssignedSrId = '',
+    this.deliveryAssignedSrName = '',
     this.userPhone = '',
     this.userDue = 0,
   });
@@ -97,6 +101,8 @@ class OrderModel {
       scheduledDeliveryDate: data['scheduledDeliveryDate'] is Timestamp
           ? (data['scheduledDeliveryDate'] as Timestamp).toDate()
           : null,
+      deliveryAssignedSrId: data['deliveryAssignedSrId'] ?? '',
+      deliveryAssignedSrName: data['deliveryAssignedSrName'] ?? '',
       userPhone: data['userPhone'] ?? data['orderedByPhone'] ?? '',
       items: (data['items'] as List? ?? [])
           .map((e) => OrderItem.fromMap(e))
