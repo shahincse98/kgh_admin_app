@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controller/replace_controller.dart';
+import '../controller/product_controller.dart';
 import '../model/global_replace_model.dart';
 import '../model/delivered_replace_model.dart';
 import '../model/product_model.dart';
 import '../../../widgets/responsive.dart';
+import '../../user/controller/user_controller.dart';
+import '../../user/model/user_model.dart';
 
 class ReplaceManagementView extends StatefulWidget {
   const ReplaceManagementView({super.key});
@@ -20,11 +23,13 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
   late TabController _tabs;
   final _pendingSearch = ''.obs;
   final _deliveredSearch = ''.obs;
+  final _currentTab = 0.obs;
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 3, vsync: this);
+    _tabs.addListener(() => _currentTab.value = _tabs.index);
     rc.fetchAllReplaces();
   }
 
@@ -80,6 +85,13 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
           _productSummaryTab(),
         ],
       )),
+      floatingActionButton: Obx(() => _currentTab.value == 0
+          ? FloatingActionButton.extended(
+              onPressed: () => _showAddReplaceDialog(),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Replace যোগ করুন'),
+            )
+          : const SizedBox.shrink()),
     );
   }
 
@@ -499,6 +511,14 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
   // ══════════════════════════════════════════════
   // DIALOGS
   // ══════════════════════════════════════════════
+
+  void _showAddReplaceDialog() {
+    Get.dialog(
+      _AddReplaceDialog(rc: rc),
+      barrierDismissible: false,
+    );
+  }
+
   Future<void> _showDeliverDialog(GlobalReplaceModel r) async {
     final dateObs = DateTime.now().obs;
     final noteCtrl = TextEditingController(text: r.note);
@@ -710,4 +730,411 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
   int _countPendingItems(
           List<String> keys, Map<String, List<GlobalReplaceModel>> grouped) =>
       keys.fold(0, (sum, k) => sum + 1 + (grouped[k]?.length ?? 0));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADD REPLACE DIALOG — StatefulWidget (complex form state)
+// ═══════════════════════════════════════════════════════════════
+class _AddReplaceDialog extends StatefulWidget {
+  final ReplaceController rc;
+  const _AddReplaceDialog({required this.rc});
+
+  @override
+  State<_AddReplaceDialog> createState() => _AddReplaceDialogState();
+}
+
+class _AddReplaceDialogState extends State<_AddReplaceDialog> {
+  // Controllers
+  final _qtyCtrl = TextEditingController(text: '1');
+  final _noteCtrl = TextEditingController();
+  final _userSearch = TextEditingController();
+  final _productSearch = TextEditingController();
+
+  // State
+  UserModel? _selectedUser;
+  ProductModel? _selectedProduct;
+  DateTime _date = DateTime.now();
+  bool _saving = false;
+
+  String _fmt(DateTime d) => DateFormat('dd MMM yyyy').format(d);
+
+  @override
+  void dispose() {
+    _qtyCtrl.dispose();
+    _noteCtrl.dispose();
+    _userSearch.dispose();
+    _productSearch.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final uc = Get.find<UserController>();
+    final pc = Get.find<ProductController>();
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 620),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.swap_horiz_rounded, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text('নতুন Replace যোগ করুন',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  ),
+                  IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Get.back()),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── User/Shop selection ──────────────────────────────
+                    _sectionLabel('কাস্টমার / শপ *'),
+                    if (_selectedUser != null)
+                      _selectedChip(
+                        label: _selectedUser!.shopName,
+                        sublabel: _selectedUser!.proprietorName,
+                        onRemove: () => setState(() => _selectedUser = null),
+                        color: Colors.blue,
+                      )
+                    else ...[
+                      TextField(
+                        controller: _userSearch,
+                        decoration: const InputDecoration(
+                          hintText: 'শপের নাম লিখুন...',
+                          prefixIcon: Icon(Icons.search_rounded),
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      const SizedBox(height: 4),
+                      _buildUserList(uc),
+                    ],
+                    const SizedBox(height: 14),
+
+                    // ── Product selection ────────────────────────────────
+                    _sectionLabel('পণ্য *'),
+                    if (_selectedProduct != null)
+                      _selectedChip(
+                        label: _selectedProduct!.name,
+                        sublabel: 'স্টক: ${_selectedProduct!.stock}',
+                        onRemove: () => setState(() => _selectedProduct = null),
+                        color: Colors.deepOrange,
+                      )
+                    else ...[
+                      TextField(
+                        controller: _productSearch,
+                        decoration: const InputDecoration(
+                          hintText: 'পণ্যের নাম লিখুন...',
+                          prefixIcon: Icon(Icons.search_rounded),
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                      const SizedBox(height: 4),
+                      _buildProductList(pc),
+                    ],
+                    const SizedBox(height: 14),
+
+                    // ── Quantity ─────────────────────────────────────────
+                    _sectionLabel('পরিমাণ *'),
+                    TextField(
+                      controller: _qtyCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        hintText: '1',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                        suffixText: 'টি',
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // ── Date ─────────────────────────────────────────────
+                    _sectionLabel('তারিখ'),
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _date,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) setState(() => _date = picked);
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_today_rounded,
+                                size: 18, color: Colors.grey),
+                            const SizedBox(width: 8),
+                            Text(_fmt(_date),
+                                style: const TextStyle(fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // ── Note ─────────────────────────────────────────────
+                    _sectionLabel('মন্তব্য (ঐচ্ছিক)'),
+                    TextField(
+                      controller: _noteCtrl,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        hintText: 'সমস্যার বিবরণ...',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      child: const Text('বাতিল'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.check_rounded, size: 18),
+                      label: const Text('যোগ করুন'),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white),
+                      onPressed: _saving ? null : _submit,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserList(UserController uc) {
+    final q = _userSearch.text.toLowerCase();
+    final filtered = uc.users
+        .where((u) =>
+            q.isEmpty ||
+            u.shopName.toLowerCase().contains(q) ||
+            u.proprietorName.toLowerCase().contains(q))
+        .take(6)
+        .toList();
+    if (filtered.isEmpty) return const SizedBox.shrink();
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 160),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListView.separated(
+        shrinkWrap: true,
+        itemCount: filtered.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (_, i) {
+          final u = filtered[i];
+          return ListTile(
+            dense: true,
+            leading: const Icon(Icons.storefront_rounded, size: 20),
+            title: Text(u.shopName,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            subtitle: Text(u.proprietorName,
+                style: const TextStyle(fontSize: 11)),
+            onTap: () {
+              setState(() {
+                _selectedUser = u;
+                _userSearch.clear();
+              });
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildProductList(ProductController pc) {
+    final q = _productSearch.text.toLowerCase();
+    final filtered = pc.products
+        .where((p) =>
+            !p.isInternal &&
+            (q.isEmpty || p.name.toLowerCase().contains(q)))
+        .take(6)
+        .toList();
+    if (filtered.isEmpty) return const SizedBox.shrink();
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 160),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListView.separated(
+        shrinkWrap: true,
+        itemCount: filtered.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (_, i) {
+          final p = filtered[i];
+          return ListTile(
+            dense: true,
+            leading: p.images.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.network(p.images.first,
+                        width: 32, height: 32, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.inventory_2_rounded, size: 20)),
+                  )
+                : const Icon(Icons.inventory_2_rounded, size: 20),
+            title: Text(p.name,
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            subtitle: Text('স্টক: ${p.stock} • ${p.productCategory}',
+                style: const TextStyle(fontSize: 11)),
+            onTap: () {
+              setState(() {
+                _selectedProduct = p;
+                _productSearch.clear();
+              });
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _selectedChip({
+    required String label,
+    required String sublabel,
+    required VoidCallback onRemove,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_rounded, color: color, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                        fontSize: 13)),
+                Text(sublabel,
+                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, size: 18),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: onRemove,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(text,
+          style: const TextStyle(
+              fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey)),
+    );
+  }
+
+  Future<void> _submit() async {
+    if (_selectedUser == null) {
+      Get.snackbar('ত্রুটি', 'কাস্টমার/শপ সিলেক্ট করুন',
+          backgroundColor: Colors.red, colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+    if (_selectedProduct == null) {
+      Get.snackbar('ত্রুটি', 'পণ্য সিলেক্ট করুন',
+          backgroundColor: Colors.red, colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+    final qty = int.tryParse(_qtyCtrl.text);
+    if (qty == null || qty <= 0) {
+      Get.snackbar('ত্রুটি', 'সঠিক পরিমাণ দিন',
+          backgroundColor: Colors.red, colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await widget.rc.addReplace(
+        userId: _selectedUser!.id,
+        shopName: _selectedUser!.shopName,
+        productId: _selectedProduct!.id,
+        productName: _selectedProduct!.name,
+        quantity: qty,
+        note: _noteCtrl.text.trim(),
+        date: _date,
+      );
+      Get.back();
+      Get.snackbar(
+        '✓ যোগ হয়েছে',
+        '${_selectedProduct!.name} (${qty}টি) — ${_selectedUser!.shopName}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.shade700,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 }

@@ -72,15 +72,24 @@ class ExpenseController extends GetxController {
     required String note,
     required DateTime date,
   }) async {
-    await _db.collection('expenses').add({
+    final expDate = DateTime(date.year, date.month, date.day);
+    final ref = await _db.collection('expenses').add({
       'type': type,
       'amount': amount,
       'note': note,
-      'date':
-          Timestamp.fromDate(DateTime(date.year, date.month, date.day)),
+      'date': Timestamp.fromDate(expDate),
       'createdAt': FieldValue.serverTimestamp(),
     });
-    await loadExpenses();
+    // Insert locally — avoid full Firestore re-fetch
+    final newExpense = ExpenseModel(
+      id: ref.id,
+      type: type,
+      amount: amount,
+      note: note,
+      date: expDate,
+      createdAt: DateTime.now(),
+    );
+    expenses.insert(0, newExpense);
   }
 
   Future<void> deleteExpense(String id) async {

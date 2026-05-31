@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/order_model.dart';
@@ -18,6 +19,8 @@ class OrderController extends GetxController {
   DocumentSnapshot? lastDoc;
   final int limit = 20;
 
+  StreamSubscription? _pendingSub;
+
   @override
   void onInit() {
     super.onInit();
@@ -32,13 +35,21 @@ class OrderController extends GetxController {
   }
 
   void _listenPendingCount() {
-    _db
+    _pendingSub?.cancel();
+    _pendingSub = _db
         .collection('orders')
         .where('status', isEqualTo: 'pending')
         .snapshots()
-        .listen((snap) {
-      pendingCount.value = snap.docs.length;
-    });
+        .listen(
+          (snap) { pendingCount.value = snap.docs.length; },
+          onError: (_) {},
+        );
+  }
+
+  @override
+  void onClose() {
+    _pendingSub?.cancel();
+    super.onClose();
   }
 
   Future<void> fetchOrders({bool loadMore = false}) async {
@@ -279,12 +290,31 @@ class OrderController extends GetxController {
       'items': items.map((i) => i.toMap()).toList(),
       'totalAmount': newTotal,
     });
-    // Refresh local list
+    // Update locally — no Firestore re-fetch needed
     final idx = orders.indexWhere((o) => o.id == id);
     if (idx != -1) {
-      lastDoc = null;
-      hasMore.value = true;
-      await fetchOrders();
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: o.createdAt,
+        items: items,
+        status: o.status,
+        totalAmount: newTotal.toDouble(),
+        paidAmount: o.paidAmount,
+        shopName: o.shopName,
+        shopAddress: o.shopAddress,
+        shopPhone: o.shopPhone,
+        userId: o.userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: o.deliveredBySrId,
+        commissionConfirmed: o.commissionConfirmed,
+        scheduledDeliveryDate: o.scheduledDeliveryDate,
+        deliveryAssignedSrId: o.deliveryAssignedSrId,
+        deliveryAssignedSrName: o.deliveryAssignedSrName,
+        userPhone: o.userPhone,
+        userDue: o.userDue,
+      );
     }
   }
 
@@ -325,10 +355,31 @@ class OrderController extends GetxController {
       'paidAt': FieldValue.serverTimestamp(),
     });
 
-    // Refresh local list
+    // Update locally — no Firestore re-fetch needed
     final idx = orders.indexWhere((o) => o.id == orderId);
     if (idx != -1) {
-      await fetchOrders();
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: o.createdAt,
+        items: o.items,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        shopName: o.shopName,
+        shopAddress: o.shopAddress,
+        shopPhone: o.shopPhone,
+        userId: o.userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: srDocId,
+        commissionConfirmed: true,
+        scheduledDeliveryDate: o.scheduledDeliveryDate,
+        deliveryAssignedSrId: o.deliveryAssignedSrId,
+        deliveryAssignedSrName: o.deliveryAssignedSrName,
+        userPhone: o.userPhone,
+        userDue: o.userDue,
+      );
     }
   }
 }

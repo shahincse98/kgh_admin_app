@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 import '../controller/purchase_controller.dart';
 import '../model/purchase_entry_model.dart';
 import '../../product/model/product_model.dart';
+import '../../supplier/controller/supplier_controller.dart';
+import '../../supplier/model/supplier_model.dart';
+import '../../supplier/view/supplier_list_view.dart';
 import '../../../widgets/responsive.dart';
 
 class PurchaseView extends GetView<PurchaseController> {
@@ -415,10 +418,10 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
   static final _fmt = NumberFormat('#,##,##0');
 
   final _searchCtrl = TextEditingController();
-  final _supplierCtrl = TextEditingController();
   late DateTime _date;
   List<ProductModel> _suggestions = [];
   final List<_CartItem> _cart = [];
+  SupplierModel? _selectedSupplier;
   bool _saving = false;
 
   @override
@@ -430,7 +433,6 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
   @override
   void dispose() {
     _searchCtrl.dispose();
-    _supplierCtrl.dispose();
     for (final item in _cart) {
       item.dispose();
     }
@@ -523,7 +525,8 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                   'note': '',
                 })
             .toList(),
-        supplier: _supplierCtrl.text.trim(),
+        supplierId: _selectedSupplier?.id ?? '',
+        supplier: _selectedSupplier?.shopName ?? '',
         date: _date,
       );
       if (mounted) Navigator.of(context).pop();
@@ -631,22 +634,102 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: TextField(
-                          controller: _supplierCtrl,
-                          decoration: InputDecoration(
-                            labelText: 'Supplier',
-                            contentPadding:
-                                const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 12),
-                            border: OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(10)),
-                          ),
-                        ),
-                      ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  // ── Supplier Picker ──
+                  InkWell(
+                    onTap: () async {
+                      try {
+                        Get.find<SupplierController>();
+                      } catch (_) {
+                        Get.lazyPut<SupplierController>(
+                            () => SupplierController());
+                      }
+                      final picked =
+                          await showModalBottomSheet<SupplierModel>(
+                        context: context,
+                        isScrollControlled: true,
+                        useSafeArea: true,
+                        shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(20))),
+                        builder: (_) => const SupplierPickerSheet(),
+                      );
+                      if (picked != null) {
+                        setState(() => _selectedSupplier = picked);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: _selectedSupplier != null
+                                ? scheme.primary
+                                : scheme.outlineVariant),
+                        borderRadius: BorderRadius.circular(10),
+                        color: _selectedSupplier != null
+                            ? scheme.primaryContainer.withAlpha(60)
+                            : null,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.store_rounded,
+                            size: 18,
+                            color: _selectedSupplier != null
+                                ? scheme.primary
+                                : scheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _selectedSupplier != null
+                                ? Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _selectedSupplier!.shopName,
+                                        style: TextStyle(
+                                            fontWeight:
+                                                FontWeight.w700,
+                                            fontSize: 13,
+                                            color: scheme.primary),
+                                      ),
+                                      if (_selectedSupplier!
+                                          .ownerName.isNotEmpty)
+                                        Text(
+                                          _selectedSupplier!.ownerName,
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color:
+                                                  scheme.onSurfaceVariant),
+                                        ),
+                                    ],
+                                  )
+                                : Text(
+                                    'সাপ্লাইয়ার বেছে নিন',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: scheme.onSurfaceVariant),
+                                  ),
+                          ),
+                          if (_selectedSupplier != null)
+                            GestureDetector(
+                              onTap: () => setState(
+                                  () => _selectedSupplier = null),
+                              child: Icon(Icons.close_rounded,
+                                  size: 18,
+                                  color: scheme.onSurfaceVariant),
+                            )
+                          else
+                            Icon(Icons.arrow_drop_down_rounded,
+                                color: scheme.onSurfaceVariant),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 14),
 

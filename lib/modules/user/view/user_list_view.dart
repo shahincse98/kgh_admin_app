@@ -68,7 +68,7 @@ class UserListView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: controller.fetchUsers,
+            onPressed: () => controller.fetchUsers(force: true),
           ),
         ],
       ),
@@ -163,7 +163,7 @@ class UserListView extends StatelessWidget {
               }
 
               return RefreshIndicator(
-                onRefresh: controller.fetchUsers,
+                onRefresh: () => controller.fetchUsers(force: true),
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(12, 2, 12, 16),
                   itemCount: list.length,

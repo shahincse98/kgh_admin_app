@@ -3,6 +3,10 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controller/sales_controller.dart';
 import '../../../widgets/call_button.dart';
+import '../../sales_plan/view/sales_plan_view.dart';
+import '../../sales_plan/controller/sales_plan_controller.dart';
+import '../../product/controller/product_controller.dart';
+import '../../user/controller/user_controller.dart';
 
 class SalesView extends GetView<SalesController> {
   const SalesView({super.key});
@@ -19,6 +23,22 @@ class SalesView extends GetView<SalesController> {
         title: const Text('Sales Analytics'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.assignment_turned_in_rounded),
+            tooltip: 'বিক্রয় পরিকল্পনা',
+            onPressed: () {
+              if (!Get.isRegistered<SalesPlanController>()) {
+                Get.put(SalesPlanController());
+              }
+              if (!Get.isRegistered<ProductController>()) {
+                Get.put(ProductController());
+              }
+              if (!Get.isRegistered<UserController>()) {
+                Get.put(UserController());
+              }
+              Get.to(() => const SalesPlanView());
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: controller.loadData,
           ),
@@ -27,7 +47,8 @@ class SalesView extends GetView<SalesController> {
       body: Obx(() {
         return Column(
           children: [
-            _monthNav(context, scheme),
+            _modeToggle(context, scheme),
+            _periodNav(context, scheme),
             if (controller.loading.value)
               const Expanded(
                   child: Center(child: CircularProgressIndicator()))
@@ -37,19 +58,21 @@ class SalesView extends GetView<SalesController> {
                   onRefresh: controller.loadData,
                   child: controller.allOrders.isEmpty
                       ? ListView(
-                          children: const [
-                            SizedBox(height: 80),
+                          children: [
+                            const SizedBox(height: 80),
                             Center(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.bar_chart_rounded,
+                                  const Icon(Icons.bar_chart_rounded,
                                       size: 56, color: Colors.grey),
-                                  SizedBox(height: 12),
+                                  const SizedBox(height: 12),
                                   Text(
-                                      'এই মাসে কোনো delivered order নেই',
-                                      style:
-                                          TextStyle(color: Colors.grey)),
+                                    controller.viewMode.value == 'weekly'
+                                        ? 'এই সপ্তাহে কোনো delivered order নেই'
+                                        : 'এই মাসে কোনো delivered order নেই',
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
                                 ],
                               ),
                             ),
@@ -77,6 +100,91 @@ class SalesView extends GetView<SalesController> {
           ],
         );
       }),
+    );
+  }
+
+  // ── Mode Toggle ──────────────────────────────────────────────
+
+  Widget _modeToggle(BuildContext context, ColorScheme scheme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(
+            bottom: BorderSide(
+                color: scheme.outlineVariant.withAlpha(80), width: 0.8)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(
+                value: 'monthly',
+                label: Text('মাসিক'),
+                icon: Icon(Icons.calendar_month_rounded, size: 16),
+              ),
+              ButtonSegment(
+                value: 'weekly',
+                label: Text('সাপ্তাহিক'),
+                icon: Icon(Icons.calendar_view_week_rounded, size: 16),
+              ),
+            ],
+            selected: {controller.viewMode.value},
+            onSelectionChanged: (v) => controller.setMode(v.first),
+            style: const ButtonStyle(
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _periodNav(BuildContext context, ColorScheme scheme) {
+    if (controller.viewMode.value == 'weekly') {
+      return _weekNav(context, scheme);
+    }
+    return _monthNav(context, scheme);
+  }
+
+  Widget _weekNav(BuildContext context, ColorScheme scheme) {
+    final ws = controller.selectedWeekStart.value;
+    final we = ws.add(const Duration(days: 6));
+    final now = DateTime.now();
+    final nowWeek = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: now.weekday - 1));
+    final isCurrentWeek = !ws.isBefore(nowWeek);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        border: Border(
+            bottom: BorderSide(color: scheme.outlineVariant, width: 1)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left_rounded),
+            onPressed: controller.prevWeek,
+          ),
+          Text(
+            '${DateFormat('dd MMM').format(ws)} – ${DateFormat('dd MMM, yyyy').format(we)}',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          IconButton(
+            icon: Icon(Icons.chevron_right_rounded,
+                color: isCurrentWeek ? Colors.grey : null),
+            onPressed: isCurrentWeek ? null : controller.nextWeek,
+          ),
+        ],
+      ),
     );
   }
 

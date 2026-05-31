@@ -56,7 +56,7 @@ class HomeView extends GetView<HomeController> {
         }
         final data = controller.dashboard.value;
         return RefreshIndicator(
-          onRefresh: controller.refreshDashboard,
+          onRefresh: () => controller.refreshDashboard(force: true),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final width = constraints.maxWidth;
@@ -170,6 +170,12 @@ class HomeView extends GetView<HomeController> {
                             const Color(0xFF6366F1), () => Get.toNamed(AppRoutes.purchases)),
                         _actionButton('Sales', Icons.bar_chart_rounded,
                             const Color(0xFF16A34A), () => Get.toNamed(AppRoutes.sales)),
+                        _actionButton('বিক্রয় পরিকল্পনা', Icons.assignment_turned_in_rounded,
+                            const Color(0xFFD97706), () => Get.toNamed(AppRoutes.salesPlan)),
+                        _actionButton('সাপ্লাইয়ার', Icons.store_mall_directory_rounded,
+                            const Color(0xFF0891B2), () => Get.toNamed(AppRoutes.suppliers)),
+                        _actionButton('রিপ্লেস', Icons.swap_horiz_rounded,
+                            const Color(0xFF7C3AED), () => Get.toNamed(AppRoutes.replaceManagement)),
                       ],
                     ),
                     const SizedBox(height: 22),
@@ -190,7 +196,7 @@ class HomeView extends GetView<HomeController> {
         );
       }),
       floatingActionButton: FloatingActionButton(
-        onPressed: controller.refreshDashboard,
+        onPressed: () => controller.refreshDashboard(force: true),
         tooltip: 'Refresh',
         child: const Icon(Icons.refresh),
       ),
@@ -439,6 +445,22 @@ Drawer _drawer() {
           onTap: () {
             Get.back();
             Get.toNamed(AppRoutes.purchases);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.store_mall_directory_rounded),
+          title: const Text('সাপ্লাইয়ার'),
+          onTap: () {
+            Get.back();
+            Get.toNamed(AppRoutes.suppliers);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.swap_horiz_rounded),
+          title: const Text('রিপ্লেস ম্যানেজমেন্ট'),
+          onTap: () {
+            Get.back();
+            Get.toNamed(AppRoutes.replaceManagement);
           },
         ),
         ListTile(

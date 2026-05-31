@@ -7,6 +7,7 @@ class PurchaseEntryModel {
   final int quantity;
   final double unitPrice;
   final double totalAmount;
+  final String supplierId;
   final String supplier;
   final String note;
   final DateTime date;
@@ -19,6 +20,7 @@ class PurchaseEntryModel {
     required this.quantity,
     required this.unitPrice,
     required this.totalAmount,
+    required this.supplierId,
     required this.supplier,
     required this.note,
     required this.date,
@@ -35,6 +37,7 @@ class PurchaseEntryModel {
       quantity: (data['quantity'] as num?)?.toInt() ?? 0,
       unitPrice: (data['unitPrice'] as num?)?.toDouble() ?? 0,
       totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0,
+      supplierId: (data['supplierId'] as String?) ?? '',
       supplier: (data['supplier'] as String?) ?? '',
       note: (data['note'] as String?) ?? '',
       date: (data['date'] as Timestamp).toDate(),

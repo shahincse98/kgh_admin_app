@@ -22,10 +22,12 @@ class ProductModel {
   final int totalOrders;
   final int monthlySold;
   final int replaceCount;
+  final int replaceStock;
 
   final bool isAvailable;
   final bool isHot;
   final bool isNew;
+  final bool isInternal;
 
   final List<String> images;
   final List<String> productDetails;
@@ -53,9 +55,11 @@ class ProductModel {
     required this.totalOrders,
     required this.monthlySold,
     required this.replaceCount,
+    required this.replaceStock,
     required this.isAvailable,
     required this.isHot,
     required this.isNew,
+    required this.isInternal,
     required this.images,
     required this.productDetails,
     required this.quantityDiscount,
@@ -84,9 +88,11 @@ class ProductModel {
       totalOrders: (map['totalOrders'] as num?)?.toInt() ?? 0,
       monthlySold: (map['monthlySold'] as num?)?.toInt() ?? 0,
       replaceCount: (map['replaceCount'] as num?)?.toInt() ?? 0,
+      replaceStock: (map['replaceStock'] as num?)?.toInt() ?? 0,
       isAvailable: map['isAvailable'] ?? false,
       isHot: map['isHot'] ?? false,
       isNew: map['isNew'] ?? false,
+      isInternal: map['isInternal'] ?? false,
       images: (map['images'] as List?)?.map((e) => e.toString()).toList() ?? [],
       productDetails:
           (map['productDetails'] as List?)?.map((e) => e.toString()).toList() ??
@@ -116,9 +122,11 @@ class ProductModel {
       'totalOrders': totalOrders,
       'monthlySold': monthlySold,
       'replaceCount': replaceCount,
+      'replaceStock': replaceStock,
       'isAvailable': isAvailable,
       'isHot': isHot,
       'isNew': isNew,
+      'isInternal': isInternal,
       'images': images,
       'productDetails': productDetails,
       'quantityDiscount': quantityDiscount,
@@ -148,9 +156,11 @@ class ProductModel {
       totalOrders: (map['totalOrders'] as num?)?.toInt() ?? totalOrders,
       monthlySold: (map['monthlySold'] as num?)?.toInt() ?? monthlySold,
       replaceCount: (map['replaceCount'] as num?)?.toInt() ?? replaceCount,
+      replaceStock: (map['replaceStock'] as num?)?.toInt() ?? replaceStock,
       isAvailable: map['isAvailable'] ?? isAvailable,
       isHot: map['isHot'] ?? isHot,
       isNew: map['isNew'] ?? isNew,
+      isInternal: map['isInternal'] ?? isInternal,
       images: map['images'] != null
           ? List<String>.from(map['images'])
           : images,

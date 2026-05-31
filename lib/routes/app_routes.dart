@@ -12,5 +12,9 @@ abstract class AppRoutes {
   static const srDetail = '/sr/detail';
   static const purchases = '/purchases';
   static const sales = '/sales';
+  static const salesPlan = '/sales/plan';
   static const srPanel = '/sr-panel';
+  static const suppliers = '/suppliers';
+  static const supplierDetail = '/suppliers/detail';
+  static const replaceManagement = '/replace';
 }

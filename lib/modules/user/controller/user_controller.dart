@@ -12,17 +12,21 @@ class UserController extends GetxController {
   final loading = true.obs;
   final searchText = ''.obs;
 
+  bool _loadedOnce = false;
+
   @override
   void onInit() {
     super.onInit();
     fetchUsers();
   }
 
-  Future<void> fetchUsers() async {
+  Future<void> fetchUsers({bool force = false}) async {
+    if (_loadedOnce && !force) return;
     loading.value = true;
     final snap = await _db.collection('users').get();
     users.value =
         snap.docs.map((e) => UserModel.fromFirestore(e)).toList();
+    _loadedOnce = true;
     loading.value = false;
   }
 

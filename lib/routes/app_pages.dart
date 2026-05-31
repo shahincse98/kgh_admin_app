@@ -21,10 +21,17 @@ import 'package:kgh_admin_app/modules/purchase/view/purchase_view.dart';
 import 'package:kgh_admin_app/modules/purchase/controller/purchase_controller.dart';
 import 'package:kgh_admin_app/modules/sales/view/sales_view.dart';
 import 'package:kgh_admin_app/modules/sales/controller/sales_controller.dart';
+import 'package:kgh_admin_app/modules/sales_plan/view/sales_plan_view.dart';
+import 'package:kgh_admin_app/modules/sales_plan/controller/sales_plan_controller.dart';
+import 'package:kgh_admin_app/modules/product/controller/product_controller.dart';
+import 'package:kgh_admin_app/modules/supplier/view/supplier_list_view.dart';
+import 'package:kgh_admin_app/modules/supplier/view/supplier_detail_view.dart';
+import 'package:kgh_admin_app/modules/supplier/controller/supplier_controller.dart';
+import 'package:kgh_admin_app/modules/replace/view/admin_replace_view.dart';
+import 'package:kgh_admin_app/modules/replace/controller/admin_replace_controller.dart';
 import '../modules/home/view/home_view.dart';
 import '../modules/home/controller/home_controller.dart';
 import '../modules/product/view/product_list_view.dart';
-import '../modules/product/controller/product_controller.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -58,14 +65,14 @@ class AppPages {
       name: AppRoutes.products,
       page: () => const ProductListView(),
       binding: BindingsBuilder(() {
-        Get.lazyPut<ProductController>(() => ProductController());
+        Get.lazyPut<ProductController>(() => ProductController(), fenix: true);
       }),
     ),
     GetPage(
       name: AppRoutes.users,
       page: () => const UserListView(),
       binding: BindingsBuilder(() {
-        Get.lazyPut<UserController>(() => UserController());
+        Get.lazyPut<UserController>(() => UserController(), fenix: true);
       }),
     ),
     GetPage(
@@ -108,6 +115,7 @@ class AppPages {
       page: () => const PurchaseView(),
       binding: BindingsBuilder(() {
         Get.lazyPut<PurchaseController>(() => PurchaseController());
+        Get.lazyPut<SupplierController>(() => SupplierController(), fenix: true);
       }),
     ),
     GetPage(
@@ -118,8 +126,41 @@ class AppPages {
       }),
     ),
     GetPage(
+      name: AppRoutes.salesPlan,
+      page: () => const SalesPlanView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<SalesPlanController>(() => SalesPlanController());
+        Get.lazyPut<ProductController>(() => ProductController(), fenix: true);
+        Get.lazyPut<UserController>(() => UserController(), fenix: true);
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.replaceManagement,
+      page: () => const AdminReplaceView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<AdminReplaceController>(
+            () => AdminReplaceController(), fenix: true);
+        Get.lazyPut<ProductController>(() => ProductController(), fenix: true);
+        Get.lazyPut<SupplierController>(() => SupplierController(), fenix: true);
+      }),
+    ),
+    GetPage(
       name: AppRoutes.srPanel,
       page: () => const SrPanelShell(),
+    ),
+    GetPage(
+      name: AppRoutes.suppliers,
+      page: () => const SupplierListView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<SupplierController>(() => SupplierController(), fenix: true);
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.supplierDetail,
+      page: () => const SupplierDetailView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<SupplierController>(() => SupplierController(), fenix: true);
+      }),
     ),
   ];
 }

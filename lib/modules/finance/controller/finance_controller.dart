@@ -134,11 +134,29 @@ class FinanceController extends GetxController {
   }
 
   Future<void> _loadData() async {
+    // Limit to last 13 months to avoid downloading entire order history.
+    // If the user selects a custom range beyond this, they can still trigger
+    // a force-reload — but for typical usage this window is sufficient.
+    final cutoff = Timestamp.fromDate(
+        DateTime(DateTime.now().year - 1, DateTime.now().month));
+
     final results = await Future.wait([
       _db.collection('products').get(),
-      _db.collection('orders').orderBy('createdAt', descending: true).get(),
-      _db.collection('expenses').orderBy('date', descending: true).get(),
-      _db.collection('stock_purchases').orderBy('date', descending: true).get(),
+      _db
+          .collection('orders')
+          .where('createdAt', isGreaterThanOrEqualTo: cutoff)
+          .orderBy('createdAt', descending: true)
+          .get(),
+      _db
+          .collection('expenses')
+          .where('date', isGreaterThanOrEqualTo: cutoff)
+          .orderBy('date', descending: true)
+          .get(),
+      _db
+          .collection('stock_purchases')
+          .where('date', isGreaterThanOrEqualTo: cutoff)
+          .orderBy('date', descending: true)
+          .get(),
     ]);
 
     final products = results[0].docs;

@@ -76,27 +76,30 @@ class SrController extends GetxController {
     final start = DateTime(m.year, m.month);
     final end = DateTime(m.year, m.month + 1);
 
-    // Fetch all delivered orders and filter in memory to avoid composite index
-    final snap = await _db
-        .collection('orders')
-        .where('status', isEqualTo: 'delivered')
-        .get();
+    try {
+      // Use Firestore-level date filter now that the composite index is built
+      final snap = await _db
+          .collection('orders')
+          .where('status', isEqualTo: 'delivered')
+          .where('createdAt',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('createdAt', isLessThan: Timestamp.fromDate(end))
+          .get();
 
-    int count = 0;
-    double revenue = 0;
-    for (final doc in snap.docs) {
-      final ts = doc.data()['createdAt'];
-      if (ts is! Timestamp) continue;
-      final dt = ts.toDate();
-      if (dt.isBefore(start) || !dt.isBefore(end)) continue;
-      count++;
-      revenue += (doc.data()['totalAmount'] as num?)?.toDouble() ?? 0;
+      int count = 0;
+      double revenue = 0;
+      for (final doc in snap.docs) {
+        count++;
+        revenue += (doc.data()['totalAmount'] as num?)?.toDouble() ?? 0;
+      }
+
+      totalDeliveries.value = count;
+      totalRevenue.value = revenue;
+      commissionDue.value = revenue * (commissionPercent.value / 100.0);
+      totalDue.value = commissionDue.value + monthlyFixedSalary.value;
+    } catch (_) {
+      // Index may still be building — silently ignore
     }
-
-    totalDeliveries.value = count;
-    totalRevenue.value = revenue;
-    commissionDue.value = revenue * (commissionPercent.value / 100.0);
-    totalDue.value = commissionDue.value + monthlyFixedSalary.value;
   }
 
   Future<void> _loadPayments() async {

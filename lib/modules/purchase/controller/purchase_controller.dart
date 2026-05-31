@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import '../model/purchase_entry_model.dart';
 import '../../product/model/product_model.dart';
+import '../../product/controller/product_controller.dart';
 
 class PurchaseController extends GetxController {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -18,16 +19,29 @@ class PurchaseController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadProducts();
+    _loadProductsFromCache();
     loadEntries();
   }
 
-  Future<void> loadProducts() async {
+  /// Reuse already-loaded products from ProductController to avoid
+  /// a redundant full-collection fetch on every purchase page visit.
+  void _loadProductsFromCache() {
     try {
-      final snap = await _db
-          .collection('products')
-          .orderBy('name')
-          .get();
+      final pc = Get.find<ProductController>();
+      if (pc.products.isNotEmpty) {
+        final sorted = List<ProductModel>.from(pc.products)
+          ..sort((a, b) => a.name.compareTo(b.name));
+        allProducts.assignAll(sorted);
+        return;
+      }
+    } catch (_) {}
+    // Fallback: fetch independently if ProductController isn't loaded
+    _fetchProductsFromFirestore();
+  }
+
+  Future<void> _fetchProductsFromFirestore() async {
+    try {
+      final snap = await _db.collection('products').orderBy('name').get();
       allProducts.assignAll(
           snap.docs.map((d) => ProductModel.fromFirestore(d)).toList());
     } catch (_) {}
@@ -93,15 +107,15 @@ class PurchaseController extends GetxController {
     required String productId,
     required int quantity,
     required double unitPrice,
+    required String supplierId,
     required String supplier,
     required String note,
     required DateTime date,
   }) async {
     final total = quantity * unitPrice;
+    final entryDate = DateTime(date.year, date.month, date.day);
 
     final batch = _db.batch();
-
-    // Write purchase entry
     final ref = _db.collection('stock_purchases').doc();
     batch.set(ref, {
       'productName': productName,
@@ -109,42 +123,61 @@ class PurchaseController extends GetxController {
       'quantity': quantity,
       'unitPrice': unitPrice,
       'totalAmount': total,
+      'supplierId': supplierId,
       'supplier': supplier,
       'note': note,
-      'date': Timestamp.fromDate(
-          DateTime(date.year, date.month, date.day)),
+      'date': Timestamp.fromDate(entryDate),
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // If productId given, also bump stock
     if (productId.isNotEmpty) {
       batch.update(_db.collection('products').doc(productId),
           {'stock': FieldValue.increment(quantity)});
     }
 
     await batch.commit();
-    await loadEntries();
+
+    // Insert locally — avoid full re-fetch
+    final newEntry = PurchaseEntryModel(
+      id: ref.id,
+      productName: productName,
+      productId: productId,
+      quantity: quantity,
+      unitPrice: unitPrice,
+      totalAmount: total,
+      supplierId: supplierId,
+      supplier: supplier,
+      note: note,
+      date: entryDate,
+      createdAt: DateTime.now(),
+    );
+    entries.insert(0, newEntry);
+    _buildDailyMap(entries);
   }
 
   Future<void> addMultipleEntries({
     required List<Map<String, dynamic>> items,
+    required String supplierId,
     required String supplier,
     required DateTime date,
   }) async {
     final batch = _db.batch();
-    final dateTs = Timestamp.fromDate(
-        DateTime(date.year, date.month, date.day));
+    final entryDate = DateTime(date.year, date.month, date.day);
+    final dateTs = Timestamp.fromDate(entryDate);
+    final newEntries = <PurchaseEntryModel>[];
 
     for (final item in items) {
       final ref = _db.collection('stock_purchases').doc();
       final qty = item['quantity'] as int;
       final price = item['unitPrice'] as double;
+      final total = qty * price;
       batch.set(ref, {
         'productName': item['productName'],
         'productId': item['productId'],
         'quantity': qty,
         'unitPrice': price,
-        'totalAmount': qty * price,
+        'totalAmount': total,
+        'supplierId': supplierId,
         'supplier': supplier,
         'note': item['note'] ?? '',
         'date': dateTs,
@@ -157,10 +190,26 @@ class PurchaseController extends GetxController {
           {'stock': FieldValue.increment(qty)},
         );
       }
+      newEntries.add(PurchaseEntryModel(
+        id: ref.id,
+        productName: item['productName'] as String,
+        productId: productId,
+        quantity: qty,
+        unitPrice: price,
+        totalAmount: total,
+        supplierId: supplierId,
+        supplier: supplier,
+        note: item['note'] ?? '',
+        date: entryDate,
+        createdAt: DateTime.now(),
+      ));
     }
 
     await batch.commit();
-    await loadEntries();
+
+    // Insert locally — avoid full re-fetch
+    entries.insertAll(0, newEntries);
+    _buildDailyMap(entries);
   }
 
   Future<void> deleteEntry(PurchaseEntryModel e) async {

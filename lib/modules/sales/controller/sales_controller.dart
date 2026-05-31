@@ -37,6 +37,35 @@ class SalesController extends GetxController {
   final loading = false.obs;
   final selectedMonth = DateTime.now().obs;
 
+  // ── Weekly mode ──────────────────────────────────────────────
+  final viewMode = 'monthly'.obs; // 'monthly' | 'weekly'
+  final selectedWeekStart = _weekStartOf(DateTime.now()).obs;
+
+  static DateTime _weekStartOf(DateTime d) {
+    final date = DateTime(d.year, d.month, d.day);
+    return date.subtract(Duration(days: date.weekday - 1)); // Monday
+  }
+
+  void setMode(String mode) {
+    if (viewMode.value == mode) return;
+    viewMode.value = mode;
+    loadData();
+  }
+
+  void prevWeek() {
+    selectedWeekStart.value =
+        selectedWeekStart.value.subtract(const Duration(days: 7));
+    loadData();
+  }
+
+  void nextWeek() {
+    final next = selectedWeekStart.value.add(const Duration(days: 7));
+    final nowWeek = _weekStartOf(DateTime.now());
+    if (next.isAfter(nowWeek)) return; // don't go beyond current week
+    selectedWeekStart.value = next;
+    loadData();
+  }
+
   final allOrders = <SalesOrderRow>[].obs;
   final dayRows = <SalesDayRow>[].obs;
 
@@ -77,9 +106,15 @@ class SalesController extends GetxController {
   Future<void> loadData() async {
     loading.value = true;
     try {
-      final m = selectedMonth.value;
-      final start = DateTime(m.year, m.month);
-      final end = DateTime(m.year, m.month + 1);
+      final DateTime start, end;
+      if (viewMode.value == 'weekly') {
+        start = selectedWeekStart.value;
+        end = start.add(const Duration(days: 7));
+      } else {
+        final m = selectedMonth.value;
+        start = DateTime(m.year, m.month);
+        end = DateTime(m.year, m.month + 1);
+      }
 
       final snap = await _db
           .collection('orders')

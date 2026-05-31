@@ -18,29 +18,44 @@ class HomeController extends GetxController {
 
   final loading = false.obs;
 
+  bool _loadedOnce = false;
+  DateTime? _lastLoaded;
+
   @override
   void onInit() {
     super.onInit();
     refreshDashboard();
   }
 
-  Future<void> refreshDashboard() async {
+  Future<void> refreshDashboard({bool force = false}) async {
+    final now = DateTime.now();
+    // Skip re-fetch if loaded within last 3 minutes (unless forced)
+    if (!force &&
+        _loadedOnce &&
+        _lastLoaded != null &&
+        now.difference(_lastLoaded!) < const Duration(minutes: 3)) {
+      return;
+    }
     loading.value = true;
     try {
-      final results = await Future.wait([
-        _db.collection('orders').get(),
-        _db.collection('products').get(),
-        _db.collection('users').get(),
+      // Use count() aggregation for counts (avoids downloading full docs)
+      // Run all queries in parallel
+      final orderSnapFuture = _db.collection('orders').get();
+      final aggFutures = Future.wait([
+        _db.collection('products').count().get(),
+        _db.collection('users').count().get(),
         _db
             .collection('orders')
             .where('status', isEqualTo: 'pending')
+            .count()
             .get(),
       ]);
 
-      final ordersSnap = results[0];
-      final productsSnap = results[1];
-      final usersSnap = results[2];
-      final pendingSnap = results[3];
+      final ordersSnap = await orderSnapFuture;
+      final aggs = await aggFutures;
+      final productsCount = aggs[0].count ?? 0;
+      final usersCount = aggs[1].count ?? 0;
+      final pendingCount = aggs[2].count ?? 0;
 
       num totalRevenue = 0;
       final monthly = <int, double>{};
@@ -61,11 +76,14 @@ class HomeController extends GetxController {
 
       dashboard.value = DashboardModel(
         totalOrders: ordersSnap.docs.length,
-        totalProducts: productsSnap.docs.length,
+        totalProducts: productsCount,
         totalRevenue: totalRevenue.toInt(),
-        totalUsers: usersSnap.docs.length,
-        pendingOrders: pendingSnap.docs.length,
+        totalUsers: usersCount,
+        pendingOrders: pendingCount,
       );
+
+      _loadedOnce = true;
+      _lastLoaded = DateTime.now();
     } catch (_) {
       // silent fail
     } finally {

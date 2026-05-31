@@ -5,7 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../controller/product_controller.dart';
 import '../model/product_model.dart';
+import 'product_form_view.dart';
 import 'replace_management_view.dart';
+import 'stock_management_view.dart';
+import '../../replace/view/admin_replace_view.dart';
+import '../../replace/controller/admin_replace_controller.dart';
 
 class ProductListView extends GetView<ProductController> {
   const ProductListView({super.key});
@@ -23,6 +27,24 @@ class ProductListView extends GetView<ProductController> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _addProductDialog(),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'আরো',
+            onSelected: (val) {
+              if (val == 'normalize') _confirmNormalize();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'normalize',
+                child: Row(
+                  children: [
+                    Icon(Icons.auto_fix_high_rounded, size: 18),
+                    SizedBox(width: 10),
+                    Text('সব ডকুমেন্ট ঠিক করুন'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -63,33 +85,78 @@ class ProductListView extends GetView<ProductController> {
   }
 
   void _showStockList(BuildContext context) {
-    final all = controller.products;
-    final sorted = [...all]..sort((a, b) => a.name.compareTo(b.name));
-    final text = sorted
-        .map((p) => '${p.name}: ${p.stock}')
-        .join('\n');
+    Get.to(() => const StockManagementView());
+  }
 
-    _showCopyableList(
-      context: context,
-      title: 'Stock List (${sorted.length})',
-      text: text,
-      rows: sorted
-          .map((p) => _ListRow(
-                label: p.name,
-                sublabel: p.productCategory,
-                value: '${p.stock}',
-                valueColor: p.stock < 0
-                    ? Colors.red
-                    : p.stock == 0
-                        ? Colors.orange
-                        : Colors.green.shade700,
-              ))
-          .toList(),
+  void _confirmNormalize() {
+    Get.dialog(
+      AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.auto_fix_high_rounded, size: 22),
+            SizedBox(width: 8),
+            Text('সব ডকুমেন্ট ঠিক করুন'),
+          ],
+        ),
+        content: const Text(
+          'সব product document-এ missing fields যোগ হবে '
+          '(যেমন: isInternal, createdAt ইত্যাদি)। '
+          'যেসব documents ইতিমধ্যে সম্পূর্ণ সেগুলো পরিবর্তন হবে না।',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Get.back(), child: const Text('বাতিল')),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.auto_fix_high_rounded, size: 16),
+            label: const Text('শুরু করুন'),
+            onPressed: () async {
+              Get.back();
+              Get.dialog(
+                const AlertDialog(
+                  content: Row(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(width: 16),
+                      Text('Processing...'),
+                    ],
+                  ),
+                ),
+                barrierDismissible: false,
+              );
+              try {
+                final updated = await controller.normalizeAllProducts();
+                Get.back();
+                Get.snackbar(
+                  'সম্পন্ন!',
+                  updated == 0
+                      ? 'সব ডকুমেন্ট ইতিমধ্যে সম্পূর্ণ ছিল।'
+                      : '$updated টি ডকুমেন্ট আপডেট হয়েছে।',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor:
+                      updated == 0 ? Colors.blue : Colors.green,
+                  colorText: Colors.white,
+                  duration: const Duration(seconds: 4),
+                );
+              } catch (e) {
+                Get.back();
+                Get.snackbar('ত্রুটি', e.toString(),
+                    backgroundColor: Colors.red,
+                    colorText: Colors.white);
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 
   void _showReplaceList(BuildContext context) {
-    Get.to(() => const ReplaceManagementView());
+    try {
+      Get.find<AdminReplaceController>();
+    } catch (_) {
+      Get.lazyPut<AdminReplaceController>(() => AdminReplaceController());
+    }
+    Get.to(() => const AdminReplaceView());
   }
 
   void _showCopyableList({
@@ -225,14 +292,17 @@ class ProductListView extends GetView<ProductController> {
       }
 
       final list = controller.filteredProducts;
+      final replaceStockList = controller.products
+          .where((p) => p.replaceStock > 0)
+          .toList()
+        ..sort((a, b) => b.replaceStock.compareTo(a.replaceStock));
 
-      if (list.isEmpty) {
+      if (list.isEmpty && replaceStockList.isEmpty) {
         return const Center(child: Text('No products found'));
       }
 
       return RefreshIndicator(
-        onRefresh: () =>
-            controller.fetchProducts(forceRefresh: true),
+        onRefresh: () => controller.fetchProducts(forceRefresh: true),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final columns = constraints.maxWidth >= 1200
@@ -243,109 +313,301 @@ class ProductListView extends GetView<ProductController> {
                         ? 2
                         : 1;
 
-            return GridView.builder(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 16),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: columns == 1 ? 2.2 : 1.25,
-              ),
-              itemCount: list.length,
-              itemBuilder: (context, index) {
-                final p = list[index];
-
-                return Card(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: () => _editProductDialog(p),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  p.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ),
-                              Switch(
-                                value: p.isAvailable,
-                                onChanged: (v) => controller.updateProduct(
-                                  p.id,
-                                  {'isAvailable': v},
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: p.images.isNotEmpty
-                                      ? Image.network(
-                                          p.images.first,
-                                          width: 78,
-                                          height: 78,
-                                          fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => Container(
-                                            width: 78,
-                                            height: 78,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .surfaceContainerHighest,
-                                            alignment: Alignment.center,
-                                            child: const Icon(Icons.image_not_supported_rounded),
-                                          ),
-                                        )
-                                      : Container(
-                                          width: 78,
-                                          height: 78,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .surfaceContainerHighest,
-                                          alignment: Alignment.center,
-                                          child: const Icon(Icons.image_rounded),
-                                        ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
+            return CustomScrollView(
+              slivers: [
+                // ── Replace Stock Section ──
+                if (replaceStockList.isNotEmpty) ...
+                  _replaceStockSliver(replaceStockList, columns, context),
+                // ── Regular Products ──
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 16),
+                  sliver: SliverGrid(
+                    gridDelegate:
+                        SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: columns == 1 ? 2.2 : 1.25,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final p = list[index];
+                        return Card(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(18),
+                            onTap: () => _editProductDialog(p),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Row(
                                     children: [
-                                      _line('Category', p.productCategory),
-                                      _line('Stock', p.stock.toString()),
-                                      _line('Buy', '৳${p.purchasePrice}'),
-                                      _line('Wholesale', '৳${p.wholesalePrice}'),
-                                      _line('Retail', '৳${p.retailPrice}'),
+                                      Expanded(
+                                        child: Text(
+                                          p.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                      ),
+                                      Switch(
+                                        value: p.isAvailable,
+                                        onChanged: (v) =>
+                                            controller.updateProduct(
+                                          p.id,
+                                          {'isAvailable': v},
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 8),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          child: p.images.isNotEmpty
+                                              ? Image.network(
+                                                  p.images.first,
+                                                  width: 78,
+                                                  height: 78,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context,
+                                                          error,
+                                                          stackTrace) =>
+                                                      Container(
+                                                    width: 78,
+                                                    height: 78,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .surfaceContainerHighest,
+                                                    alignment:
+                                                        Alignment.center,
+                                                    child: const Icon(Icons
+                                                        .image_not_supported_rounded),
+                                                  ),
+                                                )
+                                              : Container(
+                                                  width: 78,
+                                                  height: 78,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .surfaceContainerHighest,
+                                                  alignment: Alignment.center,
+                                                  child: const Icon(
+                                                      Icons.image_rounded),
+                                                ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              _line('Category',
+                                                  p.productCategory),
+                                              _line('Stock',
+                                                  p.stock.toString()),
+                                              _line(
+                                                  'Buy', '৳${p.purchasePrice}'),
+                                              _line('Wholesale',
+                                                  '৳${p.wholesalePrice}'),
+                                              _line(
+                                                  'Retail', '৳${p.retailPrice}'),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
-                      ),
+                        );
+                      },
+                      childCount: list.length,
                     ),
                   ),
-                );
-              },
+                ),
+              ],
             );
           },
         ),
       );
     });
+  }
+
+  List<Widget> _replaceStockSliver(
+      List<ProductModel> list, int columns, BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return [
+      SliverToBoxAdapter(
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.teal.withAlpha(18),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.teal.withAlpha(50)),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.swap_horiz_rounded,
+                  color: Colors.teal, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'রিপ্লেস প্রডাক্ট',
+                  style: TextStyle(
+                      color: Colors.teal,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.teal,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${list.fold(0, (s, p) => s + p.replaceStock)}টি',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      SliverPadding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        sliver: SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: columns == 1 ? 2.8 : 1.4,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final p = list[index];
+              return Card(
+                color: Colors.teal.withAlpha(12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                      color: Colors.teal.withAlpha(60), width: 1),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => _editProductDialog(p),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: p.images.isNotEmpty
+                              ? Image.network(
+                                  p.images.first,
+                                  width: 56,
+                                  height: 56,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    width: 56,
+                                    height: 56,
+                                    color: Colors.teal.withAlpha(20),
+                                    child: const Icon(
+                                        Icons.inventory_2_rounded,
+                                        color: Colors.teal),
+                                  ),
+                                )
+                              : Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color: Colors.teal.withAlpha(20),
+                                    borderRadius:
+                                        BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                      Icons.swap_horiz_rounded,
+                                      color: Colors.teal),
+                                ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                p.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(p.productCategory,
+                                  style: const TextStyle(
+                                      fontSize: 11, color: Colors.grey)),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding:
+                                        const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal,
+                                      borderRadius:
+                                          BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'রিপ্লেস: ${p.replaceStock}টি',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text('স্টক: ${p.stock}',
+                                      style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+            childCount: list.length,
+          ),
+        ),
+      ),
+    ];
   }
 
   Widget _line(String label, String value) {
@@ -360,143 +622,13 @@ class ProductListView extends GetView<ProductController> {
     );
   }
 
-  // ✏️ EDIT PRODUCT (Retail Added)
+  // ✏️ EDIT PRODUCT
   void _editProductDialog(ProductModel p) {
-    final name = TextEditingController(text: p.name);
-    final cat = TextEditingController(text: p.productCategory);
-    final stock = TextEditingController(text: p.stock.toString());
-    final buy = TextEditingController(text: p.purchasePrice.toString());
-    final wholesale =
-        TextEditingController(text: p.wholesalePrice.toString());
-    final retail =
-        TextEditingController(text: p.retailPrice.toString());
-
-    Get.defaultDialog(
-      title: 'Edit Product',
-      content: SingleChildScrollView(
-        child: Column(
-          children: [
-            _tf(name, 'Name'),
-            _tf(cat, 'Category'),
-            _tf(stock, 'Stock', number: true),
-            _tf(buy, 'Purchase Price', number: true),
-            _tf(wholesale, 'Wholesale Price', number: true),
-            _tf(retail, 'Retail Price', number: true),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red),
-              icon: const Icon(Icons.delete),
-              label: const Text('Delete'),
-              onPressed: () async {
-                await controller.deleteProduct(p.id);
-                Get.back();
-              },
-            ),
-          ],
-        ),
-      ),
-      textConfirm: 'Save',
-      onConfirm: () async {
-        await controller.updateProduct(p.id, {
-          'name': name.text,
-          'productCategory': cat.text,
-          'stock': int.tryParse(stock.text) ?? p.stock,
-          'purchasePrice':
-              int.tryParse(buy.text) ?? p.purchasePrice,
-          'wholesalePrice':
-              int.tryParse(wholesale.text) ?? p.wholesalePrice,
-          'retailPrice':
-              int.tryParse(retail.text) ?? p.retailPrice,
-        });
-        Get.back();
-      },
-    );
+    Get.to(() => ProductFormView(product: p));
   }
 
   void _addProductDialog() {
-    final name = TextEditingController();
-    final cat = TextEditingController();
-    final brand = TextEditingController();
-    final stock = TextEditingController(text: '0');
-    final buy = TextEditingController(text: '0');
-    final wholesale = TextEditingController(text: '0');
-    final retail = TextEditingController(text: '0');
-
-    Get.defaultDialog(
-      title: 'নতুন Product যোগ করুন',
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _tf(name, 'Product Name *'),
-            _tf(cat, 'Category *'),
-            _tf(brand, 'Brand'),
-            _tf(stock, 'Stock', number: true),
-            _tf(buy, 'Purchase Price', number: true),
-            _tf(wholesale, 'Wholesale Price', number: true),
-            _tf(retail, 'Retail Price', number: true),
-          ],
-        ),
-      ),
-      textCancel: 'বাতিল',
-      textConfirm: 'যোগ করুন',
-      onConfirm: () async {
-        if (name.text.trim().isEmpty || cat.text.trim().isEmpty) {
-          Get.snackbar('Error', 'Name ও Category আবশ্যক',
-              backgroundColor: Colors.red,
-              colorText: Colors.white);
-          return;
-        }
-        await controller.addProduct({
-          'name': name.text.trim(),
-          'productCategory': cat.text.trim(),
-          'brandName': brand.text.trim(),
-          'stock': int.tryParse(stock.text) ?? 0,
-          'purchasePrice': int.tryParse(buy.text) ?? 0,
-          'wholesalePrice': int.tryParse(wholesale.text) ?? 0,
-          'retailPrice': int.tryParse(retail.text) ?? 0,
-          'isAvailable': true,
-          'isHot': false,
-          'isNew': true,
-          'images': [],
-          'productDetails': [],
-          'quantityDiscount': {},
-          'pendingStock': 0,
-          'totalSold': 0,
-          'totalOrders': 0,
-          'monthlySold': 0,
-          'replaceCount': 0,
-          'productCode': '',
-          'productModel': '',
-          'productVideo': '',
-          'unit': '',
-          'warranty': '',
-        });
-        Get.back();
-        Get.snackbar('সফল', 'Product সফলভাবে যোগ হয়েছে',
-            backgroundColor: Colors.green,
-            colorText: Colors.white);
-      },
-    );
-  }
-
-  Widget _tf(TextEditingController c, String l,
-      {bool number = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: TextField(
-        controller: c,
-        keyboardType:
-            number ? TextInputType.number : TextInputType.text,
-        decoration: InputDecoration(
-          labelText: l,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      ),
-    );
+    Get.to(() => const ProductFormView());
   }
 }
 
