@@ -176,6 +176,14 @@ class HomeView extends GetView<HomeController> {
                             const Color(0xFF0891B2), () => Get.toNamed(AppRoutes.suppliers)),
                         _actionButton('রিপ্লেস', Icons.swap_horiz_rounded,
                             const Color(0xFF7C3AED), () => Get.toNamed(AppRoutes.replaceManagement)),
+                        _actionButton('স্টক আউট / Dispatch', Icons.local_shipping_rounded,
+                            const Color(0xFFD97706), () => Get.toNamed(AppRoutes.dispatch)),
+                        _actionButton('Dispatch History', Icons.receipt_long_rounded,
+                            const Color(0xFFD97706), () => Get.toNamed(AppRoutes.dispatchHistory)),
+                        _actionButton('ম্যানুয়াল স্টক আউট', Icons.shopping_cart_checkout_rounded,
+                            const Color(0xFFDC2626), () => Get.toNamed(AppRoutes.manualStockOut)),
+                        _actionButton('স্টক ইন', Icons.add_shopping_cart_rounded,
+                            const Color(0xFF16A34A), () => Get.toNamed(AppRoutes.stockIn)),
                       ],
                     ),
                     const SizedBox(height: 22),
@@ -461,6 +469,38 @@ Drawer _drawer() {
           onTap: () {
             Get.back();
             Get.toNamed(AppRoutes.replaceManagement);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.local_shipping, color: Color(0xFFD97706)),
+          title: const Text('স্টক আউট / Dispatch'),
+          onTap: () {
+            Get.back();
+            Get.toNamed(AppRoutes.dispatch);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.receipt_long, color: Color(0xFFD97706)),
+          title: const Text('Dispatch History'),
+          onTap: () {
+            Get.back();
+            Get.toNamed(AppRoutes.dispatchHistory);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.shopping_cart_checkout, color: Color(0xFFDC2626)),
+          title: const Text('ম্যানুয়াল স্টক আউট'),
+          onTap: () {
+            Get.back();
+            Get.toNamed(AppRoutes.manualStockOut);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.add_shopping_cart, color: Color(0xFF16A34A)),
+          title: const Text('স্টক ইন'),
+          onTap: () {
+            Get.back();
+            Get.toNamed(AppRoutes.stockIn);
           },
         ),
         ListTile(

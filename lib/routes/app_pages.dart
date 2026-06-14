@@ -3,6 +3,15 @@ import 'package:kgh_admin_app/modules/order/controller/order_controller.dart';
 import 'package:kgh_admin_app/modules/order/controller/create_order_controller.dart';
 import 'package:kgh_admin_app/modules/order/view/order_list_view.dart';
 import 'package:kgh_admin_app/modules/order/view/create_order_view.dart';
+import 'package:kgh_admin_app/modules/dispatch/controller/dispatch_controller.dart';
+import 'package:kgh_admin_app/modules/dispatch/view/dispatch_view.dart';
+import 'package:kgh_admin_app/modules/dispatch/view/dispatch_history_view.dart';
+import 'package:kgh_admin_app/modules/manual_stock_out/controller/manual_stock_out_controller.dart';
+import 'package:kgh_admin_app/modules/manual_stock_out/view/manual_stock_out_view.dart';
+import 'package:kgh_admin_app/modules/manual_stock_out/view/manual_stock_out_history_view.dart';
+import 'package:kgh_admin_app/modules/stock_in/controller/stock_in_controller.dart';
+import 'package:kgh_admin_app/modules/stock_in/view/stock_in_view.dart';
+import 'package:kgh_admin_app/modules/stock_in/view/stock_in_history_view.dart';
 import 'package:kgh_admin_app/modules/user/view/user_list_view.dart';
 import 'package:kgh_admin_app/modules/user/controller/user_controller.dart';
 import 'package:kgh_admin_app/modules/auth/view/login_view.dart';
@@ -59,6 +68,45 @@ class AppPages {
       page: () => const CreateOrderView(),
       binding: BindingsBuilder(() {
         Get.lazyPut<CreateOrderController>(() => CreateOrderController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.dispatch,
+      page: () => const DispatchView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<DispatchController>(() => DispatchController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.dispatchHistory,
+      page: () => const DispatchHistoryView(),
+    ),
+    GetPage(
+      name: AppRoutes.manualStockOut,
+      page: () => const ManualStockOutView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<ManualStockOutController>(() => ManualStockOutController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.manualStockOutHistory,
+      page: () => const ManualStockOutHistoryView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<ManualStockOutController>(() => ManualStockOutController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.stockIn,
+      page: () => const StockInView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<StockInController>(() => StockInController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.stockInHistory,
+      page: () => const StockInHistoryView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<StockInController>(() => StockInController());
       }),
     ),
     GetPage(

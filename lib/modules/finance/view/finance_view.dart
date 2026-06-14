@@ -48,6 +48,11 @@ class FinanceView extends GetView<FinanceController> {
                       Icons.inventory_2_rounded),
                   const SizedBox(height: 10),
                   _stockValuationRow(context, w),
+                    const SizedBox(height: 14),
+                    _sectionHeader(context, 'রিপ্লেস স্টক মূল্যায়ন (বর্তমান)',
+                      Icons.swap_horiz_rounded),
+                    const SizedBox(height: 10),
+                    _replaceValuationRow(context, w),
                   const SizedBox(height: 20),
 
                   // ── Period filter ──
@@ -219,7 +224,7 @@ class FinanceView extends GetView<FinanceController> {
                       style:
                           const TextStyle(fontSize: 12, color: Colors.grey)),
                   Text(
-                    '৳ ${_fmtInt(value)}',
+                    '৳ ${_fmt(value)}',
                     style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -231,6 +236,99 @@ class FinanceView extends GetView<FinanceController> {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _replaceValuationRow(BuildContext context, double width) {
+    final cards = [
+      _replaceCard(
+        context,
+        'At Shop রিপ্লেস',
+        controller.replaceAtShopWholesaleValue.value,
+        controller.replaceAtShopRetailValue.value,
+        const Color(0xFF0EA5E9),
+      ),
+      _replaceCard(
+        context,
+        'Supplier রিপ্লেস',
+        controller.replaceSupplierWholesaleValue.value,
+        controller.replaceSupplierRetailValue.value,
+        const Color(0xFFF97316),
+      ),
+      _replaceCard(
+        context,
+        'মোট রিপ্লেস',
+        controller.replaceTotalWholesaleValue.value,
+        controller.replaceTotalRetailValue.value,
+        const Color(0xFF16A34A),
+      ),
+    ];
+
+    if (width >= 950) {
+      return Row(
+        children: cards
+            .map((c) => Expanded(
+                child: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: c,
+                    )))
+            .toList(),
+      );
+    }
+
+    return Column(
+      children: cards
+          .map((c) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: c,
+              ))
+          .toList(),
+    );
+  }
+
+  Widget _replaceCard(BuildContext context, String title, double wholesale,
+      double retail, Color color) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(24),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.swap_horiz_rounded,
+                      color: color, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text('পাইকারি মূল্য: ৳ ${_fmt(wholesale)}',
+                style: TextStyle(
+                    fontSize: 13,
+                    color: color,
+                    fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text('খুচরা মূল্য: ৳ ${_fmt(retail)}',
+                style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w700)),
           ],
         ),
       ),

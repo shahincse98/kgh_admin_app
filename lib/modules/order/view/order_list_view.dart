@@ -157,6 +157,7 @@ class _OrderListViewState extends State<OrderListView> {
       ('all', 'সব'),
       ('pending', 'Pending'),
       ('approved', 'Approved'),
+      ('dispatched', 'Dispatched'),
       ('delivered', 'Delivered'),
       ('cancelled', 'বাতিল'),
       ('scheduled', 'নির্ধারিত'),
@@ -406,6 +407,13 @@ class _OrderListViewState extends State<OrderListView> {
                               scheme,
                               labelColor: _scheduledChipColor(order),
                             ),
+                          if (order.memoNumber.isNotEmpty)
+                            _chip(
+                              Icons.receipt_long_rounded,
+                              'মেমো: ${order.memoNumber}',
+                              scheme,
+                              labelColor: const Color(0xFFD97706),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 10),
@@ -467,6 +475,7 @@ class _OrderListViewState extends State<OrderListView> {
     final label = {
           'pending': 'Pending',
           'approved': 'Approved',
+          'dispatched': 'Dispatched',
           'delivered': 'Delivered',
           'cancelled': 'Cancelled',
         }[status] ??
@@ -524,6 +533,8 @@ class _OrderListViewState extends State<OrderListView> {
         return const Color(0xFFF59E0B);
       case 'approved':
         return const Color(0xFF2563EB);
+      case 'dispatched':
+        return const Color(0xFFD97706);
       case 'delivered':
         return const Color(0xFF16A34A);
       case 'cancelled':

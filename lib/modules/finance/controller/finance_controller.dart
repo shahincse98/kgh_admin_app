@@ -56,6 +56,14 @@ class FinanceController extends GetxController {
   final stockSaleValue = 0.0.obs;
   final stockAvgMarginPct = 0.0.obs;
 
+  // Replace valuation (always current, not period-filtered)
+  final replaceAtShopWholesaleValue = 0.0.obs;
+  final replaceAtShopRetailValue = 0.0.obs;
+  final replaceSupplierWholesaleValue = 0.0.obs;
+  final replaceSupplierRetailValue = 0.0.obs;
+  final replaceTotalWholesaleValue = 0.0.obs;
+  final replaceTotalRetailValue = 0.0.obs;
+
   // Period-filtered KPIs
   final totalSales = 0.0.obs;
   final totalCost = 0.0.obs;
@@ -77,7 +85,7 @@ class FinanceController extends GetxController {
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _orderDocs = [];
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _expenseDocs = [];
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _purchaseDocs = [];
-  Map<String, int> _productCostById = {};
+  Map<String, double> _productCostById = {};
 
   @override
   void onInit() {
@@ -157,16 +165,45 @@ class FinanceController extends GetxController {
           .where('date', isGreaterThanOrEqualTo: cutoff)
           .orderBy('date', descending: true)
           .get(),
+        _db
+          .collection('admin_replace_entries')
+          .where('status', isEqualTo: 'at_shop')
+          .get(),
+        _db
+          .collection('admin_replace_entries')
+          .where('status', isEqualTo: 'with_supplier')
+          .get(),
     ]);
 
     final products = results[0].docs;
     _orderDocs = results[1].docs;
     _expenseDocs = results[2].docs;
     _purchaseDocs = results[3].docs;
+    final atShopReplaceDocs = results[4].docs;
+    final withSupplierReplaceDocs = results[5].docs;
 
     _productCostById = {
       for (final p in products)
-        p.id: (p.data()['purchasePrice'] as num?)?.toInt() ?? 0,
+        p.id: (p.data()['purchasePrice'] as num?)?.toDouble() ?? 0,
+    };
+
+    final wholesaleById = <String, double>{
+      for (final p in products)
+        p.id: (p.data()['wholesalePrice'] as num?)?.toDouble() ?? 0,
+    };
+    final retailById = <String, double>{
+      for (final p in products)
+        p.id: (p.data()['retailPrice'] as num?)?.toDouble() ?? 0,
+    };
+    final wholesaleByName = <String, double>{
+      for (final p in products)
+        ((p.data()['name'] ?? '').toString().trim().toLowerCase()):
+            (p.data()['wholesalePrice'] as num?)?.toDouble() ?? 0,
+    };
+    final retailByName = <String, double>{
+      for (final p in products)
+        ((p.data()['name'] ?? '').toString().trim().toLowerCase()):
+            (p.data()['retailPrice'] as num?)?.toDouble() ?? 0,
     };
 
     // Stock valuation — always current snapshot
@@ -184,6 +221,49 @@ class FinanceController extends GetxController {
     stockSaleValue.value = saleVal;
     stockAvgMarginPct.value =
         capital > 0 ? ((saleVal - capital) / capital) * 100 : 0;
+
+    double atShopWholesale = 0;
+    double atShopRetail = 0;
+    for (final doc in atShopReplaceDocs) {
+      final map = doc.data();
+      final qty = (map['quantity'] as num?)?.toDouble() ?? 0;
+      if (qty <= 0) continue;
+      final pid = (map['productId'] ?? '').toString();
+      final pname = (map['productName'] ?? '').toString().trim().toLowerCase();
+      final wholesale = pid.isNotEmpty
+        ? (wholesaleById[pid] ?? 0)
+        : (wholesaleByName[pname] ?? 0);
+      final retail = pid.isNotEmpty
+        ? (retailById[pid] ?? 0)
+        : (retailByName[pname] ?? 0);
+      atShopWholesale += wholesale * qty;
+      atShopRetail += retail * qty;
+    }
+
+    double supplierWholesale = 0;
+    double supplierRetail = 0;
+    for (final doc in withSupplierReplaceDocs) {
+      final map = doc.data();
+      final qty = (map['quantity'] as num?)?.toDouble() ?? 0;
+      if (qty <= 0) continue;
+      final pid = (map['productId'] ?? '').toString();
+      final pname = (map['productName'] ?? '').toString().trim().toLowerCase();
+      final wholesale = pid.isNotEmpty
+        ? (wholesaleById[pid] ?? 0)
+        : (wholesaleByName[pname] ?? 0);
+      final retail = pid.isNotEmpty
+        ? (retailById[pid] ?? 0)
+        : (retailByName[pname] ?? 0);
+      supplierWholesale += wholesale * qty;
+      supplierRetail += retail * qty;
+    }
+
+    replaceAtShopWholesaleValue.value = atShopWholesale;
+    replaceAtShopRetailValue.value = atShopRetail;
+    replaceSupplierWholesaleValue.value = supplierWholesale;
+    replaceSupplierRetailValue.value = supplierRetail;
+    replaceTotalWholesaleValue.value = atShopWholesale + supplierWholesale;
+    replaceTotalRetailValue.value = atShopRetail + supplierRetail;
   }
 
   void _calculate() {

@@ -6,6 +6,8 @@ import '../model/product_model.dart';
 import '../../replace/controller/admin_replace_controller.dart';
 import 'stock_snapshot_view.dart';
 
+enum _StockAppBarAction { history, resetAll, refresh, addInternal }
+
 class StockManagementView extends StatefulWidget {
   const StockManagementView({super.key});
 
@@ -16,6 +18,7 @@ class StockManagementView extends StatefulWidget {
 class _StockManagementViewState extends State<StockManagementView>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
+  late final AdminReplaceController _arc;
   final _search = TextEditingController();
   final _searchText = ''.obs;
 
@@ -23,6 +26,10 @@ class _StockManagementViewState extends State<StockManagementView>
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
+    _arc = Get.isRegistered<AdminReplaceController>()
+        ? Get.find<AdminReplaceController>()
+        : Get.put(AdminReplaceController());
+    _arc.fetchEntries();
     _search.addListener(() => _searchText.value = _search.text);
   }
 
@@ -37,6 +44,7 @@ class _StockManagementViewState extends State<StockManagementView>
   Widget build(BuildContext context) {
     final ctrl = Get.find<ProductController>();
     final cs = Theme.of(context).colorScheme;
+    final isCompact = MediaQuery.sizeOf(context).width < 720;
 
     return Scaffold(
       appBar: AppBar(
@@ -52,20 +60,20 @@ class _StockManagementViewState extends State<StockManagementView>
                     (q.isEmpty || p.name.toLowerCase().contains(q)))
                 .toList()
               ..sort((a, b) => a.name.compareTo(b.name));
-            // Internal: all (regardless of stock)
+            // Internal: stock >= 1 only
             final internal = ctrl.products
                 .where((p) =>
                     p.isInternal &&
+                p.stock >= 1 &&
                     (q.isEmpty || p.name.toLowerCase().contains(q)))
                 .toList()
               ..sort((a, b) => a.name.compareTo(b.name));
             // Replace stock: only entries currently at_shop, grouped by product
-            AdminReplaceController? arc;
-            try { arc = Get.find<AdminReplaceController>(); } catch (_) {}
-            final atShopEntries = arc?.atShop ?? [];
+            final atShopEntries = _arc.atShop;
             final replaceMap = <String, int>{};
             for (final e in atShopEntries) {
-              if (q.isEmpty || e.productName.toLowerCase().contains(q)) {
+              if (e.quantity >= 1 &&
+                  (q.isEmpty || e.productName.toLowerCase().contains(q))) {
                 replaceMap[e.productName] =
                     (replaceMap[e.productName] ?? 0) + e.quantity;
               }
@@ -108,88 +116,139 @@ class _StockManagementViewState extends State<StockManagementView>
               },
             );
           }),
-          IconButton(
-            tooltip: 'স্টক স্ন্যাপশট ইতিহাস',
-            icon: const Icon(Icons.history_rounded),
-            onPressed: () => Get.to(() => const StockSnapshotView()),
-          ),
-          IconButton(
-            tooltip: 'সব স্টক শূন্য করুন',
-            icon: const Icon(Icons.layers_clear_rounded),
-            onPressed: () => _confirmResetAll(ctrl),
-          ),
-          IconButton(
-            tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => ctrl.fetchProducts(forceRefresh: true),
-          ),
-          IconButton(
-            tooltip: 'নতুন ইন্টার্নাল পণ্য',
-            icon: const Icon(Icons.add_box_rounded),
-            onPressed: () => _addInternalProductDialog(ctrl),
-          ),
+          if (isCompact)
+            PopupMenuButton<_StockAppBarAction>(
+              tooltip: 'More actions',
+              onSelected: (value) {
+                switch (value) {
+                  case _StockAppBarAction.history:
+                    Get.to(() => const StockSnapshotView());
+                    break;
+                  case _StockAppBarAction.resetAll:
+                    _confirmResetAll(ctrl);
+                    break;
+                  case _StockAppBarAction.refresh:
+                    ctrl.fetchProducts(forceRefresh: true);
+                    _arc.fetchEntries(force: true);
+                    break;
+                  case _StockAppBarAction.addInternal:
+                    _addInternalProductDialog(ctrl);
+                    break;
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: _StockAppBarAction.history,
+                  child: Text('স্টক স্ন্যাপশট ইতিহাস'),
+                ),
+                PopupMenuItem(
+                  value: _StockAppBarAction.resetAll,
+                  child: Text('সব স্টক শূন্য করুন'),
+                ),
+                PopupMenuItem(
+                  value: _StockAppBarAction.refresh,
+                  child: Text('Refresh'),
+                ),
+                PopupMenuItem(
+                  value: _StockAppBarAction.addInternal,
+                  child: Text('নতুন ইন্টার্নাল পণ্য'),
+                ),
+              ],
+            )
+          else ...[
+            IconButton(
+              tooltip: 'স্টক স্ন্যাপশট ইতিহাস',
+              icon: const Icon(Icons.history_rounded),
+              onPressed: () => Get.to(() => const StockSnapshotView()),
+            ),
+            IconButton(
+              tooltip: 'সব স্টক শূন্য করুন',
+              icon: const Icon(Icons.layers_clear_rounded),
+              onPressed: () => _confirmResetAll(ctrl),
+            ),
+            IconButton(
+              tooltip: 'Refresh',
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () {
+                ctrl.fetchProducts(forceRefresh: true);
+                _arc.fetchEntries(force: true);
+              },
+            ),
+            IconButton(
+              tooltip: 'নতুন ইন্টার্নাল পণ্য',
+              icon: const Icon(Icons.add_box_rounded),
+              onPressed: () => _addInternalProductDialog(ctrl),
+            ),
+          ],
         ],
         bottom: TabBar(
           controller: _tabs,
+          isScrollable: isCompact,
           tabs: const [
             Tab(text: 'সকল পণ্য'),
             Tab(text: 'ইন্টার্নাল পণ্য'),
           ],
         ),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-            child: TextField(
-              controller: _search,
-              decoration: InputDecoration(
-                hintText: 'পণ্য খুঁজুন...',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: Obx(() => _searchText.value.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded),
-                        onPressed: () {
-                          _search.clear();
-                        },
-                      )
-                    : const SizedBox.shrink()),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(isCompact ? 10 : 12, 10,
+                    isCompact ? 10 : 12, 4),
+                child: TextField(
+                  controller: _search,
+                  decoration: InputDecoration(
+                    hintText: 'পণ্য খুঁজুন...',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: Obx(() => _searchText.value.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded),
+                            onPressed: () {
+                              _search.clear();
+                            },
+                          )
+                        : const SizedBox.shrink()),
+                  ),
+                ),
               ),
-            ),
+              Expanded(
+                child: Obx(() {
+                  final all = ctrl.products;
+                  final q = _searchText.value.toLowerCase();
+
+                  final regular = all
+                      .where((p) =>
+                          !p.isInternal &&
+                          (q.isEmpty || p.name.toLowerCase().contains(q)))
+                      .toList()
+                    ..sort((a, b) => a.name.compareTo(b.name));
+
+                  final internal = all
+                      .where((p) =>
+                          p.isInternal &&
+                          (q.isEmpty || p.name.toLowerCase().contains(q)))
+                      .toList()
+                    ..sort((a, b) => a.name.compareTo(b.name));
+
+                  if (ctrl.loading.value) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  return TabBarView(
+                    controller: _tabs,
+                    children: [
+                      _buildStockList(ctrl, regular, cs, isInternal: false),
+                      _buildStockList(ctrl, internal, cs, isInternal: true),
+                    ],
+                  );
+                }),
+              ),
+            ],
           ),
-          Expanded(
-            child: Obx(() {
-              final all = ctrl.products;
-              final q = _searchText.value.toLowerCase();
-
-              final regular = all
-                  .where((p) =>
-                      !p.isInternal &&
-                      (q.isEmpty || p.name.toLowerCase().contains(q)))
-                  .toList()
-                ..sort((a, b) => a.name.compareTo(b.name));
-
-              final internal = all
-                  .where((p) =>
-                      p.isInternal &&
-                      (q.isEmpty || p.name.toLowerCase().contains(q)))
-                  .toList()
-                ..sort((a, b) => a.name.compareTo(b.name));
-
-              if (ctrl.loading.value) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              return TabBarView(
-                controller: _tabs,
-                children: [
-                  _buildStockList(ctrl, regular, cs, isInternal: false),
-                  _buildStockList(ctrl, internal, cs, isInternal: true),
-                ],
-              );
-            }),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -280,7 +339,7 @@ class _StockManagementViewState extends State<StockManagementView>
               _tf(name, 'পণ্যের নাম *'),
               _tf(cat, 'ক্যাটাগরি'),
               _tf(stock, 'স্টক', number: true),
-              _tf(price, 'মূল্য (ঐচ্ছিক)', number: true),
+              _tf(price, 'মূল্য (ঐচ্ছিক)', number: true, decimal: true),
               _tf(note, 'নোট (ঐচ্ছিক)'),
             ],
           ),
@@ -302,7 +361,7 @@ class _StockManagementViewState extends State<StockManagementView>
                 'productCategory': cat.text.trim(),
                 'brandName': note.text.trim(),
                 'stock': int.tryParse(stock.text) ?? 0,
-                'purchasePrice': int.tryParse(price.text) ?? 0,
+                'purchasePrice': double.tryParse(price.text.trim()) ?? 0,
                 'wholesalePrice': 0,
                 'retailPrice': 0,
                 'isAvailable': false,
@@ -337,12 +396,15 @@ class _StockManagementViewState extends State<StockManagementView>
     );
   }
 
-  Widget _tf(TextEditingController c, String label, {bool number = false}) {
+  Widget _tf(TextEditingController c, String label,
+      {bool number = false, bool decimal = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: TextField(
         controller: c,
-        keyboardType: number ? TextInputType.number : TextInputType.text,
+        keyboardType: number
+            ? TextInputType.numberWithOptions(decimal: decimal)
+            : TextInputType.text,
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -363,6 +425,7 @@ class _StockTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final isCompact = MediaQuery.sizeOf(context).width < 420;
     final stockColor = product.stock < 0
         ? Colors.red
         : product.stock == 0
@@ -381,8 +444,8 @@ class _StockTile extends StatelessWidget {
               child: product.images.isNotEmpty
                   ? Image.network(
                       product.images.first,
-                      width: 52,
-                      height: 52,
+                      width: isCompact ? 44 : 52,
+                      height: isCompact ? 44 : 52,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => _imagePlaceholder(cs),
                     )
@@ -461,21 +524,24 @@ class _StockTile extends StatelessWidget {
               icon: Icons.remove_circle_outline_rounded,
               color: Colors.red,
               tooltip: 'স্টক কমান (বিক্রি/ব্যবহার)',
+              compact: isCompact,
               onTap: () => _adjustStockDialog(context, isAdd: false),
             ),
-            const SizedBox(width: 4),
+            SizedBox(width: isCompact ? 2 : 4),
             _actionBtn(
               icon: Icons.add_circle_outline_rounded,
               color: Colors.green.shade700,
               tooltip: 'স্টক বাড়ান (ক্রয়/যোগ)',
+              compact: isCompact,
               onTap: () => _adjustStockDialog(context, isAdd: true),
             ),
             if (product.isInternal) ...[
-              const SizedBox(width: 4),
+              SizedBox(width: isCompact ? 2 : 4),
               _actionBtn(
                 icon: Icons.delete_outline_rounded,
                 color: Colors.red.shade700,
                 tooltip: 'পণ্য ডিলেট করুন',
+                compact: isCompact,
                 onTap: () => _confirmDelete(context),
               ),
             ],
@@ -486,9 +552,10 @@ class _StockTile extends StatelessWidget {
   }
 
   Widget _imagePlaceholder(ColorScheme cs) {
+    final size = 52.0;
     return Container(
-      width: 52,
-      height: 52,
+      width: size,
+      height: size,
       color: cs.surfaceContainerHighest,
       alignment: Alignment.center,
       child: Icon(Icons.inventory_2_rounded,
@@ -500,6 +567,7 @@ class _StockTile extends StatelessWidget {
     required IconData icon,
     required Color color,
     required String tooltip,
+    required bool compact,
     required VoidCallback onTap,
   }) {
     return Tooltip(
@@ -508,8 +576,8 @@ class _StockTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Icon(icon, color: color, size: 26),
+          padding: EdgeInsets.all(compact ? 2 : 4),
+          child: Icon(icon, color: color, size: compact ? 23 : 26),
         ),
       ),
     );

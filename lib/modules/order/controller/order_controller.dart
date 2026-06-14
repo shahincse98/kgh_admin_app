@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/order_model.dart';
 import '../../user/controller/user_controller.dart';
 import '../../user/model/user_model.dart';
+import '../../auth/controller/auth_controller.dart';
+import '../../product/controller/product_controller.dart';
 
 class OrderController extends GetxController {
   final _db = FirebaseFirestore.instance;
@@ -162,22 +164,83 @@ class OrderController extends GetxController {
     }
     await _db.collection('orders').doc(id).update(data);
 
-    // Deduct stock when order moves TO 'approved' (only once)
-    if (status == 'approved' && previousStatus != 'approved' && items.isNotEmpty) {
-      final batch = _db.batch();
-      for (final item in items) {
-        final productId = (item is Map)
-            ? (item['productId'] ?? '').toString()
-            : '';
-        final qty = (item is Map)
-            ? (item['quantity'] as num?)?.toInt() ?? 0
-            : 0;
-        if (productId.isEmpty || qty == 0) continue;
-        final ref = _db.collection('products').doc(productId);
-        batch.update(ref, {'stock': FieldValue.increment(-qty)});
-      }
-      await batch.commit();
+    // Dispatch: stock was already deducted at dispatch time (see dispatchOrder)
+  }
+
+  Future<void> dispatchOrder({
+    required String orderId,
+    required List items,
+    required String memoNumber,
+  }) async {
+    final currentUser = await _getCurrentUserId();
+
+    // 1. Deduct stock
+    final batch = _db.batch();
+    for (final item in items) {
+      final productId = (item is Map)
+          ? (item['productId'] ?? '').toString()
+          : '';
+      final qty = (item is Map)
+          ? (item['quantity'] as num?)?.toInt() ?? 0
+          : 0;
+      if (productId.isEmpty || qty == 0) continue;
+      final ref = _db.collection('products').doc(productId);
+      batch.update(ref, {'stock': FieldValue.increment(-qty)});
     }
+
+    // 2. Update order with dispatch info
+    batch.update(_db.collection('orders').doc(orderId), {
+      'status': 'dispatched',
+      'memoNumber': memoNumber,
+      'dispatchedAt': FieldValue.serverTimestamp(),
+      'dispatchedBy': currentUser,
+    });
+
+    await batch.commit();
+
+    // Refresh products globally
+    try {
+      Get.find<ProductController>().fetchProducts(forceRefresh: true);
+    } catch (_) {}
+
+    // 3. Update local cache
+    final idx = orders.indexWhere((o) => o.id == orderId);
+    if (idx != -1) {
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: o.createdAt,
+        items: o.items,
+        status: 'dispatched',
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        shopName: o.shopName,
+        shopAddress: o.shopAddress,
+        shopPhone: o.shopPhone,
+        userId: o.userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: o.deliveredBySrId,
+        commissionConfirmed: o.commissionConfirmed,
+        scheduledDeliveryDate: o.scheduledDeliveryDate,
+        deliveryAssignedSrId: o.deliveryAssignedSrId,
+        deliveryAssignedSrName: o.deliveryAssignedSrName,
+        memoNumber: memoNumber,
+        dispatchedAt: DateTime.now(),
+        dispatchedBy: currentUser,
+        userPhone: o.userPhone,
+        userDue: o.userDue,
+      );
+      orders.refresh();
+    }
+  }
+
+  Future<String> _getCurrentUserId() async {
+    try {
+      final auth = Get.find<AuthController>();
+      return auth.currentUser?.uid ?? '';
+    } catch (_) {}
+    return '';
   }
 
   Future<void> updatePaidAmount(String id, num amount) async {
@@ -211,6 +274,9 @@ class OrderController extends GetxController {
         scheduledDeliveryDate: date,
         deliveryAssignedSrId: o.deliveryAssignedSrId,
         deliveryAssignedSrName: o.deliveryAssignedSrName,
+        memoNumber: o.memoNumber,
+        dispatchedAt: o.dispatchedAt,
+        dispatchedBy: o.dispatchedBy,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -252,6 +318,9 @@ class OrderController extends GetxController {
         scheduledDeliveryDate: date ?? o.scheduledDeliveryDate,
         deliveryAssignedSrId: srId,
         deliveryAssignedSrName: srName,
+        memoNumber: o.memoNumber,
+        dispatchedAt: o.dispatchedAt,
+        dispatchedBy: o.dispatchedBy,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -312,6 +381,9 @@ class OrderController extends GetxController {
         scheduledDeliveryDate: o.scheduledDeliveryDate,
         deliveryAssignedSrId: o.deliveryAssignedSrId,
         deliveryAssignedSrName: o.deliveryAssignedSrName,
+        memoNumber: o.memoNumber,
+        dispatchedAt: o.dispatchedAt,
+        dispatchedBy: o.dispatchedBy,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -377,6 +449,9 @@ class OrderController extends GetxController {
         scheduledDeliveryDate: o.scheduledDeliveryDate,
         deliveryAssignedSrId: o.deliveryAssignedSrId,
         deliveryAssignedSrName: o.deliveryAssignedSrName,
+        memoNumber: o.memoNumber,
+        dispatchedAt: o.dispatchedAt,
+        dispatchedBy: o.dispatchedBy,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );

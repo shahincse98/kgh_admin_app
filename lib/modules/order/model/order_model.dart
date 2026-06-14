@@ -56,6 +56,9 @@ class OrderModel {
   final DateTime? scheduledDeliveryDate; // Admin-set delivery date for SR
   final String deliveryAssignedSrId;   // SR assigned to deliver this order
   final String deliveryAssignedSrName; // SR display name for delivery
+  final String memoNumber;             // Memo/challan number for dispatch
+  final DateTime? dispatchedAt;        // When products physically left warehouse
+  final String dispatchedBy;           // UID of admin who dispatched
   String userPhone;            // resolved after load from users collection
   int userDue;                 // resolved after load from users collection
 
@@ -77,6 +80,9 @@ class OrderModel {
     this.scheduledDeliveryDate,
     this.deliveryAssignedSrId = '',
     this.deliveryAssignedSrName = '',
+    this.memoNumber = '',
+    this.dispatchedAt,
+    this.dispatchedBy = '',
     this.userPhone = '',
     this.userDue = 0,
   });
@@ -103,6 +109,11 @@ class OrderModel {
           : null,
       deliveryAssignedSrId: data['deliveryAssignedSrId'] ?? '',
       deliveryAssignedSrName: data['deliveryAssignedSrName'] ?? '',
+      memoNumber: data['memoNumber'] ?? '',
+      dispatchedAt: data['dispatchedAt'] is Timestamp
+          ? (data['dispatchedAt'] as Timestamp).toDate()
+          : null,
+      dispatchedBy: data['dispatchedBy'] ?? '',
       userPhone: data['userPhone'] ?? data['orderedByPhone'] ?? '',
       items: (data['items'] as List? ?? [])
           .map((e) => OrderItem.fromMap(e))

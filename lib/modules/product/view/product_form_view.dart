@@ -143,11 +143,17 @@ class _ProductFormViewState extends State<ProductFormView> {
             // ── মূল্য ──────────────────────────────────────────────────
             _sectionHeader('মূল্য', cs),
             Row(children: [
-              Expanded(child: _tf(_buyPrice, 'ক্রয় মূল্য', number: true)),
+              Expanded(
+                child: _tf(_buyPrice, 'ক্রয় মূল্য',
+                  number: true, decimal: true)),
               const SizedBox(width: 10),
-              Expanded(child: _tf(_wholesale, 'পাইকারি', number: true)),
+              Expanded(
+                child: _tf(_wholesale, 'পাইকারি',
+                  number: true, decimal: true)),
               const SizedBox(width: 10),
-              Expanded(child: _tf(_retail, 'খুচরা', number: true)),
+              Expanded(
+                child: _tf(_retail, 'খুচরা',
+                  number: true, decimal: true)),
             ]),
 
             // ── স্টক ───────────────────────────────────────────────────
@@ -227,12 +233,14 @@ class _ProductFormViewState extends State<ProductFormView> {
   // ── Text field ───────────────────────────────────────────────────────────
 
   Widget _tf(TextEditingController c, String label,
-      {bool number = false}) {
+      {bool number = false, bool decimal = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
         controller: c,
-        keyboardType: number ? TextInputType.number : TextInputType.text,
+        keyboardType: number
+            ? TextInputType.numberWithOptions(decimal: decimal)
+            : TextInputType.text,
         decoration: InputDecoration(
           labelText: label,
           border:
@@ -446,9 +454,9 @@ class _ProductFormViewState extends State<ProductFormView> {
         'unit': _unit.text.trim(),
         'warranty': _warranty.text.trim(),
         'productVideo': _video.text.trim(),
-        'purchasePrice': int.tryParse(_buyPrice.text) ?? 0,
-        'wholesalePrice': int.tryParse(_wholesale.text) ?? 0,
-        'retailPrice': int.tryParse(_retail.text) ?? 0,
+        'purchasePrice': double.tryParse(_buyPrice.text.trim()) ?? 0,
+        'wholesalePrice': double.tryParse(_wholesale.text.trim()) ?? 0,
+        'retailPrice': double.tryParse(_retail.text.trim()) ?? 0,
         'stock': int.tryParse(_stock.text) ?? 0,
         'images': _images,
         'productDetails': _details,

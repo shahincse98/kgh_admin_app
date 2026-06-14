@@ -12,9 +12,9 @@ class ProductModel {
   final String unit;
   final String warranty;
 
-  final int purchasePrice;
-  final int wholesalePrice;
-  final int retailPrice;
+  final double purchasePrice;
+  final double wholesalePrice;
+  final double retailPrice;
 
   final int stock;
   final int pendingStock;
@@ -79,9 +79,9 @@ class ProductModel {
       productVideo: map['productVideo'] ?? '',
       unit: map['unit'] ?? '',
       warranty: map['warranty'] ?? '',
-      purchasePrice: (map['purchasePrice'] as num?)?.toInt() ?? 0,
-      wholesalePrice: (map['wholesalePrice'] as num?)?.toInt() ?? 0,
-      retailPrice: (map['retailPrice'] as num?)?.toInt() ?? 0,
+      purchasePrice: (map['purchasePrice'] as num?)?.toDouble() ?? 0,
+      wholesalePrice: (map['wholesalePrice'] as num?)?.toDouble() ?? 0,
+      retailPrice: (map['retailPrice'] as num?)?.toDouble() ?? 0,
       stock: (map['stock'] as num?)?.toInt() ?? 0,
       pendingStock: (map['pendingStock'] as num?)?.toInt() ?? 0,
       totalSold: (map['totalSold'] as num?)?.toInt() ?? 0,
@@ -146,10 +146,10 @@ class ProductModel {
       productVideo: map['productVideo'] ?? productVideo,
       unit: map['unit'] ?? unit,
       warranty: map['warranty'] ?? warranty,
-      purchasePrice: (map['purchasePrice'] as num?)?.toInt() ?? purchasePrice,
-      wholesalePrice:
-          (map['wholesalePrice'] as num?)?.toInt() ?? wholesalePrice,
-      retailPrice: (map['retailPrice'] as num?)?.toInt() ?? retailPrice,
+        purchasePrice: (map['purchasePrice'] as num?)?.toDouble() ?? purchasePrice,
+        wholesalePrice:
+          (map['wholesalePrice'] as num?)?.toDouble() ?? wholesalePrice,
+        retailPrice: (map['retailPrice'] as num?)?.toDouble() ?? retailPrice,
       stock: (map['stock'] as num?)?.toInt() ?? stock,
       pendingStock: (map['pendingStock'] as num?)?.toInt() ?? pendingStock,
       totalSold: (map['totalSold'] as num?)?.toInt() ?? totalSold,

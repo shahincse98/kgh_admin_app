@@ -1,0 +1,240 @@
+import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../model/stock_in_model.dart';
+import '../../auth/controller/auth_controller.dart';
+import '../../product/controller/product_controller.dart';
+
+class StockInController extends GetxController {
+  final _db = FirebaseFirestore.instance;
+
+  final entries = <StockInModel>[].obs;
+  final loading = false.obs;
+  final searchText = ''.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    fetchEntries();
+  }
+
+  Future<void> fetchEntries() async {
+    loading.value = true;
+    try {
+      final snap = await _db
+          .collection('stock_ins')
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      entries.assignAll(
+          snap.docs.map((e) => StockInModel.fromFirestore(e)).toList());
+    } catch (_) {}
+    loading.value = false;
+  }
+
+  List<StockInModel> get filteredEntries {
+    var list = entries.toList();
+    final q = searchText.value.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      list = list.where((e) =>
+        e.productName.toLowerCase().contains(q) ||
+        e.source.toLowerCase().contains(q) ||
+        e.note.toLowerCase().contains(q) ||
+        e.id.toLowerCase().contains(q)
+      ).toList();
+    }
+    return list;
+  }
+
+  List<StockInGroup> get filteredGroups {
+    final list = filteredEntries;
+    final map = <String, StockInGroup>{};
+
+    for (final e in list) {
+      final key = '${e.date.toIso8601String().substring(0, 10)}|${e.source}';
+      map.putIfAbsent(key, () => StockInGroup(
+        date: e.date,
+        source: e.source,
+        note: e.note,
+        entries: [],
+      ));
+      map[key]!.entries.add(e);
+    }
+
+    return map.values.toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  Future<void> addStockIn({
+    required String productId,
+    required String productName,
+    required int quantity,
+    String image = '',
+    String source = '',
+    String note = '',
+    required DateTime date,
+  }) async {
+    final currentUser = await _getCurrentUserId();
+
+    final batch = _db.batch();
+
+    // 1. Increment product stock
+    if (productId.isNotEmpty) {
+      final ref = _db.collection('products').doc(productId);
+      batch.update(ref, {'stock': FieldValue.increment(quantity)});
+    }
+
+    // 2. Create stock-in entry
+    final docRef = _db.collection('stock_ins').doc();
+    batch.set(docRef, {
+      'productId': productId,
+      'productName': productName,
+      'image': image,
+      'quantity': quantity,
+      'source': source,
+      'note': note,
+      'date': Timestamp.fromDate(date),
+      'createdAt': FieldValue.serverTimestamp(),
+      'createdBy': currentUser,
+    });
+
+    await batch.commit();
+
+    // Refresh products globally
+    try {
+      Get.find<ProductController>().fetchProducts(forceRefresh: true);
+    } catch (_) {}
+
+    await fetchEntries();
+  }
+
+  Future<void> addMultipleStockIn({
+    required DateTime date,
+    required String source,
+    String note = '',
+    required List<Map<String, dynamic>> items,
+  }) async {
+    final currentUser = await _getCurrentUserId();
+    final batch = _db.batch();
+
+    for (final item in items) {
+      final productId = item['productId'] as String? ?? '';
+      final productName = item['productName'] as String? ?? '';
+      final image = item['image'] as String? ?? '';
+      final quantity = (item['quantity'] as num?)?.toInt() ?? 0;
+      if (productId.isEmpty || quantity <= 0) continue;
+
+      // Increment stock
+      batch.update(_db.collection('products').doc(productId), {'stock': FieldValue.increment(quantity)});
+
+      // Create entry
+      final docRef = _db.collection('stock_ins').doc();
+      batch.set(docRef, {
+        'productId': productId,
+        'productName': productName,
+        'image': image,
+        'quantity': quantity,
+        'source': source,
+        'note': note,
+        'date': Timestamp.fromDate(date),
+        'createdAt': FieldValue.serverTimestamp(),
+        'createdBy': currentUser,
+      });
+    }
+
+    await batch.commit();
+
+    try {
+      Get.find<ProductController>().fetchProducts(forceRefresh: true);
+    } catch (_) {}
+
+    await fetchEntries();
+  }
+
+  Future<void> deleteEntry(String id) async {
+    final entry = entries.firstWhereOrNull((e) => e.id == id);
+    if (entry != null && entry.productId.isNotEmpty) {
+      final batch = _db.batch();
+      // Restore stock
+      batch.update(_db.collection('products').doc(entry.productId),
+          {'stock': FieldValue.increment(-entry.quantity)});
+      batch.delete(_db.collection('stock_ins').doc(id));
+      await batch.commit();
+
+      try {
+        Get.find<ProductController>().fetchProducts(forceRefresh: true);
+      } catch (_) {}
+    } else {
+      await _db.collection('stock_ins').doc(id).delete();
+    }
+    entries.removeWhere((e) => e.id == id);
+  }
+
+  Future<void> updateEntry({
+    required String id,
+    required String productId,
+    required String productName,
+    required int quantity,
+    String source = '',
+    String note = '',
+    required DateTime date,
+  }) async {
+    final oldEntry = entries.firstWhereOrNull((e) => e.id == id);
+    if (oldEntry == null) return;
+
+    final batch = _db.batch();
+
+    // 1. Reverse old stock
+    if (oldEntry.productId.isNotEmpty) {
+      batch.update(_db.collection('products').doc(oldEntry.productId),
+          {'stock': FieldValue.increment(-oldEntry.quantity)});
+    }
+
+    // 2. Apply new stock
+    if (productId.isNotEmpty) {
+      batch.update(_db.collection('products').doc(productId),
+          {'stock': FieldValue.increment(quantity)});
+    }
+
+    // 3. Update entry
+    batch.update(_db.collection('stock_ins').doc(id), {
+      'productId': productId,
+      'productName': productName,
+      'quantity': quantity,
+      'source': source,
+      'note': note,
+      'date': Timestamp.fromDate(date),
+    });
+
+    await batch.commit();
+
+    try {
+      Get.find<ProductController>().fetchProducts(forceRefresh: true);
+    } catch (_) {}
+
+    await fetchEntries();
+  }
+
+  Future<String> _getCurrentUserId() async {
+    try {
+      final auth = Get.find<AuthController>();
+      return auth.currentUser?.uid ?? '';
+    } catch (_) {}
+    return '';
+  }
+}
+
+class StockInGroup {
+  final DateTime date;
+  final String source;
+  final String note;
+  final List<StockInModel> entries;
+
+  StockInGroup({
+    required this.date,
+    required this.source,
+    required this.note,
+    required this.entries,
+  });
+
+  int get totalQty => entries.fold(0, (s, e) => s + e.quantity);
+}

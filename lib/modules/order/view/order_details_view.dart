@@ -80,7 +80,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           .take(6)
           .toList();
 
-  static const _statuses = ['pending', 'approved', 'delivered', 'cancelled'];
+  static const _statuses = ['pending', 'approved', 'dispatched', 'delivered', 'cancelled'];
   static final _fmt = NumberFormat('#,##,##0');
 
   @override
@@ -345,6 +345,11 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             const SizedBox(height: 12),
           // ── Scheduled delivery (admin can set, SR sees) ────
           _scheduledDeliveryCard(scheme),
+          // ── Dispatch info ──────────────────────────────────
+          if (widget.order.memoNumber.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _dispatchInfoCard(scheme),
+          ],
           const SizedBox(height: 12),
           // ── Status change ──────────────────────────────────
           _statusCard(scheme),
@@ -555,6 +560,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     if (s == _currentStatus) return;
                     if (s == 'delivered') {
                       await _showDeliveryPaymentDialog(_currentStatus);
+                    } else if (s == 'dispatched') {
+                      await _showDispatchDialog(_currentStatus);
                     } else {
                       final prev = _currentStatus;
                       setState(() => _currentStatus = s);
@@ -1341,6 +1348,102 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     });
   }
 
+  // ── Dispatch dialog ──────────────────────────────────────────
+
+  Future<void> _showDispatchDialog(String previousStatus) async {
+    final scheme = Theme.of(context).colorScheme;
+    final memoCtrl = TextEditingController(
+      text: '#MEM${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+    );
+
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(
+          children: [
+            Icon(Icons.local_shipping_rounded, color: Color(0xFFD97706), size: 22),
+            SizedBox(width: 8),
+            Text('স্টক আউট / Dispatch', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    _dialogPayRow('অর্ডার', '#${widget.order.id}', const Color(0xFF0891B2)),
+                    const SizedBox(height: 6),
+                    _dialogPayRow('কাস্টমার', widget.order.shopName, const Color(0xFF2563EB)),
+                    const SizedBox(height: 6),
+                    _dialogPayRow('প্রডাক্ট', '${widget.order.items.length} টি', const Color(0xFF7C3AED)),
+                    const SizedBox(height: 6),
+                    _dialogPayRow('টোটাল', '৳ ${_fmt.format(widget.order.totalAmount.toInt())}', const Color(0xFF0891B2)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text('মেমো / চালান নাম্বার',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
+              const SizedBox(height: 4),
+              TextField(
+                controller: memoCtrl,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'মেমো নাম্বার লিখুন',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'সতর্কতা: Dispatch করলে স্টক কেটে যাবে। এটি undo করা যাবে না।',
+                style: TextStyle(fontSize: 11, color: Colors.red.shade700, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')),
+          ElevatedButton.icon(
+            onPressed: () => Get.back(result: true),
+            icon: const Icon(Icons.check_rounded, size: 16),
+            label: const Text('Dispatch করুন'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFD97706),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final memo = memoCtrl.text.trim();
+      if (memo.isEmpty) {
+        Get.snackbar('ত্রুটি', 'মেমো নাম্বার দিতে হবে', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+        return;
+      }
+      setState(() => _currentStatus = 'dispatched');
+      await controller.dispatchOrder(
+        orderId: widget.order.id,
+        items: widget.order.items.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList(),
+        memoNumber: memo,
+      );
+      Get.snackbar('সফল', 'স্টক আউট সম্পন্ন হয়েছে\nমেমো: $memo', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFFD97706), colorText: Colors.white);
+    }
+    memoCtrl.dispose();
+  }
+
   // ── Delivery confirmation + payment dialog ─────────────────
 
   Future<void> _showDeliveryPaymentDialog(String previousStatus) async {
@@ -1557,6 +1660,50 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         ),
         child: Icon(icon,
             size: 18, color: color ?? const Color(0xFF0891B2)),
+      ),
+    );
+  }
+
+  // ── Dispatch info card ───────────────────────────────────────
+
+  Widget _dispatchInfoCard(ColorScheme scheme) {
+    final hasInfo = widget.order.memoNumber.isNotEmpty;
+    if (!hasInfo) return const SizedBox.shrink();
+    final dateFmt = DateFormat('dd MMMM yyyy, h:mm a');
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD97706).withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.local_shipping_rounded, color: Color(0xFFD97706), size: 18),
+                ),
+                const SizedBox(width: 12),
+                const Text('স্টক আউট / Dispatch', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _infoRow(Icons.tag_rounded, 'মেমো: ${widget.order.memoNumber}', scheme, textColor: const Color(0xFFD97706)),
+            if (widget.order.dispatchedAt != null) ...[
+              const SizedBox(height: 6),
+              _infoRow(Icons.access_time_rounded, dateFmt.format(widget.order.dispatchedAt!), scheme),
+            ],
+            if (widget.order.dispatchedBy.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              _infoRow(Icons.person_rounded, 'Dispatched by: ${widget.order.dispatchedBy}', scheme),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1956,6 +2103,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   String _statusLabel(String s) => {
         'pending': 'Pending',
         'approved': 'Approved',
+        'dispatched': 'Dispatched',
         'delivered': 'Delivered',
         'cancelled': 'বাতিল',
       }[s] ??
@@ -1967,6 +2115,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         return const Color(0xFFF59E0B);
       case 'approved':
         return const Color(0xFF2563EB);
+      case 'dispatched':
+        return const Color(0xFFD97706);
       case 'delivered':
         return const Color(0xFF16A34A);
       case 'cancelled':
