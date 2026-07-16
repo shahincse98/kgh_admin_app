@@ -59,10 +59,25 @@ class OrderController extends GetxController {
 
     loading.value = true;
 
-    Query query = _db
-        .collection('orders')
-        .orderBy('createdAt', descending: true)
-        .limit(limit);
+    final statusFilter = selectedStatus.value;
+    // 'all' and 'scheduled' both need unfiltered fetch (scheduled is
+    // derived from scheduledDeliveryDate, not a status field).
+    final needsStatusFilter =
+        statusFilter != 'all' && statusFilter != 'scheduled';
+
+    Query query;
+    if (needsStatusFilter) {
+      query = _db
+          .collection('orders')
+          .where('status', isEqualTo: statusFilter)
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+    } else {
+      query = _db
+          .collection('orders')
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+    }
 
     if (lastDoc != null && loadMore) {
       query = query.startAfterDocument(lastDoc!);
@@ -138,10 +153,17 @@ class OrderController extends GetxController {
 
   List<OrderModel> get filteredOrders {
     List<OrderModel> list = orders;
+    // 'scheduled' is a derived filter (not a Firestore status field),
+    // so we filter it locally. Other status filters are already
+    // applied at the Firestore query level in fetchOrders().
     if (selectedStatus.value == 'scheduled') {
-      list = list.where((o) => o.scheduledDeliveryDate != null).toList();
-    } else if (selectedStatus.value != 'all') {
-      list = list.where((o) => o.status == selectedStatus.value).toList();
+      list = list
+          .where((o) =>
+              (o.scheduledDeliveryDate != null ||
+               o.deliveryAssignedSrId.isNotEmpty) &&
+              o.status != 'delivered' &&
+              o.status != 'cancelled')
+          .toList();
     }
     final q = searchText.value.trim().toLowerCase();
     if (q.isNotEmpty) {
@@ -150,7 +172,8 @@ class OrderController extends GetxController {
               o.shopName.toLowerCase().contains(q) ||
               o.id.toLowerCase().contains(q) ||
               o.shopPhone.contains(q) ||
-              o.userPhone.contains(q))
+              o.userPhone.contains(q) ||
+              o.localMemo.toLowerCase().contains(q))
           .toList();
     }
     return list;
@@ -159,12 +182,177 @@ class OrderController extends GetxController {
   Future<void> updateOrderStatus(String id, String status,
       {String? previousStatus, List items = const [], String? deliveredBySrId}) async {
     final data = <String, dynamic>{'status': status};
-    if (status == 'delivered' && deliveredBySrId != null && deliveredBySrId.isNotEmpty) {
-      data['deliveredBySrId'] = deliveredBySrId;
+    if (status == 'delivered') {
+      data['deliveredAt'] = FieldValue.serverTimestamp();
+      if (deliveredBySrId != null && deliveredBySrId.isNotEmpty) {
+        data['deliveredBySrId'] = deliveredBySrId;
+      }
     }
-    await _db.collection('orders').doc(id).update(data);
 
-    // Dispatch: stock was already deducted at dispatch time (see dispatchOrder)
+    final prev = previousStatus ?? '';
+
+    // ── Stock deduction ───────────────────────────────────────
+    // Deduct stock when going to 'delivered' directly from
+    // pending/approved (dispatched state already deducted stock).
+    final needsStockDeduction = status == 'delivered' &&
+        prev != 'dispatched' &&
+        prev != 'delivered';
+
+    // ── Stock restoration ─────────────────────────────────────
+    // Restore stock when reverting from dispatched/delivered back
+    // to pending/approved/cancelled (stock was previously cut).
+    final needsStockRestore = (prev == 'dispatched' || prev == 'delivered') &&
+        (status == 'pending' ||
+            status == 'approved' ||
+            status == 'cancelled');
+
+    if ((needsStockDeduction || needsStockRestore) && items.isNotEmpty) {
+      final batch = _db.batch();
+      for (final item in items) {
+        final productId = (item is Map)
+            ? (item['productId'] ?? '').toString()
+            : '';
+        final qty = (item is Map)
+            ? (item['quantity'] as num?)?.toInt() ?? 0
+            : 0;
+        if (productId.isEmpty || qty == 0) continue;
+        final delta = needsStockDeduction ? -qty : qty;
+        batch.update(_db.collection('products').doc(productId),
+            {'stock': FieldValue.increment(delta)});
+      }
+      batch.update(_db.collection('orders').doc(id), data);
+      await batch.commit();
+
+      // Refresh products globally
+      try {
+        Get.find<ProductController>().fetchProducts(forceRefresh: true);
+      } catch (_) {}
+    } else {
+      await _db.collection('orders').doc(id).update(data);
+    }
+  }
+
+  /// Update the deliveredAt timestamp for an order (edit delivery date).
+  Future<void> updateDeliveredAt(String id, DateTime date) async {
+    await _db.collection('orders').doc(id).update({
+      'deliveredAt': Timestamp.fromDate(date),
+    });
+    final idx = orders.indexWhere((o) => o.id == id);
+    if (idx != -1) {
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: o.createdAt,
+        items: o.items,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        shopName: o.shopName,
+        shopAddress: o.shopAddress,
+        shopPhone: o.shopPhone,
+        userId: o.userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: o.deliveredBySrId,
+        commissionConfirmed: o.commissionConfirmed,
+        scheduledDeliveryDate: o.scheduledDeliveryDate,
+        deliveryAssignedSrId: o.deliveryAssignedSrId,
+        deliveryAssignedSrName: o.deliveryAssignedSrName,
+        memoNumber: o.memoNumber,
+        dispatchedAt: o.dispatchedAt,
+        dispatchedBy: o.dispatchedBy,
+        deliveredAt: date,
+        localMemo: o.localMemo,
+        returnAmount: o.returnAmount,
+        deductionAmount: o.deductionAmount,
+        previousDue: o.previousDue,
+        discountAmount: o.discountAmount,
+        userPhone: o.userPhone,
+        userDue: o.userDue,
+      );
+      orders.refresh();
+    }
+  }
+
+  /// Update the createdAt timestamp for an order (edit order date).
+  Future<void> updateCreatedAt(String id, DateTime date) async {
+    await _db.collection('orders').doc(id).update({
+      'createdAt': Timestamp.fromDate(date),
+    });
+    final idx = orders.indexWhere((o) => o.id == id);
+    if (idx != -1) {
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: date,
+        items: o.items,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        shopName: o.shopName,
+        shopAddress: o.shopAddress,
+        shopPhone: o.shopPhone,
+        userId: o.userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: o.deliveredBySrId,
+        commissionConfirmed: o.commissionConfirmed,
+        scheduledDeliveryDate: o.scheduledDeliveryDate,
+        deliveryAssignedSrId: o.deliveryAssignedSrId,
+        deliveryAssignedSrName: o.deliveryAssignedSrName,
+        memoNumber: o.memoNumber,
+        dispatchedAt: o.dispatchedAt,
+        dispatchedBy: o.dispatchedBy,
+        deliveredAt: o.deliveredAt,
+        localMemo: o.localMemo,
+        returnAmount: o.returnAmount,
+        deductionAmount: o.deductionAmount,
+        previousDue: o.previousDue,
+        discountAmount: o.discountAmount,
+        userPhone: o.userPhone,
+        userDue: o.userDue,
+      );
+      orders.refresh();
+    }
+  }
+
+  /// Update the dispatchedAt timestamp for an order.
+  Future<void> updateDispatchedAt(String id, DateTime date) async {
+    await _db.collection('orders').doc(id).update({
+      'dispatchedAt': Timestamp.fromDate(date),
+    });
+    final idx = orders.indexWhere((o) => o.id == id);
+    if (idx != -1) {
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: o.createdAt,
+        items: o.items,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        shopName: o.shopName,
+        shopAddress: o.shopAddress,
+        shopPhone: o.shopPhone,
+        userId: o.userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: o.deliveredBySrId,
+        commissionConfirmed: o.commissionConfirmed,
+        scheduledDeliveryDate: o.scheduledDeliveryDate,
+        deliveryAssignedSrId: o.deliveryAssignedSrId,
+        deliveryAssignedSrName: o.deliveryAssignedSrName,
+        memoNumber: o.memoNumber,
+        dispatchedAt: date,
+        dispatchedBy: o.dispatchedBy,
+        deliveredAt: o.deliveredAt,
+        localMemo: o.localMemo,
+        returnAmount: o.returnAmount,
+        userPhone: o.userPhone,
+        userDue: o.userDue,
+      );
+      orders.refresh();
+    }
   }
 
   Future<void> dispatchOrder({
@@ -228,6 +416,10 @@ class OrderController extends GetxController {
         memoNumber: memoNumber,
         dispatchedAt: DateTime.now(),
         dispatchedBy: currentUser,
+        returnAmount: o.returnAmount,
+        deductionAmount: o.deductionAmount,
+        previousDue: o.previousDue,
+        discountAmount: o.discountAmount,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -277,6 +469,12 @@ class OrderController extends GetxController {
         memoNumber: o.memoNumber,
         dispatchedAt: o.dispatchedAt,
         dispatchedBy: o.dispatchedBy,
+        deliveredAt: o.deliveredAt,
+        localMemo: o.localMemo,
+        returnAmount: o.returnAmount,
+        deductionAmount: o.deductionAmount,
+        previousDue: o.previousDue,
+        discountAmount: o.discountAmount,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -321,6 +519,12 @@ class OrderController extends GetxController {
         memoNumber: o.memoNumber,
         dispatchedAt: o.dispatchedAt,
         dispatchedBy: o.dispatchedBy,
+        deliveredAt: o.deliveredAt,
+        localMemo: o.localMemo,
+        returnAmount: o.returnAmount,
+        deductionAmount: o.deductionAmount,
+        previousDue: o.previousDue,
+        discountAmount: o.discountAmount,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -350,6 +554,70 @@ class OrderController extends GetxController {
         );
       }
     } catch (_) {}
+  }
+
+  Future<void> recordDuePayment({
+    required String orderId,
+    required String userId,
+    required int amount,
+    required String paymentMethod,
+    required DateTime date,
+    String note = '',
+  }) async {
+    final batch = _db.batch();
+
+    // 1. Save payment record in orders/{orderId}/due_payments/
+    final payRef = _db
+        .collection('orders')
+        .doc(orderId)
+        .collection('due_payments')
+        .doc();
+    batch.set(payRef, {
+      'amount': amount,
+      'paymentMethod': paymentMethod,
+      'date': Timestamp.fromDate(DateTime(date.year, date.month, date.day)),
+      'note': note,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    // 2. Increment order's paidAmount
+    batch.update(_db.collection('orders').doc(orderId), {
+      'paidAmount': FieldValue.increment(amount),
+    });
+
+    // 3. Decrement user's totalDue
+    if (userId.isNotEmpty) {
+      batch.update(_db.collection('users').doc(userId), {
+        'totalDue': FieldValue.increment(-amount),
+      });
+    }
+
+    await batch.commit();
+
+    // Update local UserController cache
+    if (userId.isNotEmpty) {
+      try {
+        final uc = Get.find<UserController>();
+        final idx = uc.users.indexWhere((u) => u.id == userId);
+        if (idx != -1) {
+          final u = uc.users[idx];
+          final newDue = (u.totalDue - amount).clamp(0, 9999999);
+          uc.users[idx] = UserModel(
+            id: u.id,
+            shopName: u.shopName,
+            proprietorName: u.proprietorName,
+            phone: u.phone,
+            email: u.email,
+            address: u.address,
+            deliveryDay: u.deliveryDay,
+            totalDue: newDue,
+            totalPayableToCustomer: u.totalPayableToCustomer,
+            isBlocked: u.isBlocked,
+            createdAt: u.createdAt,
+          );
+        }
+      } catch (_) {}
+    }
   }
 
   Future<void> updateOrderItems(String id, List<OrderItem> items) async {
@@ -384,14 +652,245 @@ class OrderController extends GetxController {
         memoNumber: o.memoNumber,
         dispatchedAt: o.dispatchedAt,
         dispatchedBy: o.dispatchedBy,
+        deliveredAt: o.deliveredAt,
+        localMemo: o.localMemo,
+        returnAmount: o.returnAmount,
+        deductionAmount: o.deductionAmount,
+        previousDue: o.previousDue,
+        discountAmount: o.discountAmount,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
     }
   }
 
+  Future<void> changeCustomer({
+    required String orderId,
+    required String userId,
+    required String shopName,
+    required String shopPhone,
+    required String shopAddress,
+    required String userPhone,
+    required int userDue,
+  }) async {
+    await _db.collection('orders').doc(orderId).update({
+      'userId': userId,
+      'shopName': shopName,
+      'shopPhone': shopPhone,
+      'shopAddress': shopAddress,
+      'userPhone': userPhone,
+      'userDue': userDue,
+    });
+
+    final idx = orders.indexWhere((o) => o.id == orderId);
+    if (idx != -1) {
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: o.createdAt,
+        items: o.items,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        shopName: shopName,
+        shopAddress: shopAddress,
+        shopPhone: shopPhone,
+        userId: userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: o.deliveredBySrId,
+        commissionConfirmed: o.commissionConfirmed,
+        scheduledDeliveryDate: o.scheduledDeliveryDate,
+        deliveryAssignedSrId: o.deliveryAssignedSrId,
+        deliveryAssignedSrName: o.deliveryAssignedSrName,
+        memoNumber: o.memoNumber,
+        dispatchedAt: o.dispatchedAt,
+        dispatchedBy: o.dispatchedBy,
+        deliveredAt: o.deliveredAt,
+        localMemo: o.localMemo,
+        returnAmount: o.returnAmount,
+        deductionAmount: o.deductionAmount,
+        previousDue: o.previousDue,
+        discountAmount: o.discountAmount,
+        userPhone: userPhone,
+        userDue: userDue,
+      );
+      orders.refresh();
+    }
+  }
+
+  /// Save the total return/deduction amount on the order.
+  Future<void> saveReturnAmount(String id, num amount) async {
+    await _db.collection('orders').doc(id).update({'returnAmount': amount});
+    final idx = orders.indexWhere((o) => o.id == id);
+    if (idx != -1) {
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: o.createdAt,
+        items: o.items,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        shopName: o.shopName,
+        shopAddress: o.shopAddress,
+        shopPhone: o.shopPhone,
+        userId: o.userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: o.deliveredBySrId,
+        commissionConfirmed: o.commissionConfirmed,
+        scheduledDeliveryDate: o.scheduledDeliveryDate,
+        deliveryAssignedSrId: o.deliveryAssignedSrId,
+        deliveryAssignedSrName: o.deliveryAssignedSrName,
+        memoNumber: o.memoNumber,
+        dispatchedAt: o.dispatchedAt,
+        dispatchedBy: o.dispatchedBy,
+        deliveredAt: o.deliveredAt,
+        localMemo: o.localMemo,
+        returnAmount: amount,
+        deductionAmount: o.deductionAmount,
+        previousDue: o.previousDue,
+        discountAmount: o.discountAmount,
+        userPhone: o.userPhone,
+        userDue: o.userDue,
+      );
+      orders.refresh();
+    }
+  }
+
+  /// Save the total replace deduction amount on the order.
+  Future<void> saveDeductionAmount(String id, num amount) async {
+    await _db.collection('orders').doc(id).update({'deductionAmount': amount});
+    final idx = orders.indexWhere((o) => o.id == id);
+    if (idx != -1) {
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: o.createdAt,
+        items: o.items,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        shopName: o.shopName,
+        shopAddress: o.shopAddress,
+        shopPhone: o.shopPhone,
+        userId: o.userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: o.deliveredBySrId,
+        commissionConfirmed: o.commissionConfirmed,
+        scheduledDeliveryDate: o.scheduledDeliveryDate,
+        deliveryAssignedSrId: o.deliveryAssignedSrId,
+        deliveryAssignedSrName: o.deliveryAssignedSrName,
+        memoNumber: o.memoNumber,
+        dispatchedAt: o.dispatchedAt,
+        dispatchedBy: o.dispatchedBy,
+        deliveredAt: o.deliveredAt,
+        localMemo: o.localMemo,
+        returnAmount: o.returnAmount,
+        deductionAmount: amount,
+        previousDue: o.previousDue,
+        discountAmount: o.discountAmount,
+        userPhone: o.userPhone,
+        userDue: o.userDue,
+      );
+      orders.refresh();
+    }
+  }
+
+  /// Save discount amount on the order.
+  Future<void> saveDiscountAmount(String id, num amount) async {
+    await _db.collection('orders').doc(id).update({'discountAmount': amount});
+    final idx = orders.indexWhere((o) => o.id == id);
+    if (idx != -1) {
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: o.createdAt,
+        items: o.items,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        shopName: o.shopName,
+        shopAddress: o.shopAddress,
+        shopPhone: o.shopPhone,
+        userId: o.userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: o.deliveredBySrId,
+        commissionConfirmed: o.commissionConfirmed,
+        scheduledDeliveryDate: o.scheduledDeliveryDate,
+        deliveryAssignedSrId: o.deliveryAssignedSrId,
+        deliveryAssignedSrName: o.deliveryAssignedSrName,
+        memoNumber: o.memoNumber,
+        dispatchedAt: o.dispatchedAt,
+        dispatchedBy: o.dispatchedBy,
+        deliveredAt: o.deliveredAt,
+        localMemo: o.localMemo,
+        returnAmount: o.returnAmount,
+        deductionAmount: o.deductionAmount,
+        previousDue: o.previousDue,
+        discountAmount: amount,
+        userPhone: o.userPhone,
+        userDue: o.userDue,
+      );
+      orders.refresh();
+    }
+  }
+
   void changeFilter(String value) {
+    if (selectedStatus.value == value) return;
     selectedStatus.value = value;
+    lastDoc = null;
+    hasMore.value = true;
+    fetchOrders();
+  }
+
+  /// Admin deletes an order. If the order was dispatched or delivered,
+  /// stock is restored first. Commission records (if any) are also
+  /// removed so that SR ledger stays consistent.
+  Future<void> deleteOrder(String orderId) async {
+    final idx = orders.indexWhere((o) => o.id == orderId);
+    if (idx == -1) return;
+    final o = orders[idx];
+
+    final batch = _db.batch();
+
+    // 1. Restore stock if it was deducted (dispatched or delivered)
+    if (o.status == 'dispatched' || o.status == 'delivered') {
+      for (final item in o.items) {
+        if (item.productId.isEmpty) continue;
+        batch.update(
+          _db.collection('products').doc(item.productId),
+          {'stock': FieldValue.increment(item.quantity)},
+        );
+      }
+    }
+
+    // 2. Delete commission payment record (if any)
+    if (o.commissionConfirmed) {
+      final paySnap = await _db
+          .collection('sr_payments')
+          .where('orderId', isEqualTo: orderId)
+          .get();
+      for (final doc in paySnap.docs) {
+        batch.delete(doc.reference);
+      }
+    }
+
+    // 3. Delete the order document
+    batch.delete(_db.collection('orders').doc(orderId));
+
+    await batch.commit();
+
+    // 4. Refresh products globally
+    try {
+      Get.find<ProductController>().fetchProducts(forceRefresh: true);
+    } catch (_) {}
+
+    // 5. Remove from local cache
+    orders.removeAt(idx);
   }
 
   /// Admin confirms delivery and credits SR commission.
@@ -452,6 +951,12 @@ class OrderController extends GetxController {
         memoNumber: o.memoNumber,
         dispatchedAt: o.dispatchedAt,
         dispatchedBy: o.dispatchedBy,
+        deliveredAt: o.deliveredAt,
+        localMemo: o.localMemo,
+        returnAmount: o.returnAmount,
+        deductionAmount: o.deductionAmount,
+        previousDue: o.previousDue,
+        discountAmount: o.discountAmount,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );

@@ -12,48 +12,59 @@ import 'bindings/initial_binding.dart';
 import 'theme/app_theme.dart';
 import 'firebase_options.dart';
 
-String _initialRoute = AppRoutes.login;
 String? srDocIdForStartup;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  usePathUrlStrategy(); // Remove # from web URLs
+  usePathUrlStrategy();
 
-  await GetStorage.init();
+  String initialRoute = AppRoutes.login;
+  String? srDocId;
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await GetStorage.init().timeout(const Duration(seconds: 5));
+  } catch (_) {}
 
-  await _initFirestore();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(const Duration(seconds: 15));
+  } catch (_) {}
 
-  // Determine initial route based on role
-  // authStateChanges().first waits for persistent auth state to restore from IndexedDB (web)
-  final user = await FirebaseAuth.instance.authStateChanges().first;
-  if (user != null) {
-    final db = FirebaseFirestore.instance;
-    final srSnap = await db
-        .collection('sr_staff')
-        .where('email', isEqualTo: user.email)
-        .where('isActive', isEqualTo: true)
-        .limit(1)
-        .get();
-    if (srSnap.docs.isNotEmpty) {
-      _initialRoute = AppRoutes.srPanel;
-      srDocIdForStartup = srSnap.docs.first.id;
-    } else {
-      _initialRoute = AppRoutes.home;
+  try {
+    await _initFirestore().timeout(const Duration(seconds: 10));
+  } catch (_) {}
+
+  try {
+    final user = await FirebaseAuth.instance
+        .authStateChanges()
+        .first
+        .timeout(const Duration(seconds: 10));
+    if (user != null && user.email != null) {
+      try {
+        final srSnap = await FirebaseFirestore.instance
+            .collection('sr_staff')
+            .where('email', isEqualTo: user.email)
+            .where('isActive', isEqualTo: true)
+            .limit(1)
+            .get()
+            .timeout(const Duration(seconds: 10));
+        if (srSnap.docs.isNotEmpty) {
+          initialRoute = AppRoutes.srPanel;
+          srDocId = srSnap.docs.first.id;
+        } else {
+          initialRoute = AppRoutes.home;
+        }
+      } catch (_) {
+        initialRoute = AppRoutes.home;
+      }
     }
-  }
+  } catch (_) {}
 
-  runApp(const MyApp());
+  srDocIdForStartup = srDocId;
+  runApp(MyApp(initialRoute: initialRoute, srDocId: srDocId));
 }
 
-/// Ensures required Firestore documents exist with default values.
-/// Collections are auto-created in Firestore on first write.
-///   • admin_settings/finance  — SR commission % & monthly salary
-///   • expenses                — auto-created on first expense entry
-///   • sr_payments             — auto-created on first payment entry
 Future<void> _initFirestore() async {
   final db = FirebaseFirestore.instance;
   final financeRef = db.collection('admin_settings').doc('finance');
@@ -68,14 +79,17 @@ Future<void> _initFirestore() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String initialRoute;
+  final String? srDocId;
+
+  const MyApp({super.key, required this.initialRoute, this.srDocId});
 
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       initialBinding: InitialBinding(),
-      initialRoute: _initialRoute,
+      initialRoute: initialRoute,
       getPages: AppPages.pages,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

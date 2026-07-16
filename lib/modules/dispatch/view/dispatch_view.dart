@@ -24,7 +24,7 @@ class DispatchView extends GetView<DispatchController> {
                 const Text('স্টক আউট / Dispatch',
                     style: TextStyle(fontWeight: FontWeight.w800)),
                 Text(
-                  '${controller.filteredOrders.length} টি Approved অর্ডার',
+                  '${controller.filteredOrders.length} টি অর্ডার (Pending / Approved / Delivered w/o Dispatch)',
                   style: TextStyle(fontSize: 12, color: scheme.onSurface.withAlpha(160)),
                 ),
               ],
@@ -71,7 +71,7 @@ class DispatchView extends GetView<DispatchController> {
               );
             }
             return RefreshIndicator(
-              onRefresh: () => controller.fetchApprovedOrders(),
+              onRefresh: () => controller.fetchDispatchableOrders(),
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
                 itemCount: orders.length,
@@ -145,7 +145,7 @@ class DispatchView extends GetView<DispatchController> {
       child: InkWell(
         onTap: () async {
           await Get.to(() => OrderDetailsView(order: order));
-          controller.fetchApprovedOrders();
+          controller.fetchDispatchableOrders();
         },
         child: IntrinsicHeight(
           child: Row(

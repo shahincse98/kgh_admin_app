@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import '../model/purchase_entry_model.dart';
+import '../model/shortage_item_model.dart';
 import '../../product/model/product_model.dart';
 import '../../product/controller/product_controller.dart';
 
@@ -16,11 +17,19 @@ class PurchaseController extends GetxController {
   /// Map of dateKey (yyyy-MM-dd) -> total purchase amount
   final dailyPurchase = <String, double>{}.obs;
 
+  // ── Shortage list (from approved orders vs stock) ──────────────
+  final shortageList = <ShortageItem>[].obs;
+  final shortageLoading = false.obs;
+  final approvedOrderCount = 0.obs;
+  final shortageError = ''.obs;
+  bool _shortageLoaded = false;
+
   @override
   void onInit() {
     super.onInit();
     _loadProductsFromCache();
     loadEntries();
+    computeShortage();
   }
 
   /// Reuse already-loaded products from ProductController to avoid
@@ -222,5 +231,103 @@ class PurchaseController extends GetxController {
     await batch.commit();
     entries.removeWhere((x) => x.id == e.id);
     _buildDailyMap(entries);
+  }
+
+  // ── SHORTAGE COMPUTATION ────────────────────────────────────────
+  //
+  // Aggregates all product quantities from approved orders, compares
+  // with current stock, and produces a list of products that need to
+  // be procured.  shortQty = orderedQty - stock  (only if > 0).
+
+  Future<void> computeShortage({bool force = false}) async {
+    if (shortageLoading.value) return;
+    if (_shortageLoaded && !force) return;
+    shortageLoading.value = true;
+    shortageError.value = '';
+    try {
+      // 1. Ensure products are loaded
+      try {
+        final pc = Get.find<ProductController>();
+        if (pc.products.isEmpty) await pc.fetchProducts();
+      } catch (_) {}
+
+      // 2. Fetch ALL approved orders (no pagination)
+      final snap = await _db
+          .collection('orders')
+          .where('status', isEqualTo: 'approved')
+          .get();
+
+      approvedOrderCount.value = snap.docs.length;
+
+      // 3. Aggregate ordered quantities per productId
+      final orderedMap = <String, int>{};
+      final orderCountMap = <String, int>{};
+      for (final doc in snap.docs) {
+        final items = doc.data()['items'] as List? ?? [];
+        for (final item in items) {
+          final productId = (item['productId'] ?? '').toString();
+          final qty = (item['quantity'] as num?)?.toInt() ?? 0;
+          if (productId.isEmpty || qty == 0) continue;
+          orderedMap[productId] = (orderedMap[productId] ?? 0) + qty;
+          orderCountMap[productId] = (orderCountMap[productId] ?? 0) + 1;
+        }
+      }
+
+      // 4. Build shortage list by comparing with stock
+      List<ProductModel> products;
+      try {
+        products = Get.find<ProductController>().products.toList();
+      } catch (_) {
+        products = allProducts.toList();
+      }
+
+      final result = <ShortageItem>[];
+      for (final p in products) {
+        final ordered = orderedMap[p.id] ?? 0;
+        if (ordered == 0) continue;
+        final short = ordered - p.stock;
+        if (short <= 0) continue;
+        result.add(ShortageItem(
+          productId: p.id,
+          productName: p.name,
+          brandName: p.brandName,
+          productCode: p.productCode,
+          unit: p.unit,
+          orderedQty: ordered,
+          stockQty: p.stock,
+          shortQty: short,
+          orderCount: orderCountMap[p.id] ?? 0,
+        ));
+      }
+
+      // Sort: largest shortage first
+      result.sort((a, b) => b.shortQty.compareTo(a.shortQty));
+      shortageList.assignAll(result);
+      _shortageLoaded = true;
+    } catch (e) {
+      shortageError.value = e.toString();
+    } finally {
+      shortageLoading.value = false;
+    }
+  }
+
+  /// Builds a plain-text copy of the shortage list.
+  String get shortageAsText {
+    if (shortageList.isEmpty) return 'কোনো শর্ট প্রডাক্ট নেই';
+    final now = DateTime.now();
+    final dateStr =
+        '${now.day}/${now.month}/${now.year}';
+    final buf = StringBuffer();
+    buf.writeln('সংগ্রহ তালিকা — $dateStr');
+    buf.writeln('Approved অর্ডার: $approvedOrderCount টি');
+    buf.writeln('শর্ট প্রডাক্ট: ${shortageList.length} টি');
+    buf.writeln('─────────────────────────────');
+    for (var i = 0; i < shortageList.length; i++) {
+      final item = shortageList[i];
+      buf.writeln(
+          '${i + 1}. ${item.displayName} — ${item.shortQty} টি'
+          ' (অর্ডার: ${item.orderedQty}, স্টক: ${item.stockQty})');
+    }
+    return buf.toString();
   }
 }

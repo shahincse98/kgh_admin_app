@@ -39,10 +39,14 @@ class _StockInViewState extends State<StockInView> {
     _dateCtrl.dispose();
     _sourceCtrl.dispose();
     _noteCtrl.dispose();
+    for (final item in _selectedItems) {
+      item.dispose();
+    }
     super.dispose();
   }
 
   int get _totalQty => _selectedItems.fold(0, (s, i) => s + i.quantity);
+  num get _totalValue => _selectedItems.fold(0, (s, i) => s + i.totalPrice);
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +220,7 @@ class _StockInViewState extends State<StockInView> {
                 const Spacer(),
                 Obx(() => _selectedItems.isEmpty
                     ? const SizedBox.shrink()
-                    : Text('${_selectedItems.length} টি | মোট $_totalQty pcs',
+                    : Text('${_selectedItems.length} টি | $_totalQty pcs | ৳${_fmt.format(_totalValue.toInt())}',
                         style: const TextStyle(fontSize: 12, color: Color(0xFF16A34A), fontWeight: FontWeight.w600))),
               ],
             ),
@@ -242,84 +246,128 @@ class _StockInViewState extends State<StockInView> {
                       color: scheme.surfaceContainerHigh.withAlpha(120),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            item.image,
-                            width: 40,
-                            height: 40,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, e1, e2) => Container(
-                              width: 40, height: 40,
-                              color: scheme.surfaceContainerHighest,
-                              child: const Icon(Icons.image_not_supported_rounded, size: 16),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                                  maxLines: 1, overflow: TextOverflow.ellipsis),
-                              Text('স্টক: ${item.stock}', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(120))),
-                            ],
-                          ),
-                        ),
+                        // Row 1: image, name, delete
                         Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            _qtyBtn(Icons.remove_rounded, () {
-                              if (item.quantity > 1) {
-                                item.quantity--;
-                                _selectedItems.refresh();
-                              } else {
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image.network(
+                                item.image,
+                                width: 40,
+                                height: 40,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, e1, e2) => Container(
+                                  width: 40, height: 40,
+                                  color: scheme.surfaceContainerHighest,
+                                  child: const Icon(Icons.image_not_supported_rounded, size: 16),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  Text('স্টক: ${item.stock}', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(120))),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                              color: Colors.red.shade400,
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () {
+                                item.dispose();
                                 _selectedItems.removeAt(idx);
-                              }
-                            }),
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        // Row 2: qty stepper, price field, line total
+                        Row(
+                          children: [
+                            // Qty stepper
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _qtyBtn(Icons.remove_rounded, () {
+                                  if (item.quantity > 1) {
+                                    item.quantity--;
+                                    _selectedItems.refresh();
+                                  } else {
+                                    item.dispose();
+                                    _selectedItems.removeAt(idx);
+                                  }
+                                }),
+                                SizedBox(
+                                  width: 42,
+                                  child: TextField(
+                                    controller: TextEditingController(text: '${item.quantity}'),
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                                    decoration: const InputDecoration(
+                                      border: InputBorder.none,
+                                      contentPadding: EdgeInsets.zero,
+                                      isDense: true,
+                                    ),
+                                    onChanged: (v) {
+                                      final q = int.tryParse(v);
+                                      if (q != null && q > 0) {
+                                        item.quantity = q;
+                                        _selectedItems.refresh();
+                                      }
+                                    },
+                                  ),
+                                ),
+                                _qtyBtn(Icons.add_rounded, () {
+                                  item.quantity++;
+                                  _selectedItems.refresh();
+                                }),
+                              ],
+                            ),
+                            const SizedBox(width: 8),
+                            // Price field
                             SizedBox(
-                              width: 42,
+                              width: 90,
                               child: TextField(
-                                controller: TextEditingController(text: '${item.quantity}'),
-                                keyboardType: TextInputType.number,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
+                                controller: item.priceCtrl,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                decoration: InputDecoration(
+                                  prefixText: '৳',
                                   isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                 ),
                                 onChanged: (v) {
-                                  final q = int.tryParse(v);
-                                  if (q != null && q > 0) {
-                                    item.quantity = q;
+                                  final p = num.tryParse(v);
+                                  if (p != null && p >= 0) {
+                                    item.unitPrice = p;
                                     _selectedItems.refresh();
                                   }
                                 },
-                                onSubmitted: (v) {
-                                  final q = int.tryParse(v);
-                                  if (q == null || q <= 0) {
-                                    item.quantity = 1;
-                                  }
-                                  _selectedItems.refresh();
-                                },
                               ),
                             ),
-                            _qtyBtn(Icons.add_rounded, () {
-                              item.quantity++;
-                              _selectedItems.refresh();
-                            }),
+                            const Spacer(),
+                            // Line total
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                const Text('মোট', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                                Text(
+                                  '৳${_fmt.format(item.totalPrice.toInt())}',
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF16A34A)),
+                                ),
+                              ],
+                            ),
                           ],
-                        ),
-                        const SizedBox(width: 4),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                          color: Colors.red.shade400,
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => _selectedItems.removeAt(idx),
                         ),
                       ],
                     ),
@@ -449,6 +497,7 @@ class _StockInViewState extends State<StockInView> {
                                       image: p.images.isNotEmpty ? p.images.first : '',
                                       stock: p.stock,
                                       quantity: 1,
+                                      unitPrice: p.purchasePrice,
                                     ));
                                   }
                                   Get.back();
@@ -476,7 +525,7 @@ class _StockInViewState extends State<StockInView> {
           icon: _submitting
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
               : const Icon(Icons.check_rounded),
-          label: Text(_submitting ? 'সাবমিট হচ্ছে…' : 'স্টক ইন করুন ($_totalQty pcs)'),
+          label: Text(_submitting ? 'সাবমিট হচ্ছে…' : 'স্টক ইন করুন ($_totalQty pcs | ৳${_fmt.format(_totalValue.toInt())})'),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF16A34A),
             foregroundColor: Colors.white,
@@ -508,12 +557,16 @@ class _StockInViewState extends State<StockInView> {
           'productName': i.name,
           'image': i.image,
           'quantity': i.quantity,
+          'unitPrice': i.unitPrice,
         }).toList(),
       );
 
-      Get.snackbar('সফল', '${_selectedItems.length} টি প্রডাক্ট, $_totalQty pcs স্টক ইন হয়েছে',
+      Get.snackbar('সফল', '${_selectedItems.length} টি প্রডাক্ট, $_totalQty pcs | ৳${_fmt.format(_totalValue.toInt())} স্টক ইন হয়েছে',
           snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
 
+      for (final item in _selectedItems) {
+        item.dispose();
+      }
       _selectedItems.clear();
       _noteCtrl.clear();
     } catch (e) {
@@ -530,6 +583,16 @@ class _CartItem {
   final String image;
   final int stock;
   int quantity;
+  num unitPrice;
+  late final TextEditingController priceCtrl;
 
-  _CartItem({required this.id, required this.name, required this.image, required this.stock, required this.quantity});
+  _CartItem({required this.id, required this.name, required this.image, required this.stock, required this.quantity, required this.unitPrice}) {
+    priceCtrl = TextEditingController(text: unitPrice.toStringAsFixed(0));
+  }
+
+  num get totalPrice => quantity * unitPrice;
+
+  void dispose() {
+    priceCtrl.dispose();
+  }
 }

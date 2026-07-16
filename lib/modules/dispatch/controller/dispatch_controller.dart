@@ -16,20 +16,36 @@ class DispatchController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchApprovedOrders();
+    fetchDispatchableOrders();
   }
 
-  Future<void> fetchApprovedOrders() async {
+  Future<void> fetchDispatchableOrders() async {
     loading.value = true;
     try {
+      // Fetch pending + approved orders (need dispatching)
       final snap = await _db
           .collection('orders')
-          .where('status', isEqualTo: 'approved')
-          .orderBy('createdAt', descending: true)
+          .where('status', whereIn: ['pending', 'approved'])
           .get();
 
-      orders.assignAll(
-          snap.docs.map((e) => OrderModel.fromFirestore(e)).toList());
+      // Fetch delivered orders that were never dispatched (no memoNumber)
+      final deliveredSnap = await _db
+          .collection('orders')
+          .where('status', isEqualTo: 'delivered')
+          .get();
+
+      final list = <OrderModel>[];
+      for (final doc in snap.docs) {
+        list.add(OrderModel.fromFirestore(doc));
+      }
+      for (final doc in deliveredSnap.docs) {
+        final order = OrderModel.fromFirestore(doc);
+        if (order.memoNumber.isEmpty) {
+          list.add(order);
+        }
+      }
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      orders.assignAll(list);
     } catch (_) {}
     loading.value = false;
   }
@@ -88,7 +104,7 @@ class DispatchController extends GetxController {
         memoNumber: memoNumber,
       );
     }
-    await fetchApprovedOrders();
+    await fetchDispatchableOrders();
     selectedOrderIds.clear();
   }
 }

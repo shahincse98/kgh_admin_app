@@ -6,6 +6,8 @@ class StockInModel {
   final String productName;
   final String image;
   final int quantity;
+  final num unitPrice;
+  final num totalPrice;
   final String source;
   final String note;
   final DateTime date;
@@ -18,6 +20,8 @@ class StockInModel {
     required this.productName,
     this.image = '',
     required this.quantity,
+    this.unitPrice = 0,
+    this.totalPrice = 0,
     this.source = '',
     this.note = '',
     required this.date,
@@ -33,6 +37,8 @@ class StockInModel {
       productName: data['productName'] ?? '',
       image: data['image'] ?? '',
       quantity: (data['quantity'] ?? 0).toInt(),
+      unitPrice: (data['unitPrice'] as num?) ?? 0,
+      totalPrice: (data['totalPrice'] as num?) ?? 0,
       source: data['source'] ?? '',
       note: data['note'] ?? '',
       date: (data['date'] as Timestamp).toDate(),

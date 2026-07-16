@@ -45,6 +45,17 @@ class StockInController extends GetxController {
     return list;
   }
 
+  /// Total purchase value of all (filtered) entries
+  num get totalPurchaseValue =>
+      filteredEntries.fold(0, (s, e) => s + e.totalPrice);
+
+  /// Total quantity of all (filtered) entries
+  int get totalQuantity =>
+      filteredEntries.fold(0, (s, e) => s + e.quantity);
+
+  /// Total entries count
+  int get totalEntries => filteredEntries.length;
+
   List<StockInGroup> get filteredGroups {
     final list = filteredEntries;
     final map = <String, StockInGroup>{};
@@ -68,19 +79,27 @@ class StockInController extends GetxController {
     required String productId,
     required String productName,
     required int quantity,
+    num unitPrice = 0,
     String image = '',
     String source = '',
     String note = '',
     required DateTime date,
   }) async {
     final currentUser = await _getCurrentUserId();
+    final totalPrice = (unitPrice * quantity);
 
     final batch = _db.batch();
 
-    // 1. Increment product stock
+    // 1. Increment product stock + update purchase price
     if (productId.isNotEmpty) {
       final ref = _db.collection('products').doc(productId);
-      batch.update(ref, {'stock': FieldValue.increment(quantity)});
+      final updates = <String, dynamic>{
+        'stock': FieldValue.increment(quantity),
+      };
+      if (unitPrice > 0) {
+        updates['purchasePrice'] = unitPrice;
+      }
+      batch.update(ref, updates);
     }
 
     // 2. Create stock-in entry
@@ -90,6 +109,8 @@ class StockInController extends GetxController {
       'productName': productName,
       'image': image,
       'quantity': quantity,
+      'unitPrice': unitPrice,
+      'totalPrice': totalPrice,
       'source': source,
       'note': note,
       'date': Timestamp.fromDate(date),
@@ -99,9 +120,10 @@ class StockInController extends GetxController {
 
     await batch.commit();
 
-    // Refresh products globally
+    // Refresh products globally + local cache
     try {
-      Get.find<ProductController>().fetchProducts(forceRefresh: true);
+      final pc = Get.find<ProductController>();
+      pc.fetchProducts(forceRefresh: true);
     } catch (_) {}
 
     await fetchEntries();
@@ -121,10 +143,19 @@ class StockInController extends GetxController {
       final productName = item['productName'] as String? ?? '';
       final image = item['image'] as String? ?? '';
       final quantity = (item['quantity'] as num?)?.toInt() ?? 0;
+      final unitPrice = (item['unitPrice'] as num?) ?? 0;
       if (productId.isEmpty || quantity <= 0) continue;
 
-      // Increment stock
-      batch.update(_db.collection('products').doc(productId), {'stock': FieldValue.increment(quantity)});
+      final totalPrice = unitPrice * quantity;
+
+      // Increment stock + update purchase price
+      final updates = <String, dynamic>{
+        'stock': FieldValue.increment(quantity),
+      };
+      if (unitPrice > 0) {
+        updates['purchasePrice'] = unitPrice;
+      }
+      batch.update(_db.collection('products').doc(productId), updates);
 
       // Create entry
       final docRef = _db.collection('stock_ins').doc();
@@ -133,6 +164,8 @@ class StockInController extends GetxController {
         'productName': productName,
         'image': image,
         'quantity': quantity,
+        'unitPrice': unitPrice,
+        'totalPrice': totalPrice,
         'source': source,
         'note': note,
         'date': Timestamp.fromDate(date),
@@ -174,12 +207,15 @@ class StockInController extends GetxController {
     required String productId,
     required String productName,
     required int quantity,
+    num unitPrice = 0,
     String source = '',
     String note = '',
     required DateTime date,
   }) async {
     final oldEntry = entries.firstWhereOrNull((e) => e.id == id);
     if (oldEntry == null) return;
+
+    final newTotalPrice = unitPrice * quantity;
 
     final batch = _db.batch();
 
@@ -189,10 +225,15 @@ class StockInController extends GetxController {
           {'stock': FieldValue.increment(-oldEntry.quantity)});
     }
 
-    // 2. Apply new stock
+    // 2. Apply new stock + update purchase price
     if (productId.isNotEmpty) {
-      batch.update(_db.collection('products').doc(productId),
-          {'stock': FieldValue.increment(quantity)});
+      final updates = <String, dynamic>{
+        'stock': FieldValue.increment(quantity),
+      };
+      if (unitPrice > 0) {
+        updates['purchasePrice'] = unitPrice;
+      }
+      batch.update(_db.collection('products').doc(productId), updates);
     }
 
     // 3. Update entry
@@ -200,6 +241,8 @@ class StockInController extends GetxController {
       'productId': productId,
       'productName': productName,
       'quantity': quantity,
+      'unitPrice': unitPrice,
+      'totalPrice': newTotalPrice,
       'source': source,
       'note': note,
       'date': Timestamp.fromDate(date),
@@ -237,4 +280,5 @@ class StockInGroup {
   });
 
   int get totalQty => entries.fold(0, (s, e) => s + e.quantity);
+  num get totalValue => entries.fold(0, (s, e) => s + e.totalPrice);
 }

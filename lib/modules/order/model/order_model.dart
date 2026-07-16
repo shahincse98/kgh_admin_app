@@ -7,6 +7,7 @@ class OrderItem {
   final int quantity;
   final num pricePerUnit;
   final num totalPrice;
+  final num purchasePrice;
 
   OrderItem({
     required this.productId,
@@ -15,6 +16,7 @@ class OrderItem {
     required this.quantity,
     required this.pricePerUnit,
     required this.totalPrice,
+    this.purchasePrice = 0,
   });
 
   factory OrderItem.fromMap(Map<String, dynamic> map) {
@@ -25,6 +27,7 @@ class OrderItem {
       quantity: (map['quantity'] ?? 0).toInt(),
       pricePerUnit: map['pricePerUnit'] ?? 0,
       totalPrice: map['totalPrice'] ?? 0,
+      purchasePrice: map['purchasePrice'] ?? 0,
     );
   }
 
@@ -35,6 +38,7 @@ class OrderItem {
         'quantity': quantity,
         'pricePerUnit': pricePerUnit,
         'totalPrice': totalPrice,
+        'purchasePrice': purchasePrice,
       };
 }
 
@@ -59,6 +63,13 @@ class OrderModel {
   final String memoNumber;             // Memo/challan number for dispatch
   final DateTime? dispatchedAt;        // When products physically left warehouse
   final String dispatchedBy;           // UID of admin who dispatched
+  final DateTime? deliveredAt;         // When the order was delivered to customer
+  final String localMemo;              // Local memo number (e.g. 233)
+  final num returnAmount;              // Total value of returned products
+  final num deductionAmount;           // Total replace cash deduction
+  final num discountAmount;            // Discount given at delivery
+  final String paymentMethod;           // নগদ / বিকাশ / রকেট / SR হাতে
+  final int previousDue;               // User's due at time of delivery
   String userPhone;            // resolved after load from users collection
   int userDue;                 // resolved after load from users collection
 
@@ -83,6 +94,13 @@ class OrderModel {
     this.memoNumber = '',
     this.dispatchedAt,
     this.dispatchedBy = '',
+    this.deliveredAt,
+    this.localMemo = '',
+    this.returnAmount = 0,
+    this.deductionAmount = 0,
+    this.discountAmount = 0,
+    this.paymentMethod = '',
+    this.previousDue = 0,
     this.userPhone = '',
     this.userDue = 0,
   });
@@ -114,6 +132,15 @@ class OrderModel {
           ? (data['dispatchedAt'] as Timestamp).toDate()
           : null,
       dispatchedBy: data['dispatchedBy'] ?? '',
+      deliveredAt: data['deliveredAt'] is Timestamp
+          ? (data['deliveredAt'] as Timestamp).toDate()
+          : null,
+      localMemo: data['localMemo'] ?? '',
+      returnAmount: data['returnAmount'] ?? 0,
+      deductionAmount: data['deductionAmount'] ?? 0,
+      discountAmount: data['discountAmount'] ?? 0,
+      paymentMethod: data['paymentMethod'] ?? '',
+      previousDue: (data['previousDue'] as num?)?.toInt() ?? 0,
       userPhone: data['userPhone'] ?? data['orderedByPhone'] ?? '',
       items: (data['items'] as List? ?? [])
           .map((e) => OrderItem.fromMap(e))

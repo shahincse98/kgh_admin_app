@@ -6,7 +6,6 @@ import 'package:get/get.dart';
 import '../controller/product_controller.dart';
 import '../model/product_model.dart';
 import 'product_form_view.dart';
-import 'replace_management_view.dart';
 import 'stock_management_view.dart';
 import '../../replace/view/admin_replace_view.dart';
 import '../../replace/controller/admin_replace_controller.dart';
@@ -292,12 +291,8 @@ class ProductListView extends GetView<ProductController> {
       }
 
       final list = controller.filteredProducts;
-      final replaceStockList = controller.products
-          .where((p) => p.replaceStock > 0)
-          .toList()
-        ..sort((a, b) => b.replaceStock.compareTo(a.replaceStock));
 
-      if (list.isEmpty && replaceStockList.isEmpty) {
+      if (list.isEmpty) {
         return const Center(child: Text('No products found'));
       }
 
@@ -315,9 +310,6 @@ class ProductListView extends GetView<ProductController> {
 
             return CustomScrollView(
               slivers: [
-                // ── Replace Stock Section ──
-                if (replaceStockList.isNotEmpty) ...
-                  _replaceStockSliver(replaceStockList, columns, context),
                 // ── Regular Products ──
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(12, 6, 12, 16),
@@ -444,170 +436,6 @@ class ProductListView extends GetView<ProductController> {
         ),
       );
     });
-  }
-
-  List<Widget> _replaceStockSliver(
-      List<ProductModel> list, int columns, BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return [
-      SliverToBoxAdapter(
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-          padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.teal.withAlpha(18),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.teal.withAlpha(50)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.swap_horiz_rounded,
-                  color: Colors.teal, size: 18),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'রিপ্লেস প্রডাক্ট',
-                  style: TextStyle(
-                      color: Colors.teal,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.teal,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '${list.fold(0, (s, p) => s + p.replaceStock)}টি',
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 11),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-        sliver: SliverGrid(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: columns == 1 ? 2.8 : 1.4,
-          ),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              final p = list[index];
-              return Card(
-                color: Colors.teal.withAlpha(12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                      color: Colors.teal.withAlpha(60), width: 1),
-                ),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () => _editProductDialog(p),
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: p.images.isNotEmpty
-                              ? Image.network(
-                                  p.images.first,
-                                  width: 56,
-                                  height: 56,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
-                                    width: 56,
-                                    height: 56,
-                                    color: Colors.teal.withAlpha(20),
-                                    child: const Icon(
-                                        Icons.inventory_2_rounded,
-                                        color: Colors.teal),
-                                  ),
-                                )
-                              : Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    color: Colors.teal.withAlpha(20),
-                                    borderRadius:
-                                        BorderRadius.circular(10),
-                                  ),
-                                  child: const Icon(
-                                      Icons.swap_horiz_rounded,
-                                      color: Colors.teal),
-                                ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                p.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(p.productCategory,
-                                  style: const TextStyle(
-                                      fontSize: 11, color: Colors.grey)),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding:
-                                        const EdgeInsets.symmetric(
-                                            horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.teal,
-                                      borderRadius:
-                                          BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'রিপ্লেস: ${p.replaceStock}টি',
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text('স্টক: ${p.stock}',
-                                      style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey)),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-            childCount: list.length,
-          ),
-        ),
-      ),
-    ];
   }
 
   Widget _line(String label, String value) {

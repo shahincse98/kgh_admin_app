@@ -24,9 +24,15 @@ class _OrderListViewState extends State<OrderListView> {
   void initState() {
     super.initState();
     _scrollCtrl.addListener(() {
-      if (_scrollCtrl.position.pixels >=
-              _scrollCtrl.position.maxScrollExtent - 200 &&
-          controller.hasMore.value) {
+      final pos = _scrollCtrl.position;
+      // Guard against infinite loadMore when filtered list is short
+      if (pos.maxScrollExtent <= 0 && !controller.loading.value) {
+        controller.fetchOrders(loadMore: true);
+        return;
+      }
+      if (pos.pixels >= pos.maxScrollExtent - 200 &&
+          controller.hasMore.value &&
+          !controller.loading.value) {
         controller.fetchOrders(loadMore: true);
       }
     });
@@ -77,6 +83,12 @@ class _OrderListViewState extends State<OrderListView> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (orders.isEmpty) {
+                // Auto load more if filtered list is empty but there are more pages
+                if (controller.hasMore.value && !controller.loading.value) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    controller.fetchOrders(loadMore: true);
+                  });
+                }
                 return Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -198,6 +210,107 @@ class _OrderListViewState extends State<OrderListView> {
     );
   }
 
+  // ── Order long-press actions ─────────────────────────────────
+
+  void _showOrderActions(OrderModel order, ColorScheme scheme) {
+    Get.bottomSheet(
+      Container(
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: scheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  order.shopName.isEmpty ? 'Unknown Shop' : order.shopName,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  '#${order.id} • ${order.items.length} পণ্য • ৳${_fmt.format(order.totalAmount.toInt())}',
+                  style: TextStyle(
+                      fontSize: 12, color: scheme.onSurface.withAlpha(140)),
+                ),
+              ),
+              const Divider(height: 20),
+              ListTile(
+                leading: const Icon(Icons.visibility_outlined, size: 22),
+                title: const Text('বিস্তারিত দেখুন'),
+                onTap: () {
+                  Get.back();
+                  Get.to(() => OrderDetailsView(order: order));
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.delete_outline_rounded,
+                    color: Colors.red.shade600, size: 22),
+                title: Text('অর্ডার ডিলিট করুন',
+                    style: TextStyle(color: Colors.red.shade600)),
+                subtitle: Text(
+                    (order.status == 'dispatched' || order.status == 'delivered')
+                        ? 'স্টক ফিরে যাবে'
+                        : 'এই অর্ডার মুছে ফেলা হবে',
+                    style: TextStyle(
+                        fontSize: 11, color: scheme.onSurface.withAlpha(140))),
+                onTap: () async {
+                  Get.back();
+                  final ok = await Get.dialog<bool>(AlertDialog(
+                    title: const Text('অর্ডার ডিলিট করবেন?'),
+                    content: Text(
+                        '"${order.shopName}" এর অর্ডার #${order.id} স্থায়ীভাবে মুছে ফেলা হবে।${(order.status == 'dispatched' || order.status == 'delivered') ? '\nস্টক স্বয়ংক্রিয়ভাবে ফিরে যাবে।' : ''}'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Get.back(result: false),
+                          child: const Text('না')),
+                      ElevatedButton(
+                        onPressed: () => Get.back(result: true),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white),
+                        child: const Text('ডিলিট করুন'),
+                      ),
+                    ],
+                  ));
+                  if (ok == true) {
+                    await controller.deleteOrder(order.id);
+                    if (mounted) {
+                      Get.snackbar(
+                        'সফল',
+                        'অর্ডার ডিলিট হয়েছে',
+                        snackPosition: SnackPosition.BOTTOM,
+                        backgroundColor: Colors.red,
+                        colorText: Colors.white,
+                      );
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── Date group header ──────────────────────────────────────────
 
   Widget _dateHeader(String date, int count) {
@@ -248,6 +361,7 @@ class _OrderListViewState extends State<OrderListView> {
           controller.hasMore.value = true;
           controller.fetchOrders();
         },
+        onLongPress: () => _showOrderActions(order, scheme),
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -317,10 +431,8 @@ class _OrderListViewState extends State<OrderListView> {
                                       initialDate:
                                           order.scheduledDeliveryDate ??
                                               DateTime.now(),
-                                      firstDate: DateTime.now()
-                                          .subtract(const Duration(days: 1)),
-                                      lastDate: DateTime.now()
-                                          .add(const Duration(days: 365)),
+                                      firstDate: DateTime(2020),
+                                      lastDate: DateTime(2030),
                                     );
                                     if (picked == null) return;
                                     await controller.setScheduledDelivery(
@@ -393,10 +505,31 @@ class _OrderListViewState extends State<OrderListView> {
                               scheme,
                               labelColor: const Color(0xFFDC2626),
                             ),
+                          if (order.returnAmount > 0)
+                            _chip(
+                              Icons.keyboard_return_rounded,
+                              'ফেরত: ৳${_fmt.format(order.returnAmount.toInt())}',
+                              scheme,
+                              labelColor: const Color(0xFF8B5CF6),
+                            ),
+                          if (order.deductionAmount > 0)
+                            _chip(
+                              Icons.money_off_rounded,
+                              'কাটা: ৳${_fmt.format(order.deductionAmount.toInt())}',
+                              scheme,
+                              labelColor: const Color(0xFFDC2626),
+                            ),
                           if (order.orderedByEmail.isNotEmpty)
                             _chip(
                               Icons.support_agent_rounded,
                               order.orderedByEmail,
+                              scheme,
+                              labelColor: const Color(0xFF7C3AED),
+                            ),
+                          if (order.deliveryAssignedSrName.isNotEmpty)
+                            _chip(
+                              Icons.person_pin_circle_rounded,
+                              'SR: ${order.deliveryAssignedSrName}',
                               scheme,
                               labelColor: const Color(0xFF7C3AED),
                             ),
@@ -413,6 +546,13 @@ class _OrderListViewState extends State<OrderListView> {
                               'মেমো: ${order.memoNumber}',
                               scheme,
                               labelColor: const Color(0xFFD97706),
+                            ),
+                          if (order.localMemo.isNotEmpty)
+                            _chip(
+                              Icons.tag_rounded,
+                              'লোকাল: #${order.localMemo}',
+                              scheme,
+                              labelColor: const Color(0xFF0891B2),
                             ),
                         ],
                       ),

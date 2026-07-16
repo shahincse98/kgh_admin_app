@@ -67,6 +67,8 @@ class AdminReplaceController extends GetxController {
     String replaceProductName = '',
     String customerResolutionType = '',
     int deductionAmount = 0,
+    int defectiveProductPrice = 0,
+    int replaceProductPrice = 0,
     required String note,
     required DateTime date,
   }) async {
@@ -86,6 +88,8 @@ class AdminReplaceController extends GetxController {
       deliveredToCustomer: false,
       customerResolutionType: customerResolutionType,
       deductionAmount: deductionAmount,
+      defectiveProductPrice: defectiveProductPrice,
+      replaceProductPrice: replaceProductPrice,
       supplierId: '',
       supplierName: '',
       status: 'at_shop',
@@ -99,6 +103,49 @@ class AdminReplaceController extends GetxController {
     await ref.set(entry.toMap());
 
     // Increment replaceCount on product (items awaiting processing)
+    if (productId.isNotEmpty) {
+      await _db
+          .collection('products')
+          .doc(productId)
+          .update({'replaceCount': FieldValue.increment(quantity)});
+      _localProductUpdate(productId, replaceCountDelta: quantity);
+    }
+
+    entries.insert(0, entry);
+  }
+
+  // ─── ADD TO AT SHOP (direct entry, no customer required) ────────────────
+
+  Future<void> addAtShopEntry({
+    required String productId,
+    required String productName,
+    required int quantity,
+    String note = '',
+    required DateTime date,
+  }) async {
+    final ref = _db.collection('admin_replace_entries').doc();
+    final entry = AdminReplaceModel(
+      id: ref.id,
+      productId: productId,
+      productName: productName,
+      quantity: quantity,
+      entryType: 'customer_in',
+      customerId: '',
+      customerName: '',
+      customerPhone: '',
+      customerAddress: '',
+      supplierId: '',
+      supplierName: '',
+      status: 'at_shop',
+      currentLocation: 'shop',
+      resolution: '',
+      resolvedQty: 0,
+      note: note,
+      date: date,
+      createdAt: DateTime.now(),
+    );
+    await ref.set(entry.toMap());
+
     if (productId.isNotEmpty) {
       await _db
           .collection('products')
@@ -203,6 +250,8 @@ class AdminReplaceController extends GetxController {
         deliveredToCustomerAt: entry.deliveredToCustomerAt,
         customerResolutionType: entry.customerResolutionType,
         deductionAmount: entry.deductionAmount,
+        defectiveProductPrice: entry.defectiveProductPrice,
+        replaceProductPrice: entry.replaceProductPrice,
         supplierId: supplierId,
         supplierName: supplierName,
         status: 'with_supplier',
@@ -289,6 +338,8 @@ class AdminReplaceController extends GetxController {
         deliveredToCustomerAt: entry.deliveredToCustomerAt,
         customerResolutionType: entry.customerResolutionType,
         deductionAmount: entry.deductionAmount,
+        defectiveProductPrice: entry.defectiveProductPrice,
+        replaceProductPrice: entry.replaceProductPrice,
         supplierId: entry.supplierId,
         supplierName: entry.supplierName,
         status: 'resolved',
@@ -345,6 +396,8 @@ class AdminReplaceController extends GetxController {
         deliveredToCustomerAt: entry.deliveredToCustomerAt,
         customerResolutionType: resolutionType,
         deductionAmount: deductionAmount,
+        defectiveProductPrice: entry.defectiveProductPrice,
+        replaceProductPrice: entry.replaceProductPrice,
         supplierId: entry.supplierId,
         supplierName: entry.supplierName,
         status: entry.status,
@@ -368,15 +421,33 @@ class AdminReplaceController extends GetxController {
     required String note,
   }) async {
     final now = DateTime.now();
+
+    final batch = _db.batch();
+
+    // 1. Mark delivered
     final updateMap = <String, dynamic>{
       'deliveredToCustomer': true,
       'deliveredToCustomerAt': Timestamp.fromDate(now),
       if (note.isNotEmpty) 'note': note,
     };
-    await _db
-        .collection('admin_replace_entries')
-        .doc(entry.id)
-        .update(updateMap);
+    batch.update(_db.collection('admin_replace_entries').doc(entry.id),
+        updateMap);
+
+    // 2. Deduct replace product from stock (if product_replace)
+    if (entry.customerResolutionType == 'product_replace' &&
+        entry.replaceProductId.isNotEmpty) {
+      batch.update(
+        _db.collection('products').doc(entry.replaceProductId),
+        {'stock': FieldValue.increment(-entry.quantity)},
+      );
+    }
+
+    await batch.commit();
+
+    // 3. Refresh products globally
+    try {
+      Get.find<ProductController>().fetchProducts(forceRefresh: true);
+    } catch (_) {}
 
     final idx = entries.indexWhere((e) => e.id == entry.id);
     if (idx != -1) {
@@ -407,6 +478,61 @@ class AdminReplaceController extends GetxController {
         note: note.isNotEmpty ? note : entry.note,
         date: entry.date,
         createdAt: entry.createdAt,
+      );
+      entries.refresh();
+    }
+  }
+
+  /// Set/Update the replace product for a pending customer replace entry.
+  /// This is what the customer will receive back.  No money is involved.
+  Future<void> setReplaceProduct({
+    required AdminReplaceModel entry,
+    required String replaceProductId,
+    required String replaceProductName,
+    int replaceProductPrice = 0,
+  }) async {
+    final updates = <String, dynamic>{
+      'replaceProductId': replaceProductId,
+      'replaceProductName': replaceProductName,
+      'customerResolutionType': 'product_replace',
+    };
+    if (replaceProductPrice > 0) {
+      updates['replaceProductPrice'] = replaceProductPrice;
+    }
+    await _db.collection('admin_replace_entries').doc(entry.id).update(updates);
+
+    final idx = entries.indexWhere((e) => e.id == entry.id);
+    if (idx != -1) {
+      final e = entries[idx];
+      entries[idx] = AdminReplaceModel(
+        id: e.id,
+        productId: e.productId,
+        productName: e.productName,
+        quantity: e.quantity,
+        entryType: e.entryType,
+        customerId: e.customerId,
+        customerName: e.customerName,
+        customerPhone: e.customerPhone,
+        customerAddress: e.customerAddress,
+        replaceProductId: replaceProductId,
+        replaceProductName: replaceProductName,
+        deliveredToCustomer: e.deliveredToCustomer,
+        deliveredToCustomerAt: e.deliveredToCustomerAt,
+        customerResolutionType: 'product_replace',
+        deductionAmount: e.deductionAmount,
+        defectiveProductPrice: e.defectiveProductPrice,
+        replaceProductPrice: replaceProductPrice > 0 ? replaceProductPrice : e.replaceProductPrice,
+        supplierId: e.supplierId,
+        supplierName: e.supplierName,
+        status: e.status,
+        currentLocation: e.currentLocation,
+        resolution: e.resolution,
+        resolvedQty: e.resolvedQty,
+        resolvedAt: e.resolvedAt,
+        sentToSupplierDate: e.sentToSupplierDate,
+        note: e.note,
+        date: e.date,
+        createdAt: e.createdAt,
       );
       entries.refresh();
     }
@@ -466,6 +592,50 @@ class AdminReplaceController extends GetxController {
       }
     } catch (_) {
       // ProductController may not be available in all contexts
+    }
+  }
+
+  // ─── FETCH PENDING FOR CUSTOMER ──────────────────────────────────────────
+
+  /// Fetches replace entries that are waiting to be delivered back to a
+  /// specific customer (has a replacement product assigned but not yet
+  /// handed over).  Used during order delivery to hand them over together
+  /// with the order.
+  Future<List<AdminReplaceModel>> fetchPendingForCustomer(
+      String customerId) async {
+    if (customerId.isEmpty) return [];
+    try {
+      final snap = await _db
+          .collection('admin_replace_entries')
+          .where('customerId', isEqualTo: customerId)
+          .where('deliveredToCustomer', isEqualTo: false)
+          .where('customerResolutionType', isEqualTo: 'product_replace')
+          .get();
+      final list = snap.docs
+          .map((d) => AdminReplaceModel.fromDoc(d))
+          .where((e) => e.replaceProductName.isNotEmpty)
+          .toList();
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Fetches ALL customer replace entries (both pending & delivered).
+  /// Used in order details page to show replace history for this customer.
+  Future<List<AdminReplaceModel>> fetchAllForCustomer(
+      String customerId) async {
+    if (customerId.isEmpty) return [];
+    try {
+      final snap = await _db
+          .collection('admin_replace_entries')
+          .where('customerId', isEqualTo: customerId)
+          .orderBy('createdAt', descending: true)
+          .get();
+      return snap.docs.map((d) => AdminReplaceModel.fromDoc(d)).toList();
+    } catch (_) {
+      return [];
     }
   }
 }

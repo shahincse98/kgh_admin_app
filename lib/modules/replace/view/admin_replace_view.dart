@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../controller/admin_replace_controller.dart';
 import '../model/admin_replace_model.dart';
 import '../../product/controller/product_controller.dart';
@@ -30,7 +31,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
   void initState() {
     super.initState();
     _rc = Get.find<AdminReplaceController>();
-    _tabs = TabController(length: 4, vsync: this);
+    _tabs = TabController(length: 5, vsync: this);
     _tabs.addListener(() => _tab.value = _tabs.index);
   }
 
@@ -53,8 +54,9 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
           isScrollable: true,
           tabAlignment: TabAlignment.start,
           tabs: const [
+            Tab(icon: Icon(Icons.inventory_2_rounded, size: 18), text: 'At Shop'),
             Tab(icon: Icon(Icons.person_rounded, size: 18), text: 'Customer'),
-            Tab(icon: Icon(Icons.home_repair_service_rounded, size: 18), text: 'At Shop'),
+            Tab(icon: Icon(Icons.schedule_rounded, size: 18), text: 'Pending'),
             Tab(icon: Icon(Icons.local_shipping_rounded, size: 18), text: 'Supplier'),
             Tab(icon: Icon(Icons.history_rounded, size: 18), text: 'History'),
           ],
@@ -78,16 +80,26 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
         child: TabBarView(
           controller: _tabs,
           children: [
-            _customerTab(cs),
             _atShopTab(cs),
+            _customerTab(cs),
+            _pendingTab(cs),
             _withSupplierTab(cs),
             _historyTab(cs),
           ],
         ),
       ),
       floatingActionButton: Obx(() {
-        if (_tab.value == 3) return const SizedBox.shrink(); // history
+        if (_tab.value == 4) return const SizedBox.shrink(); // history
+        if (_tab.value == 2) return const SizedBox.shrink(); // pending
         if (_tab.value == 0) {
+          return FloatingActionButton.extended(
+            onPressed: () => _showAddAtShopDialog(context),
+            backgroundColor: Colors.orange,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('At Shop যোগ করুন'),
+          );
+        }
+        if (_tab.value == 1) {
           return FloatingActionButton.extended(
             onPressed: () => _showAddCustomerDialog(context),
             backgroundColor: Colors.deepPurple,
@@ -95,7 +107,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
             label: const Text('Customer Replace'),
           );
         }
-        if (_tab.value == 2) {
+        if (_tab.value == 3) {
           return FloatingActionButton.extended(
             onPressed: () => _showAddDirectSupplierDialog(context),
             backgroundColor: Colors.blue,
@@ -103,74 +115,39 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
             label: const Text('Supplier এ যোগ করুন'),
           );
         }
-        // Tab 1 (At Shop)
-        return FloatingActionButton.extended(
-          onPressed: () => _showAddDialog(context),
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Add Entry'),
-        );
+        return const SizedBox.shrink();
       }),
     );
   }
 
   // ══════════════════════════════════════════════
-  // TAB 0 — CUSTOMER REPLACE
+  // TAB 1 — CUSTOMER (all entries with resolution)
   // ══════════════════════════════════════════════
   Widget _customerTab(ColorScheme cs) {
     return Obx(() {
       if (_rc.loading.value) {
         return const Center(child: CircularProgressIndicator());
       }
-      // Only show entries where customer will receive a replacement product
-      final all = _rc.customerEntries
-          .where((e) => e.customerResolutionType == 'product_replace')
-          .toList();
-      final pending = all.where((e) => !e.deliveredToCustomer).toList();
-      final delivered = all.where((e) => e.deliveredToCustomer).toList();
-
-      final filtered = _customerFilter.value == 'pending'
-          ? pending
-          : _customerFilter.value == 'delivered'
-              ? delivered
-              : all;
-
+      final all = _rc.customerEntries;
+      if (all.isEmpty) {
+        return _empty(Icons.person_rounded, 'কোনো কাস্টমার রিপ্লেস এন্ট্রি নেই');
+      }
       return Column(
         children: [
-          // Filter chips
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-            child: Row(
-              children: [
-                _filterChip('all', 'All (${all.length})', _customerFilter),
-                const SizedBox(width: 8),
-                _filterChip(
-                    'pending', 'Pending (${pending.length})', _customerFilter,
-                    color: Colors.orange),
-                const SizedBox(width: 8),
-                _filterChip(
-                    'delivered', 'Delivered (${delivered.length})', _customerFilter,
-                    color: Colors.green),
-              ],
+          _strip(
+            icon: Icons.person_rounded,
+            color: Colors.deepPurple,
+            label: '${all.length}টি কাস্টমার রিপ্লেস',
+            right: 'মোট: ${all.fold(0, (s, e) => s + e.quantity)}টি প্রডাক্ট',
+          ),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
+              itemCount: all.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (ctx, i) => _customerCard(ctx, all[i], cs),
             ),
           ),
-          if (filtered.isEmpty)
-            Expanded(
-              child: _empty(Icons.person_rounded,
-                  _customerFilter.value == 'delivered'
-                      ? 'কোনো ডেলিভারি সম্পন্ন হয়নি'
-                      : _customerFilter.value == 'pending'
-                          ? 'কোনো পেন্ডিং ডেলিভারি নেই'
-                          : 'কোনো পণ্য ডেলিভারি বাকি নেই'),
-            )
-          else
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
-                itemCount: filtered.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 8),
-                itemBuilder: (ctx, i) => _customerCard(ctx, filtered[i], cs),
-              ),
-            ),
         ],
       );
     });
@@ -203,273 +180,155 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
     );
   }
 
-  Widget _customerCard(
-      BuildContext context, AdminReplaceModel e, ColorScheme cs) {
+  Widget _customerCard(BuildContext context, AdminReplaceModel e, ColorScheme cs) {
+    final isMoneyDeduct = e.customerResolutionType == 'money_deduct';
+    final isProductReplace = e.customerResolutionType == 'product_replace';
     final isDelivered = e.deliveredToCustomer;
-    final hasResolution = e.isCustomerResolved;
+
+    Color statusColor;
+    String statusText;
+    if (isDelivered) {
+      statusColor = Colors.green;
+      statusText = 'Delivered';
+    } else if (isProductReplace) {
+      statusColor = Colors.deepPurple;
+      statusText = 'রিপ্লেস পাবে';
+    } else if (isMoneyDeduct) {
+      statusColor = const Color(0xFFDC2626);
+      statusText = 'টাকা কাটা';
+    } else {
+      statusColor = Colors.orange;
+      statusText = 'অপেক্ষমাণ';
+    }
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top row: customer info + status badge
             Row(
               children: [
-                _iconBox(Icons.person_rounded,
-                    isDelivered ? Colors.green : Colors.deepPurple),
+                _iconBox(Icons.person_rounded, statusColor),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                          e.customerName.isNotEmpty
-                              ? e.customerName
-                              : 'Unknown Customer',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 14)),
+                        e.customerName.isNotEmpty ? e.customerName : 'অজানা কাস্টমার',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      ),
                       if (e.customerPhone.isNotEmpty)
-                        Row(
-                          children: [
-                            const Icon(Icons.phone_rounded,
-                                size: 11, color: Colors.grey),
-                            const SizedBox(width: 3),
-                            Text(e.customerPhone,
-                                style: const TextStyle(
-                                    fontSize: 11, color: Colors.grey)),
-                          ],
-                        ),
-                      if (e.customerAddress.isNotEmpty)
-                        Row(
-                          children: [
-                            const Icon(Icons.location_on_rounded,
-                                size: 11, color: Colors.grey),
-                            const SizedBox(width: 3),
-                            Flexible(
-                              child: Text(e.customerAddress,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 11, color: Colors.grey)),
-                            ),
-                          ],
-                        ),
+                        Text(e.customerPhone,
+                            style: TextStyle(fontSize: 11, color: cs.onSurface.withAlpha(120))),
                     ],
                   ),
                 ),
-                // Status badge
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isDelivered
-                        ? Colors.green.withAlpha(22)
-                        : Colors.orange.withAlpha(22),
+                    color: statusColor.withAlpha(22),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: isDelivered
-                            ? Colors.green.withAlpha(80)
-                            : Colors.orange.withAlpha(80)),
+                    border: Border.all(color: statusColor.withAlpha(80)),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                          isDelivered
-                              ? Icons.check_circle_rounded
-                              : Icons.schedule_rounded,
-                          size: 12,
-                          color: isDelivered ? Colors.green : Colors.orange),
-                      const SizedBox(width: 4),
-                      Text(
-                          isDelivered ? 'Delivered' : 'Pending',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: isDelivered
-                                  ? Colors.green
-                                  : Colors.orange)),
-                    ],
-                  ),
+                  child: Text(statusText,
+                      style: TextStyle(
+                          fontSize: 11, fontWeight: FontWeight.w700, color: statusColor)),
+                ),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                  color: Colors.red.shade400,
+                  tooltip: 'ডিলিট',
+                  onPressed: () => _confirmDelete(context, e),
                 ),
               ],
             ),
             const Divider(height: 14),
-            // Product exchange info
             Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Received',
-                          style: TextStyle(
-                              fontSize: 10, color: Colors.grey)),
+                      const Text('ফেরত দিয়েছে',
+                          style: TextStyle(fontSize: 10, color: Colors.grey)),
                       const SizedBox(height: 2),
                       Row(children: [
-                        const Icon(Icons.arrow_downward_rounded,
-                            size: 12, color: Colors.red),
+                        const Icon(Icons.arrow_downward_rounded, size: 12, color: Colors.red),
                         const SizedBox(width: 4),
                         Expanded(
-                          child: Text(e.productName,
+                          child: Text('${e.productName} × ${e.quantity}',
                               style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.red),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis),
+                                  fontSize: 12, fontWeight: FontWeight.w600, color: Colors.red),
+                              maxLines: 2, overflow: TextOverflow.ellipsis),
                         ),
                       ]),
                     ],
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Icon(Icons.arrow_forward_rounded,
-                      size: 16, color: Colors.grey),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text('Resolution',
-                          style: TextStyle(
-                              fontSize: 10, color: Colors.grey)),
-                      const SizedBox(height: 2),
-                      _resolutionBadge(e),
-                    ],
+                const SizedBox(width: 8),
+                if (isMoneyDeduct)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDC2626).withAlpha(18),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text('− ৳ ${_fmt.format(e.deductionAmount)}',
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFFDC2626))),
                   ),
-                ),
+                if (isProductReplace && e.replaceProductName.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withAlpha(18),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.arrow_upward_rounded, size: 12, color: Colors.teal),
+                        const SizedBox(width: 4),
+                        Text(e.replaceProductName,
+                            style: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.w600, color: Colors.teal),
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(height: 8),
-            // Date + note + qty
+            const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(Icons.calendar_today_rounded,
-                    size: 12, color: Colors.grey),
+                const Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey),
                 const SizedBox(width: 4),
                 Text(_fmtDate(e.date),
-                    style: const TextStyle(
-                        fontSize: 11, color: Colors.grey)),
+                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 const Spacer(),
-                _qtyBadge(e.quantity,
-                    isDelivered ? Colors.green : Colors.deepPurple),
+                if (e.note.isNotEmpty)
+                  Flexible(
+                    child: Text(e.note,
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
               ],
             ),
-            if (e.note.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(e.note,
-                    style: const TextStyle(
-                        fontSize: 11, color: Colors.grey)),
-              ),
-            // Action buttons
-            if (!isDelivered) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _actionChip(
-                    hasResolution
-                        ? Icons.check_circle_rounded
-                        : Icons.edit_rounded,
-                    hasResolution ? 'Mark Delivered' : 'Set Resolution',
-                    hasResolution ? Colors.green : Colors.deepPurple,
-                    () => hasResolution
-                        ? _showDeliverDialog(context, e)
-                        : _showSetResolutionDialog(context, e),
-                  ),
-                  const SizedBox(width: 6),
-                  if (!hasResolution)
-                    _actionChip(
-                      Icons.check_circle_rounded,
-                      'Mark Delivered',
-                      Colors.green,
-                      () => _showDeliverDialog(context, e),
-                    ),
-                  const Spacer(),
-                  IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: 'Delete',
-                    icon: const Icon(Icons.delete_outline_rounded,
-                        size: 18, color: Colors.red),
-                    onPressed: () => _confirmDelete(context, e),
-                  ),
-                ],
-              ),
-            ] else ...[
-              const SizedBox(height: 4),
-              if (e.deliveredToCustomerAt != null)
-                Row(children: [
-                  const Icon(Icons.check_circle_outline_rounded,
-                      size: 12, color: Colors.green),
-                  const SizedBox(width: 4),
-                  Text(
-                      'Delivered on ${_fmtDate(e.deliveredToCustomerAt!)}',
-                      style: const TextStyle(
-                          fontSize: 10, color: Colors.green)),
-                ]),
-            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _resolutionBadge(AdminReplaceModel e) {
-    if (e.customerResolutionType == 'product_replace') {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          const Icon(Icons.swap_horiz_rounded,
-              size: 12, color: Colors.teal),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-                e.replaceProductName.isNotEmpty
-                    ? e.replaceProductName
-                    : 'Product',
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.teal),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis),
-          ),
-        ],
-      );
-    } else if (e.customerResolutionType == 'money_deduct') {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          const Icon(Icons.currency_rupee_rounded,
-              size: 12, color: Colors.blue),
-          const SizedBox(width: 4),
-          Text('৳${e.deductionAmount}',
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.blue)),
-        ],
-      );
-    }
-    return const Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Icon(Icons.hourglass_empty_rounded,
-            size: 12, color: Colors.orange),
-        SizedBox(width: 4),
-        Text('Pending',
-            style: TextStyle(fontSize: 11, color: Colors.orange)),
-      ],
-    );
-  }
+  // ══════════════════════════════════════════════
+  // TAB 0 — AT SHOP (expandable product-wise)
+  // ══════════════════════════════════════════════
+  final _expandedProducts = <String>{}.obs;
 
-  // ══════════════════════════════════════════════
-  // TAB 1 — AT SHOP (pending decision)
-  // ══════════════════════════════════════════════
   Widget _atShopTab(ColorScheme cs) {
     return Obx(() {
       if (_rc.loading.value) {
@@ -477,23 +336,99 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
       }
       final list = _rc.atShop;
       if (list.isEmpty) {
-        return _empty(Icons.home_repair_service_rounded,
+        return _empty(Icons.inventory_2_rounded,
             'দোকানে কোনো replace item নেই');
       }
+      // Group by product
+      final grouped = <String, List<AdminReplaceModel>>{};
+      for (final e in list) {
+        grouped.putIfAbsent(e.productName, () => []);
+        grouped[e.productName]!.add(e);
+      }
+
+      final totalItems = list.fold(0, (s, e) => s + e.quantity);
       return Column(
         children: [
           _strip(
-            icon: Icons.home_repair_service_rounded,
+            icon: Icons.inventory_2_rounded,
             color: Colors.orange,
-            label: '${list.length}টি আইটেম দোকানে আছে',
-            right: 'মোট: ${list.fold(0, (s, e) => s + e.quantity)}টি',
+            label: '${grouped.length}টি প্রডাক্ট',
+            right: 'মোট: $totalItemsটি',
           ),
           Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 100),
-              itemCount: list.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (ctx, i) => _shopCard(ctx, list[i], cs),
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
+              itemCount: grouped.length,
+              itemBuilder: (ctx, i) {
+                final name = grouped.keys.elementAt(i);
+                final items = grouped[name]!;
+                final totalQty = items.fold(0, (s, e) => s + e.quantity);
+                final isExpanded = _expandedProducts.contains(name);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            if (isExpanded) {
+                              _expandedProducts.remove(name);
+                            } else {
+                              _expandedProducts.add(name);
+                            }
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44, height: 44,
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withAlpha(20),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    isExpanded
+                                        ? Icons.expand_less_rounded
+                                        : Icons.expand_more_rounded,
+                                    color: Colors.orange, size: 22),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(name,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w700, fontSize: 14)),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withAlpha(20),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                        color: Colors.orange.withAlpha(60)),
+                                  ),
+                                  child: Text('$totalQtyটি',
+                                      style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.orange)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (isExpanded) ...[
+                          const Divider(height: 1),
+                          ...items.map((e) => _atShopEntryRow(e, cs)),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -501,68 +436,307 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
     });
   }
 
-  Widget _shopCard(BuildContext context, AdminReplaceModel e, ColorScheme cs) {
+  Widget _atShopEntryRow(AdminReplaceModel e, ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.circle_rounded, size: 8, color: Colors.orange),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${e.productName} × ${e.quantity}',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                if (e.customerName.isNotEmpty)
+                  Text(e.customerName,
+                      style: TextStyle(fontSize: 11, color: cs.onSurface.withAlpha(120))),
+              ],
+            ),
+          ),
+          Wrap(
+            spacing: 4,
+            children: [
+              _miniBtn(Icons.edit_rounded, 'Qty', Colors.teal,
+                  () => _showEditEntryQty(e)),
+              _miniBtn(Icons.local_shipping_rounded, 'Send', Colors.blue,
+                  () => _showSendToSupplierDialog(context, e)),
+              _miniBtn(Icons.build_circle_rounded, 'Done', Colors.green,
+                  () => _showResolveDialog(context, e)),
+              _miniBtn(Icons.delete_outline_rounded, 'Del', Colors.red,
+                  () => _confirmDelete(context, e)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditEntryQty(AdminReplaceModel e) {
+    final qtyCtrl = TextEditingController(text: e.quantity.toString());
+    Get.dialog(
+      AlertDialog(
+        title: Text('${e.productName} — পরিমাণ', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+        content: TextField(
+          controller: qtyCtrl,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: InputDecoration(
+            prefixText: 'পরিমাণ: ',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('বাতিল')),
+          ElevatedButton(
+            onPressed: () async {
+              final newQty = int.tryParse(qtyCtrl.text.trim());
+              if (newQty == null || newQty <= 0 || newQty == e.quantity) {
+                Get.back();
+                return;
+              }
+              final delta = newQty - e.quantity;
+              await FirebaseFirestore.instance
+                  .collection('admin_replace_entries')
+                  .doc(e.id)
+                  .update({'quantity': newQty});
+              if (e.productId.isNotEmpty) {
+                await FirebaseFirestore.instance
+                    .collection('products')
+                    .doc(e.productId)
+                    .update({'replaceCount': FieldValue.increment(delta)});
+              }
+              await _rc.fetchEntries(force: true);
+              Get.back();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+            child: const Text('আপডেট'),
+          ),
+        ],
+      ),
+    ).then((_) => qtyCtrl.dispose());
+  }
+
+  Widget _miniBtn(IconData icon, String label, Color color, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withAlpha(18),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: color.withAlpha(60)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 2),
+            Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════
+  // TAB 1 — PENDING CUSTOMER DELIVERY
+  // ══════════════════════════════════════════════
+  Widget _pendingTab(ColorScheme cs) {
+    return Obx(() {
+      if (_rc.loading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      // All entries where customer will receive a product but not yet delivered
+      final pending = _rc.entries
+          .where((e) =>
+              e.customerResolutionType == 'product_replace' &&
+              !e.deliveredToCustomer)
+          .toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      if (pending.isEmpty) {
+        return _empty(Icons.schedule_rounded,
+            'কোনো পেন্ডিং রিপ্লেস ডেলিভারি নেই');
+      }
+
+      // Group by product for summary
+      final grouped = <String, int>{};
+      for (final e in pending) {
+        grouped[e.productName] =
+            (grouped[e.productName] ?? 0) + e.quantity;
+      }
+
+      return Column(
+        children: [
+          _strip(
+            icon: Icons.schedule_rounded,
+            color: Colors.deepPurple,
+            label: '${pending.length}টি পেন্ডিং ডেলিভারি',
+            right: 'মোট: ${pending.fold(0, (s, e) => s + e.quantity)}টি',
+          ),
+          // Product-wise summary
+          if (grouped.isNotEmpty)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withAlpha(12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 4,
+                children: grouped.entries
+                    .map((e) => Text(
+                        '${e.key}: ${e.value}টি',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.deepPurple)))
+                    .toList(),
+              ),
+            ),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
+              itemCount: pending.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (ctx, i) => _pendingCard(ctx, pending[i], cs),
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  Widget _pendingCard(
+      BuildContext context, AdminReplaceModel e, ColorScheme cs) {
+    final hasReplace = e.replaceProductName.isNotEmpty;
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _iconBox(Icons.home_repair_service_rounded, Colors.orange),
+            _iconBox(Icons.schedule_rounded,
+                hasReplace ? Colors.deepPurple : Colors.orange),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(e.productName,
+                  Text(e.customerName.isNotEmpty ? e.customerName : 'অজানা কাস্টমার',
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 14)),
-                  const SizedBox(height: 2),
-                  if (e.customerName.isNotEmpty)
-                    _infoRow(Icons.person_outline_rounded, e.customerName,
-                        e.customerPhone.isNotEmpty ? ' · ${e.customerPhone}' : ''),
-                  if (e.replaceProductName.isNotEmpty)
-                    _infoRow(Icons.swap_horiz_rounded,
-                        'পাবে: ${e.replaceProductName}', ''),
-                  _infoRow(Icons.swap_horiz_rounded, e.entryTypeLabel, ''),
-                  _infoRow(Icons.calendar_today_rounded, _fmtDate(e.date), ''),
+                  if (e.customerPhone.isNotEmpty)
+                    _infoRow(Icons.phone_outlined, e.customerPhone, ''),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withAlpha(18),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.red.withAlpha(50)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.arrow_downward_rounded,
+                            size: 12, color: Colors.red),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text('ফেরত: ${e.productName}',
+                              style: const TextStyle(
+                                  fontSize: 11, color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (hasReplace)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withAlpha(18),
+                        borderRadius: BorderRadius.circular(6),
+                        border:
+                            Border.all(color: Colors.green.withAlpha(50)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.arrow_upward_rounded,
+                              size: 12, color: Colors.green),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text('পাবে: ${e.replaceProductName}',
+                                style: const TextStyle(
+                                    fontSize: 11, color: Colors.green)),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withAlpha(18),
+                        borderRadius: BorderRadius.circular(6),
+                        border:
+                            Border.all(color: Colors.orange.withAlpha(50)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.warning_rounded,
+                              size: 12, color: Colors.orange),
+                          SizedBox(width: 4),
+                          Flexible(
+                            child: Text('রিপ্লেস প্রোডাক্ট নির্ধারিত নয়',
+                                style: TextStyle(
+                                    fontSize: 11, color: Colors.orange)),
+                          ),
+                        ],
+                      ),
+                    ),
                   if (e.note.isNotEmpty)
-                    Text(e.note,
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.grey)),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(e.note,
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.grey)),
+                    ),
+                  _infoRow(
+                      Icons.calendar_today_rounded, _fmtDate(e.date), ''),
                 ],
               ),
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _qtyBadge(e.quantity, Colors.orange),
+                _qtyBadge(e.quantity, Colors.deepPurple),
                 const SizedBox(height: 6),
-                Wrap(
-                  spacing: 4,
-                  children: [
-                    _actionChip(
-                      Icons.local_shipping_rounded,
-                      'সাপ্লাইয়ারে',
-                      Colors.blue,
-                      () => _showSendToSupplierDialog(context, e),
-                    ),
-                    _actionChip(
-                      Icons.build_circle_rounded,
-                      'মেরামত হয়েছে',
-                      Colors.green,
-                      () => _showResolveDialog(context, e),
-                    ),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      tooltip: 'মুছুন',
-                      icon: const Icon(Icons.delete_outline_rounded,
-                          size: 18, color: Colors.red),
-                      onPressed: () => _confirmDelete(context, e),
-                    ),
-                  ],
-                ),
+                if (hasReplace)
+                  _actionChip(
+                    Icons.check_circle_rounded,
+                    'দিয়েছি',
+                    Colors.green,
+                    () => _showDeliverDialog(context, e),
+                  )
+                else
+                  _actionChip(
+                    Icons.add_circle_rounded,
+                    'প্রোডাক্ট সেট',
+                    Colors.deepPurple,
+                    () => _showSetResolutionDialog(context, e),
+                  ),
               ],
             ),
           ],
@@ -572,7 +746,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
   }
 
   // ══════════════════════════════════════════════
-  // TAB 2 — WITH SUPPLIER
+  // TAB 3 — WITH SUPPLIER
   // ══════════════════════════════════════════════
   Widget _withSupplierTab(ColorScheme cs) {
     return Obx(() {
@@ -657,7 +831,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
   }
 
   // ══════════════════════════════════════════════
-  // TAB 3 — CUSTOMER DELIVERY PENDING
+  // (DEPRECATED — replaced by _pendingTab)
   // ══════════════════════════════════════════════
   Widget _customerDeliveryTab(ColorScheme cs) {
     return Obx(() {
@@ -783,7 +957,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
   }
 
   // ══════════════════════════════════════════════
-  // TAB 4 — REPLACE STOCK
+  // (DEPRECATED — replace stock tab removed)
   // ══════════════════════════════════════════════
   Widget _replaceStockTab(ColorScheme cs) {
     return Obx(() {
@@ -791,22 +965,24 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
       if (pc.loading.value) {
         return const Center(child: CircularProgressIndicator());
       }
+      // Show products that have replaceStock > 0
       final list = pc.products
           .where((p) => p.replaceStock > 0)
           .toList()
-        ..sort((a, b) => b.replaceStock.compareTo(a.replaceStock));
+        ..sort((a, b) =>
+            b.replaceStock.compareTo(a.replaceStock));
       if (list.isEmpty) {
         return _empty(Icons.inventory_2_rounded,
-            'কোনো replace স্টক নেই');
+            'কোনো রিপ্লেস প্রডাক্ট নেই');
       }
-      final total = list.fold(0, (s, p) => s + p.replaceStock);
+      final totalReplaceStock = list.fold(0, (s, p) => s + p.replaceStock);
       return Column(
         children: [
           _strip(
             icon: Icons.inventory_2_rounded,
             color: Colors.teal,
-            label: '${list.length} প্রডাক্ট রিপ্লেস স্টকে',
-            right: 'মোট: ${total}টি',
+            label: '${list.length} প্রডাক্ট',
+            right: 'মোট: $totalReplaceStockটি',
           ),
           Expanded(
             child: ListView.separated(
@@ -822,74 +998,65 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
   }
 
   Widget _replaceStockCard(ProductModel p, ColorScheme cs) {
+    final hasReplaceStock = p.replaceStock > 0;
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.teal.withAlpha(20),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: p.images.isNotEmpty
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(p.images.first,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
-                              Icons.inventory_2_rounded,
-                              color: Colors.teal)))
-                  : const Icon(Icons.inventory_2_rounded, color: Colors.teal),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(p.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 14)),
-                  Text(p.productCategory,
-                      style: const TextStyle(
-                          fontSize: 11, color: Colors.grey)),
-                  const SizedBox(height: 2),
-                  Wrap(
-                    spacing: 6,
-                    children: [
-                      _badge('স্টক: ${p.stock}', Colors.green),
-                      _badge('রিপ্লেস পেন্ডিং: ${p.replaceCount}',
-                          Colors.orange),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 4),
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: Colors.teal.withAlpha(20),
                     borderRadius: BorderRadius.circular(10),
-                    border:
-                        Border.all(color: Colors.teal.withAlpha(60)),
                   ),
-                  child: Text(
-                    '${p.replaceStock}টি',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: Colors.teal,
-                        fontSize: 16),
+                  child: p.images.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(p.images.first,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.inventory_2_rounded,
+                                  color: Colors.teal)))
+                      : const Icon(Icons.inventory_2_rounded, color: Colors.teal),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(p.name,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 14)),
+                      if (p.brandName.isNotEmpty || p.productCode.isNotEmpty)
+                        Text(
+                          [p.brandName, p.productCode].where((s) => s.isNotEmpty).join(' • '),
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Text('রিপ্লেস স্টক',
-                    style: TextStyle(fontSize: 10, color: Colors.grey)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _badge('রেগুলার: ${p.stock}', Colors.green),
+                if (hasReplaceStock)
+                  _badge('রিপ্লেস স্টক: ${p.replaceStock}', Colors.teal),
+                // Action buttons
+                const SizedBox(width: 4),
+                _actionChip(Icons.edit_rounded, 'Edit', Colors.teal,
+                    () => _showEditReplaceStock(p)),
+                if (hasReplaceStock)
+                  _actionChip(Icons.delete_outline_rounded, 'Clear', Colors.red,
+                      () => _showClearReplaceStock(p)),
               ],
             ),
           ],
@@ -898,8 +1065,97 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
     );
   }
 
+  // ── Edit replace stock dialog ─────────────────────────────
+
+  void _showEditReplaceStock(ProductModel p) {
+    final qtyCtrl = TextEditingController();
+    Get.dialog(
+      AlertDialog(
+        title: Row(children: [
+          const Icon(Icons.edit_rounded, color: Colors.teal, size: 20),
+          const SizedBox(width: 8),
+          Expanded(child: Text('রিপ্লেস স্টক: ${p.name}',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              maxLines: 1, overflow: TextOverflow.ellipsis)),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('বর্তমান রিপ্লেস স্টক: ${p.replaceStock}টি',
+                style: const TextStyle(fontSize: 13, color: Colors.teal)),
+            const SizedBox(height: 10),
+            const Text('পরিমাণ পরিবর্তন (+/-):',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
+            const SizedBox(height: 4),
+            TextField(
+              controller: qtyCtrl,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'যেমন: 5 (যোগ) বা -3 (বাদ)',
+                filled: true,
+                fillColor: Colors.teal.withAlpha(8),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text('যোগ করতে +, বাদ দিতে - ব্যবহার করুন',
+                style: TextStyle(fontSize: 10, color: Colors.grey)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('বাতিল')),
+          ElevatedButton.icon(
+            onPressed: () async {
+              final delta = int.tryParse(qtyCtrl.text.trim());
+              if (delta == null || delta == 0) {
+                Get.snackbar('ত্রুটি', 'সঠিক সংখ্যা লিখুন',
+                    snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                return;
+              }
+              await _rc.adjustReplaceStock(p.id, delta);
+              Get.back();
+              Get.snackbar('আপডেট', 'রিপ্লেস স্টক $delta পরিবর্তন হয়েছে',
+                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.teal, colorText: Colors.white);
+            },
+            icon: const Icon(Icons.check_rounded, size: 16),
+            label: const Text('আপডেট'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+          ),
+        ],
+      ),
+    ).then((_) => qtyCtrl.dispose());
+  }
+
+  // ── Clear replace stock dialog ───────────────────────────
+
+  void _showClearReplaceStock(ProductModel p) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('রিপ্লেস স্টক ক্লিয়ার করবেন?'),
+        content: Text('"${p.name}" এর ${p.replaceStock}টি রিপ্লেস স্টক ০ করা হবে।'),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('না')),
+          ElevatedButton.icon(
+            onPressed: () async {
+              await _rc.adjustReplaceStock(p.id, -p.replaceStock);
+              Get.back();
+              Get.snackbar('ক্লিয়ার', 'রিপ্লেস স্টক ০ করা হয়েছে',
+                  snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.teal, colorText: Colors.white);
+            },
+            icon: const Icon(Icons.check_rounded, size: 16),
+            label: const Text('হ্যাঁ, ক্লিয়ার'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ══════════════════════════════════════════════
-  // TAB 5 — HISTORY (resolved entries)
+  // TAB 4 — HISTORY (resolved entries)
   // ══════════════════════════════════════════════
   Widget _historyTab(ColorScheme cs) {
     return Obx(() {
@@ -980,6 +1236,13 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
               ),
             ),
             _qtyBadge(e.resolvedQty > 0 ? e.resolvedQty : e.quantity, color),
+            const SizedBox(height: 6),
+            _actionChip(
+              Icons.delete_outline_rounded,
+              'মুছুন',
+              Colors.red,
+              () => _confirmDelete(context, e),
+            ),
           ],
         ),
       ),
@@ -1022,6 +1285,18 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _AddDirectSupplierSheet(rc: _rc),
+    );
+  }
+
+  void _showAddAtShopDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => _AddAtShopSheet(rc: _rc),
     );
   }
 
@@ -3526,6 +3801,226 @@ class _SupplierPickerSheetState extends State<_SupplierPickerSheet> {
                 },
               );
             }),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADD AT SHOP SHEET (direct entry, no customer required)
+// ══════════════════════════════════════════════════════════════════════════════
+
+class _AddAtShopSheet extends StatefulWidget {
+  final AdminReplaceController rc;
+  const _AddAtShopSheet({required this.rc});
+
+  @override
+  State<_AddAtShopSheet> createState() => _AddAtShopSheetState();
+}
+
+class _AddAtShopSheetState extends State<_AddAtShopSheet> {
+  ProductModel? _product;
+  final _qtyCtrl = TextEditingController(text: '1');
+  final _noteCtrl = TextEditingController();
+  DateTime _date = DateTime.now();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _qtyCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickProduct() async {
+    final picked = await showModalBottomSheet<ProductModel>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => const _ProductPickerSheet(),
+    );
+    if (picked != null) setState(() => _product = picked);
+  }
+
+  Future<void> _pickDate() async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (d != null) setState(() => _date = d);
+  }
+
+  Future<void> _save() async {
+    if (_product == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('প্রডাক্ট বেছে নিন')));
+      return;
+    }
+    final qty = int.tryParse(_qtyCtrl.text) ?? 1;
+    setState(() => _saving = true);
+    try {
+      await widget.rc.addAtShopEntry(
+        productId: _product!.id,
+        productName: _product!.name,
+        quantity: qty,
+        note: _noteCtrl.text.trim(),
+        date: _date,
+      );
+      if (mounted) Navigator.of(context).pop();
+      Get.snackbar('যোগ হয়েছে', '${_product!.name} × $qtyটি At Shop-এ যোগ হয়েছে',
+          snackPosition: SnackPosition.BOTTOM);
+    } catch (_) {
+      setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _handle(),
+          _sheetHeader(
+              'At Shop যোগ করুন', Icons.inventory_2_rounded, Colors.orange),
+          const Divider(height: 1),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  InkWell(
+                    onTap: _pickProduct,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 13),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: _product != null
+                                ? Colors.orange
+                                : scheme.outlineVariant),
+                        borderRadius: BorderRadius.circular(10),
+                        color: _product != null
+                            ? Colors.orange.withAlpha(15)
+                            : null,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.inventory_2_rounded,
+                              size: 18,
+                              color: _product != null
+                                  ? Colors.orange
+                                  : scheme.onSurfaceVariant),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _product?.name ?? 'প্রডাক্ট বেছে নিন *',
+                              style: TextStyle(
+                                  fontWeight: _product != null
+                                      ? FontWeight.w700
+                                      : FontWeight.normal,
+                                  color: _product != null
+                                      ? Colors.orange
+                                      : scheme.onSurfaceVariant),
+                            ),
+                          ),
+                          Icon(Icons.arrow_drop_down_rounded,
+                              color: scheme.onSurfaceVariant),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: _pickDate,
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 13),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: scheme.outlineVariant),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calendar_today_rounded,
+                                    size: 16, color: Colors.grey),
+                                const SizedBox(width: 6),
+                                Text(
+                                    DateFormat('dd MMM, yyyy').format(_date),
+                                    style: const TextStyle(fontSize: 13)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        width: 80,
+                        child: TextField(
+                          controller: _qtyCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'পরিমাণ',
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 13),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _noteCtrl,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      labelText: 'নোট (ঐচ্ছিক)',
+                      prefixIcon:
+                          const Icon(Icons.note_alt_outlined, size: 18),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 13),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: FilledButton.icon(
+                      onPressed: _saving ? null : _save,
+                      style: FilledButton.styleFrom(
+                          backgroundColor: Colors.orange),
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.save_rounded),
+                      label: const Text('সংরক্ষণ করুন'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
           ),
         ],
       ),

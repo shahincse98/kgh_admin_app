@@ -292,6 +292,8 @@ class SrPanelController extends GetxController {
         'shopName': cust.shopName,
         'shopAddress': cust.address,
         'shopPhone': cust.phone,
+        'userPhone': cust.phone,
+        'userDue': cust.totalDue,
         'srId': srDocId,
         'orderedBy': srDocId,
         'orderedByEmail': email,

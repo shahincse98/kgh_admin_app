@@ -6,9 +6,6 @@ import 'package:kgh_admin_app/modules/order/view/create_order_view.dart';
 import 'package:kgh_admin_app/modules/dispatch/controller/dispatch_controller.dart';
 import 'package:kgh_admin_app/modules/dispatch/view/dispatch_view.dart';
 import 'package:kgh_admin_app/modules/dispatch/view/dispatch_history_view.dart';
-import 'package:kgh_admin_app/modules/manual_stock_out/controller/manual_stock_out_controller.dart';
-import 'package:kgh_admin_app/modules/manual_stock_out/view/manual_stock_out_view.dart';
-import 'package:kgh_admin_app/modules/manual_stock_out/view/manual_stock_out_history_view.dart';
 import 'package:kgh_admin_app/modules/stock_in/controller/stock_in_controller.dart';
 import 'package:kgh_admin_app/modules/stock_in/view/stock_in_view.dart';
 import 'package:kgh_admin_app/modules/stock_in/view/stock_in_history_view.dart';
@@ -80,20 +77,6 @@ class AppPages {
     GetPage(
       name: AppRoutes.dispatchHistory,
       page: () => const DispatchHistoryView(),
-    ),
-    GetPage(
-      name: AppRoutes.manualStockOut,
-      page: () => const ManualStockOutView(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<ManualStockOutController>(() => ManualStockOutController());
-      }),
-    ),
-    GetPage(
-      name: AppRoutes.manualStockOutHistory,
-      page: () => const ManualStockOutHistoryView(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<ManualStockOutController>(() => ManualStockOutController());
-      }),
     ),
     GetPage(
       name: AppRoutes.stockIn,

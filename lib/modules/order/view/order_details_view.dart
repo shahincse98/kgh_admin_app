@@ -1,11 +1,23 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/order_model.dart';
 import '../controller/order_controller.dart';
 import '../../product/model/product_model.dart';
 import '../../product/controller/product_controller.dart';
+import '../../user/model/user_model.dart';
+import '../../user/controller/user_controller.dart';
+import '../../replace/model/admin_replace_model.dart';
+import '../../replace/controller/admin_replace_controller.dart';
+import '../../stock_in/controller/stock_in_controller.dart';
+import '../../user/model/user_model.dart';
+import '../../user/controller/user_controller.dart';
+import '../../replace/model/admin_replace_model.dart';
+import '../../replace/controller/admin_replace_controller.dart';
+import '../../stock_in/controller/stock_in_controller.dart';
 import '../../../widgets/call_button.dart';
 import '../../../widgets/responsive.dart';
 
@@ -15,7 +27,9 @@ class _EditItem {
   final String productName;
   final String image;
   int quantity;
-  final num pricePerUnit;
+  num pricePerUnit;
+  num purchasePrice;
+  late final TextEditingController priceCtrl;
 
   _EditItem({
     required this.productId,
@@ -23,7 +37,10 @@ class _EditItem {
     required this.image,
     required this.quantity,
     required this.pricePerUnit,
-  });
+    this.purchasePrice = 0,
+  }) {
+    priceCtrl = TextEditingController(text: pricePerUnit.toStringAsFixed(0));
+  }
 
   num get lineTotal => quantity * pricePerUnit;
 
@@ -34,10 +51,41 @@ class _EditItem {
         quantity: quantity,
         pricePerUnit: pricePerUnit,
         totalPrice: lineTotal,
+        purchasePrice: purchasePrice,
       );
+
+  void dispose() { priceCtrl.dispose(); }
 }
 
 // ─── Details View ────────────────────────────────────────────────
+
+// ─── Replace return item state (delivery dialog) ────────────────
+class _ReplaceReturnItem {
+  final ProductModel product;
+  int quantity;
+  String resolutionType;
+  int deductionAmount;
+  late final TextEditingController dedCtrl;
+  _ReplaceReturnItem({required this.product, required this.quantity, required this.resolutionType, required this.deductionAmount}) {
+    dedCtrl = TextEditingController(text: deductionAmount.toString());
+  }
+  void dispose() { dedCtrl.dispose(); }
+}
+
+// ─── Return item (sales return — goes back to stock) ─────────
+class _ReturnItem {
+  final ProductModel product;
+  int quantity;
+  num unitPrice;
+  late final TextEditingController priceCtrl;
+  _ReturnItem({required this.product, required this.quantity, num unitPrice = 0})
+      : unitPrice = unitPrice > 0 ? unitPrice : product.wholesalePrice {
+    priceCtrl = TextEditingController(text: unitPrice.toStringAsFixed(0));
+  }
+  num get totalPrice => quantity * unitPrice;
+  void dispose() { priceCtrl.dispose(); }
+}
+
 class OrderDetailsView extends StatefulWidget {
   final OrderModel order;
   /// If provided, marks this SR as deliverer when order status set to 'delivered'
@@ -60,10 +108,30 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   bool _saving = false;
   late num _currentPaid;
   DateTime? _scheduledDate;
+  DateTime? _deliveredAt;
+  DateTime? _dispatchedAt;
   String _assignedSrId = '';
   String _assignedSrName = '';
   List<Map<String, String>> _allSrs = [];
   bool _loadingSrs = false;
+
+  // Customer state
+  late String _currentShopName;
+  late String _currentShopAddress;
+  late String _currentShopPhone;
+  late String _currentUserId;
+  late String _currentUserPhone;
+  late int _currentUserDue;
+  late int _currentPreviousDue;
+  late num _currentDeductionAmount;
+  late num _currentReturnAmount;
+  late num _currentDiscountAmount;
+  late String _currentPaymentMethod;
+
+  List<UserModel> _allUsers = [];
+  bool _loadingUsers = false;
+  List<AdminReplaceModel> _customerReplaces = [];
+  bool _replacesLoaded = false;
 
   // Product search for adding new products in edit mode
   List<ProductModel> _allProducts = [];
@@ -94,11 +162,24 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         ? widget.order.status
         : 'pending';
     _scheduledDate = widget.order.scheduledDeliveryDate;
+    _deliveredAt = widget.order.deliveredAt;
+    _dispatchedAt = widget.order.dispatchedAt;
     _assignedSrId = widget.order.deliveryAssignedSrId;
     _assignedSrName = widget.order.deliveryAssignedSrName;
     if (widget.srDocId == null) _loadSrs();
     _savedItems = List<OrderItem>.from(widget.order.items);
     _savedTotal = widget.order.totalAmount;
+    _currentShopName = widget.order.shopName;
+    _currentShopAddress = widget.order.shopAddress;
+    _currentShopPhone = widget.order.shopPhone;
+    _currentUserId = widget.order.userId;
+    _currentUserPhone = widget.order.userPhone;
+    _currentUserDue = widget.order.userDue;
+    _currentDeductionAmount = widget.order.deductionAmount;
+    _currentReturnAmount = widget.order.returnAmount;
+    _currentDiscountAmount = widget.order.discountAmount;
+    _currentPaymentMethod = widget.order.paymentMethod.isNotEmpty ? widget.order.paymentMethod : 'SR হাতে';
+    _currentPreviousDue = widget.order.previousDue > 0 ? widget.order.previousDue : widget.order.userDue;
     _initEditItems();
     _loadProducts();
   }
@@ -1447,190 +1528,131 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   // ── Delivery confirmation + payment dialog ─────────────────
 
   Future<void> _showDeliveryPaymentDialog(String previousStatus) async {
+    final alreadyDelivered = previousStatus == 'delivered';
     final scheme = Theme.of(context).colorScheme;
     final total = _savedTotal;
     final orderDue = total - _currentPaid;
-    final payCtrl =
-        TextEditingController(text: _currentPaid.toStringAsFixed(0));
-    final totalDue = (widget.order.userDue + orderDue.toInt()).clamp(0, 9999999);
-    final dueCtrl = TextEditingController(
-        text: totalDue > 0 ? totalDue.toString() : '');
+    final previousDue = alreadyDelivered && _currentPreviousDue > 0 ? _currentPreviousDue : _currentUserDue;
+    final grandTotal = (orderDue.toInt() + previousDue).clamp(0, 9999999);
+
+    final payCtrl = TextEditingController();
+    final memoCtrl = TextEditingController();
+    final discountCtrl = TextEditingController();
+    _currentPaymentMethod = widget.order.paymentMethod.isNotEmpty ? widget.order.paymentMethod : 'SR হাতে';
+
+    List<AdminReplaceModel> pendingReplaces = [];
+    final Set<String> selectedPendingIds = {};
+    bool loadingPending = true;
+    final List<_ReplaceReturnItem> returnItems = [];
+    bool addingReturnItem = false;
+    final List<_ReturnItem> _saleReturnItems = [];
+    bool _addingSaleReturn = false;
+    String _returnQuery = '', _replaceReturnQuery = '';
+
+    AdminReplaceController? _rc;
+    try { _rc = Get.find<AdminReplaceController>(); } catch (_) { _rc = Get.put(AdminReplaceController()); }
+    if (_currentUserId.isNotEmpty) { try { pendingReplaces = await _rc!.fetchPendingForCustomer(_currentUserId); } catch (_) {} }
+    loadingPending = false;
+    if (!mounted) { payCtrl.dispose(); memoCtrl.dispose(); discountCtrl.dispose(); return; }
 
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Row(
-          children: [
-            Icon(Icons.local_shipping_rounded,
-                color: Color(0xFF16A34A), size: 22),
-            SizedBox(width: 8),
-            Text('ডেলিভারি পেমেন্ট',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: scheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    _dialogPayRow('অর্ডার আইডি',
-                        '#${widget.order.id}',
-                        const Color(0xFF0891B2)),
-                    const SizedBox(height: 6),
-                    _dialogPayRow('মোট অর্ডার',
-                        '৳ ${_fmt.format(total.toInt())}',
-                        const Color(0xFF0891B2)),
-                    const SizedBox(height: 6),
-                    _dialogPayRow('আগে দেওয়া',
-                        '৳ ${_fmt.format(_currentPaid.toInt())}',
-                        const Color(0xFF16A34A)),
-                    const SizedBox(height: 6),
-                    _dialogPayRow('এই অর্ডারে বাকি',
-                        '৳ ${_fmt.format(orderDue.toInt())}',
-                        orderDue > 0
-                            ? const Color(0xFFDC2626)
-                            : const Color(0xFF16A34A)),
-                    if (widget.order.userDue > 0) ...[
-                      const SizedBox(height: 6),
-                      _dialogPayRow('কাস্টমারের মোট বাকি',
-                          '৳ ${_fmt.format(widget.order.userDue)}',
-                          const Color(0xFFDC2626)),
-                    ],
-                  ],
-                ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(children: [Icon(Icons.local_shipping_rounded, color: Color(0xFF16A34A), size: 22), SizedBox(width: 8), Text('ডেলিভারি পেমেন্ট', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))]),
+        content: StatefulBuilder(builder: (ctx, setSt) {
+          final paidNow = num.tryParse(payCtrl.text.trim()) ?? 0;
+          final saleReturnTotal = _saleReturnItems.fold<num>(0, (s, r) => s + r.totalPrice).toInt();
+          final totalDeduction = returnItems.where((r) => r.resolutionType == 'money_deduct').fold<int>(0, (s, r) => s + r.deductionAmount);
+          final discountAmount = num.tryParse(discountCtrl.text.trim()) ?? 0;
+          final totalPayable = grandTotal - totalDeduction - saleReturnTotal;
+          final newDue = (totalPayable - paidNow.toInt() - discountAmount.toInt()).clamp(0, 9999999);
+          return SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: scheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(12), border: Border.all(color: scheme.outlineVariant.withAlpha(80))), child: Column(children: [
+              Row(children: [const Icon(Icons.receipt_long_rounded, size: 16, color: Color(0xFF0891B2)), const SizedBox(width: 6), const Text('মেমো হিসাব', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0891B2)))]),
+              const SizedBox(height: 8),
+              _dialogPayRow('পূর্বের বাকি', '৳ ${_fmt.format(previousDue)}', const Color(0xFFDC2626)),
+              const SizedBox(height: 4),
+              _dialogPayRow('আজকের অর্ডার', '৳ ${_fmt.format(orderDue.toInt())}', const Color(0xFF0891B2)),
+              if (totalDeduction > 0) ...[const SizedBox(height: 4), _dialogPayRow('রিপ্লেস বাবদ বাদ', '− ৳ ${_fmt.format(totalDeduction)}', const Color(0xFFDC2626))],
+              if (saleReturnTotal > 0) ...[const SizedBox(height: 4), _dialogPayRow('ফেরত বাদ', '− ৳ ${_fmt.format(saleReturnTotal)}', const Color(0xFF8B5CF6))],
+              const SizedBox(height: 4), Container(height: 1, color: scheme.outlineVariant),
+              const SizedBox(height: 4),
+              _dialogPayRow('দিতে হবে', '৳ ${_fmt.format(totalPayable)}', const Color(0xFF0891B2), bold: true),
+              if (discountAmount > 0) ...[const SizedBox(height: 4), _dialogPayRow('ডিসকাউন্ট', '− ৳ ${_fmt.format(discountAmount.toInt())}', const Color(0xFFD97706))],
+              if (paidNow > 0) ...[const SizedBox(height: 4), _dialogPayRow('আজকের জমা', '৳ ${_fmt.format(paidNow.toInt())}', const Color(0xFF16A34A))],
+              if (totalDeduction > 0) Padding(padding: const EdgeInsets.only(top: 4), child: _dialogPayRow('  (রিপ্লেস জমা হিসাবে)', '৳ ${_fmt.format(totalDeduction)}', const Color(0xFF16A34A), small: true)),
+              const SizedBox(height: 4), Container(height: 1, color: scheme.outlineVariant),
+              const SizedBox(height: 4),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), decoration: BoxDecoration(color: newDue > 0 ? const Color(0xFFDC2626).withAlpha(15) : const Color(0xFF16A34A).withAlpha(15), borderRadius: BorderRadius.circular(10), border: Border.all(color: newDue > 0 ? const Color(0xFFDC2626).withAlpha(60) : const Color(0xFF16A34A).withAlpha(60))),
+                child: Row(children: [Icon(Icons.account_balance_wallet_rounded, size: 18, color: newDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)), const SizedBox(width: 8), const Text('নতুন বাকি', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)), const Spacer(), Text('৳ ${_fmt.format(newDue)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: newDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)))]),
               ),
-              const SizedBox(height: 14),
-              StatefulBuilder(builder: (ctx, setSt) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('পেমেন্ট পাওয়া গেছে',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black54)),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: payCtrl,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      autofocus: true,
-                      decoration: InputDecoration(
-                        prefixText: '৳ ',
-                        hintText: 'পরিমাণ',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text('কাস্টমারের মোট বাকি আপডেট করুন',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black54)),
-                    const SizedBox(height: 4),
-                    TextField(
-                      controller: dueCtrl,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        prefixText: '৳ ',
-                        hintText: 'নতুন মোট বাকি (০ হলে খালি রাখুন)',
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
-                      ),
-                    ),
-                  ],
-                );
-              }),
-            ],
-          ),
-        ),
+            ])),
+            const SizedBox(height: 14),
+            const Text('নগদ জমা', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
+            TextField(controller: payCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: InputDecoration(prefixText: '৳ ', hintText: 'গ্রাহক যত টাকা দিল', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)), onChanged: (_) => setSt(() {})),
+            const SizedBox(height: 12),
+            const Text('পেমেন্ট মাধ্যম', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4), _paymentMethodDropdown(setSt),
+            const SizedBox(height: 12),
+            const Text('ডিসকাউন্ট (বাদ)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
+            TextField(controller: discountCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(prefixText: '৳ ', hintText: 'যদি ডিসকাউন্ট দিতে চান', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)), onChanged: (_) => setSt(() {})),
+            const SizedBox(height: 12),
+            const Text('লোকাল মেমো নাম্বার', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
+            TextField(controller: memoCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'যেমন: 233', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10))),
+          ]));
+        }),
         actions: [
-          TextButton(
-              onPressed: () => Get.back(result: false),
-              child: const Text('বাতিল')),
-          ElevatedButton.icon(
-            onPressed: () => Get.back(result: true),
-            icon: const Icon(Icons.check_rounded, size: 16),
-            label: const Text('ডেলিভার্ড করুন'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF16A34A),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-          ),
+          TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')),
+          ElevatedButton.icon(onPressed: () => Get.back(result: true), icon: const Icon(Icons.check_rounded, size: 16), label: const Text('ডেলিভার্ড করুন'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))),
         ],
       ),
     );
 
     if (confirmed == true) {
-      final amount =
-          num.tryParse(payCtrl.text.trim()) ?? _currentPaid;
-      final newDue = int.tryParse(dueCtrl.text.trim()) ?? totalDue;
-      setState(() => _currentStatus = 'delivered');
-      await controller.updateOrderStatus(
-        widget.order.id,
-        'delivered',
-        previousStatus: previousStatus,
-        deliveredBySrId: widget.srDocId,
-        items: widget.order.items
-            .map((i) => {
-                  'productId': i.productId,
-                  'quantity': i.quantity,
-                })
-            .toList(),
-      );
-      if (amount != _currentPaid) {
-        await controller.updatePaidAmount(widget.order.id, amount);
-        setState(() {
-          _currentPaid = amount;
-          _paidCtrl.text = amount.toStringAsFixed(0);
-        });
-      }
-      if (widget.order.userId.isNotEmpty) {
-        await controller.updateUserDue(widget.order.userId, newDue);
-      }
-      Get.snackbar(
-        'সফল',
-        'ডেলিভারি সম্পন্ন এবং পেমেন্ট আপডেট হয়েছে',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF16A34A),
-        colorText: Colors.white,
-      );
-      payCtrl.dispose();
-      dueCtrl.dispose();
+      final paidNow = num.tryParse(payCtrl.text.trim()) ?? 0;
+      final totalDeduction = returnItems.where((r) => r.resolutionType == 'money_deduct').fold<int>(0, (s, r) => s + r.deductionAmount);
+      final saleReturnTotal = _saleReturnItems.fold<num>(0, (s, r) => s + r.totalPrice).toInt();
+      final discountAmount = num.tryParse(discountCtrl.text.trim()) ?? 0;
+      final memo = memoCtrl.text.trim();
+      final newDue = (grandTotal - totalDeduction - saleReturnTotal - paidNow.toInt() - discountAmount.toInt()).clamp(0, 9999999);
+      final totalPaid = _currentPaid.toInt() + paidNow.toInt() + totalDeduction + saleReturnTotal;
+
+      if (!alreadyDelivered) { setState(() { _currentStatus = 'delivered'; _deliveredAt = DateTime.now(); }); await controller.updateOrderStatus(widget.order.id, 'delivered', previousStatus: previousStatus, deliveredBySrId: widget.srDocId, items: _savedItems.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList()); }
+      if (totalPaid != _currentPaid) { await controller.updatePaidAmount(widget.order.id, totalPaid); setState(() { _currentPaid = totalPaid; _paidCtrl.text = totalPaid.toStringAsFixed(0); }); }
+      if (discountAmount > 0) await controller.saveDiscountAmount(widget.order.id, discountAmount);
+      if (_currentPaymentMethod.isNotEmpty) await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'paymentMethod': _currentPaymentMethod});
+      if (memo.isNotEmpty) { try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'localMemo': memo}); } catch (_) {} }
+      if (_currentUserId.isNotEmpty) { if (mounted) setState(() => _currentPreviousDue = _currentUserDue); await controller.updateUserDue(_currentUserId, newDue); if (mounted) setState(() => _currentUserDue = newDue); try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'previousDue': _currentPreviousDue}); } catch (_) {} }
+      if (!alreadyDelivered && _saleReturnItems.isNotEmpty) { try { final sc = Get.find<StockInController>(); await sc.addMultipleStockIn(date: DateTime.now(), source: 'কাস্টমার ফেরত', note: 'অর্ডার #${widget.order.id} — $_currentShopName', items: _saleReturnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'image': i.product.images.isNotEmpty ? i.product.images.first : '', 'quantity': i.quantity, 'unitPrice': i.unitPrice}).toList()); for (final item in _saleReturnItems) { item.dispose(); } } catch (_) {} await controller.saveReturnAmount(widget.order.id, saleReturnTotal); }
+      if (totalDeduction > 0) await controller.saveDeductionAmount(widget.order.id, totalDeduction);
+      if (mounted) setState(() { _currentDeductionAmount = totalDeduction; _currentReturnAmount = saleReturnTotal; _currentDiscountAmount = discountAmount; });
+      if (!alreadyDelivered && selectedPendingIds.isNotEmpty) { try { for (final r in pendingReplaces) { if (selectedPendingIds.contains(r.id)) await _rc!.deliverToCustomer(entry: r, note: 'অর্ডার #${widget.order.id} এর সাথে ডেলিভারি'); } await _rc!.fetchEntries(force: true); } catch (_) {} }
+      if (!alreadyDelivered && returnItems.isNotEmpty) { try { for (final item in returnItems) { await _rc!.addCustomerIn(productId: item.product.id, productName: item.product.name, quantity: item.quantity, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: item.resolutionType, deductionAmount: item.deductionAmount, note: 'ডেলিভারি #${widget.order.id} এ ফেরত', date: DateTime.now()); } await _rc!.fetchEntries(force: true); } catch (_) {} }
+      final msgParts = <String>['ডেলিভারি সম্পন্ন ও পেমেন্ট আপডেট হয়েছে'];
+      if (selectedPendingIds.isNotEmpty) msgParts.add('${selectedPendingIds.length} টি রিপ্লেস ডেলিভারি');
+      if (returnItems.isNotEmpty) msgParts.add('${returnItems.length} টি ফেরত রিপ্লেস');
+      Get.snackbar('সফল', msgParts.join(' • '), snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
     }
+    payCtrl.dispose(); memoCtrl.dispose(); discountCtrl.dispose();
   }
 
-  Widget _dialogPayRow(String label, String value, Color valueColor) {
+  Widget _dialogPayRow(String label, String value, Color valueColor, {bool bold = false, bool small = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: const TextStyle(fontSize: 13, color: Colors.black54)),
-        Text(value,
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: valueColor)),
+        Text(label, style: TextStyle(fontSize: small ? 11.0 : (bold ? 14.0 : 13.0), color: Colors.black54)),
+        Text(value, style: TextStyle(fontSize: bold ? 15.0 : 14.0, fontWeight: bold ? FontWeight.w800 : FontWeight.w700, color: valueColor)),
       ],
+    );
+  }
+
+  Widget _paymentMethodDropdown(StateSetter setSt) {
+    const methods = ['SR হাতে', 'বিকাশ', 'নগদ অ্যাপ', 'রকেট', 'ব্যাংক'];
+    return DropdownButtonFormField<String>(
+      value: methods.contains(_currentPaymentMethod) ? _currentPaymentMethod : 'SR হাতে',
+      isDense: true,
+      decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
+      items: methods.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(fontSize: 13)))).toList(),
+      onChanged: (v) { if (v != null) { _currentPaymentMethod = v; setSt(() {}); } },
     );
   }
 
@@ -1992,88 +2014,121 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('পেমেন্ট তথ্য',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 12),
-            _payRow('মোট টাকা', '৳ ${_fmt.format(total.toInt())}',
-                const Color(0xFF0891B2)),
-            const SizedBox(height: 6),
-            _payRow('জমা দেওয়া হয়েছে',
-                '৳ ${_fmt.format(paid.toInt())}', const Color(0xFF16A34A)),
-            const SizedBox(height: 6),
-            _payRow('বকেয়া', '৳ ${_fmt.format(due.toInt())}',
-                due > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('পেমেন্ট তথ্য', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 12),
+          _payRow('মোট অর্ডার', '৳ ${_fmt.format(total.toInt())}', const Color(0xFF0891B2)),
+          const SizedBox(height: 4),
+          _payRow('পূর্বের বাকি (ডেলিভারির সময়)', '৳ ${_fmt.format(_currentPreviousDue)}', _currentPreviousDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)),
+          const SizedBox(height: 4),
+          Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
+          const SizedBox(height: 4),
+          _payRow('মোট দেনা', '৳ ${_fmt.format((total.toInt() + _currentPreviousDue))}', const Color(0xFF0891B2), bold: true),
+          if (_currentDeductionAmount > 0) ...[const SizedBox(height: 4), _payRow('রিপ্লেস বাবদ বাদ', '− ৳ ${_fmt.format(_currentDeductionAmount.toInt())}', const Color(0xFFDC2626))],
+          if (_currentReturnAmount > 0) ...[const SizedBox(height: 4), _payRow('ফেরত বাদ', '− ৳ ${_fmt.format(_currentReturnAmount.toInt())}', const Color(0xFF8B5CF6))],
+          if (_currentDiscountAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('ডিসকাউন্ট', '− ৳ ${_fmt.format(_currentDiscountAmount.toInt())}', const Color(0xFFD97706))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'ডিসকাউন্ট সম্পাদন', onPressed: _editDiscount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editDiscount, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('ডিসকাউন্ট যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+          const SizedBox(height: 4),
+          Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
+          const SizedBox(height: 4),
+          Builder(builder: (_) {
+            final cashPaid = (paid.toInt() - _currentDeductionAmount.toInt() - _currentReturnAmount.toInt()).clamp(0, 9999999);
+            return Column(children: [
+              if (_currentDeductionAmount > 0) _payRow('জমা: রিপ্লেস বাবদ', '৳ ${_fmt.format(_currentDeductionAmount.toInt())}', const Color(0xFF7C3AED)),
+              if (_currentReturnAmount > 0) _payRow('জমা: ফেরত বাবদ', '৳ ${_fmt.format(_currentReturnAmount.toInt())}', const Color(0xFF8B5CF6)),
+              _payRow('জমা: নগদ (${_currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : "SR হাতে"})', '৳ ${_fmt.format(cashPaid)}', const Color(0xFF16A34A)),
+              const SizedBox(height: 4),
+              Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
+              const SizedBox(height: 4),
+              _payRow('মোট জমা', '৳ ${_fmt.format(paid.toInt())}', const Color(0xFF16A34A), bold: true),
+            ]);
+          }),
+          const SizedBox(height: 4),
+          _payRow('নতুন বাকি', '৳ ${_fmt.format(_currentUserDue)}', _currentUserDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)),
+          const SizedBox(height: 4),
+          Row(children: [Expanded(child: _payRow('পেমেন্ট মাধ্যম', _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : '—', const Color(0xFF7C3AED))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'মাধ্যম পরিবর্তন', onPressed: _editPaymentMethod)]),
+          if (widget.order.localMemo.isNotEmpty) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('লোকাল মেমো', '#${widget.order.localMemo}', const Color(0xFF0891B2))), IconButton(icon: const Icon(Icons.edit_rounded, size: 16), visualDensity: VisualDensity.compact, tooltip: 'লোকাল মেমো আপডেট', onPressed: _editLocalMemo)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editLocalMemo, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('লোকাল মেমো যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+          if (_currentStatus == 'delivered') ...[
+            const SizedBox(height: 4),
+            Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editPaidAmount, icon: const Icon(Icons.edit_rounded, size: 14), label: const Text('জমা সম্পাদন', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+            const SizedBox(height: 4),
+            Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editPreviousDue, icon: const Icon(Icons.edit_rounded, size: 14), label: const Text('বাকি সম্পাদন', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
             const Divider(height: 20),
-            TextField(
-              controller: _paidCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: 'নতুন জমার পরিমাণ আপডেট করুন',
-                prefixText: '৳ ',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final amount = num.tryParse(_paidCtrl.text.trim()) ??
-                      _currentPaid;
-                  await controller.updatePaidAmount(
-                      widget.order.id, amount);
-                  setState(() => _currentPaid = amount);
-                  Get.snackbar(
-                    'আপডেট হয়েছে',
-                    'পেমেন্ট তথ্য সেভ হয়েছে',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: const Color(0xFF16A34A),
-                    colorText: Colors.white,
-                  );
-                },
-                icon: const Icon(Icons.payments_rounded),
-                label: const Text('পেমেন্ট আপডেট করুন'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF16A34A),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
+            _profitSection(scheme),
           ],
-        ),
+          if (_currentStatus != 'delivered') ...[const Divider(height: 20), TextField(controller: _paidCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(labelText: 'নতুন জমার পরিমাণ আপডেট করুন', prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12))), const SizedBox(height: 10), SizedBox(width: double.infinity, child: ElevatedButton.icon(onPressed: () async { final amount = num.tryParse(_paidCtrl.text.trim()) ?? _currentPaid; await controller.updatePaidAmount(widget.order.id, amount); setState(() => _currentPaid = amount); Get.snackbar('আপডেট হয়েছে', 'পেমেন্ট তথ্য সেভ হয়েছে', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white); }, icon: const Icon(Icons.payments_rounded), label: const Text('পেমেন্ট আপডেট করুন'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))))],
+        ]),
       ),
     );
   }
 
-  Widget _payRow(String label, String value, Color valueColor) {
+  Widget _profitSection(ColorScheme scheme) {
+    final tot = _editMode ? _editTotal : _savedTotal;
+    final ded = _currentDeductionAmount.toInt();
+    final ret = _currentReturnAmount.toInt();
+    final disc = _currentDiscountAmount.toInt();
+    final netSales = (tot - ded - ret).clamp(0, 9999999).toInt();
+    num cost = 0;
+    try { final pc = Get.find<ProductController>(); for (final item in _savedItems) { num c = item.purchasePrice; if (c <= 0) { final p = pc.products.firstWhereOrNull((p) => p.id == item.productId); if (p != null) c = p.purchasePrice; } cost += c * item.quantity; } } catch (_) {}
+    final hasSr = widget.order.deliveryAssignedSrId.isNotEmpty || widget.order.deliveredBySrId.isNotEmpty;
+    final comm = (netSales * 0.06).round();
+    final profit = (netSales - cost.toInt() - disc - (hasSr ? comm : 0)).clamp(0, 9999999);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('লাভের হিসাব', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)), const SizedBox(height: 10),
+      _payRow('মোট অর্ডার', '৳ ${_fmt.format(tot.toInt())}', const Color(0xFF0891B2)),
+      if (ded > 0) _payRow('  − রিপ্লেস বাবদ বাদ', '− ৳ ${_fmt.format(ded)}', const Color(0xFFDC2626)),
+      if (ret > 0) _payRow('  − ফেরত বাদ', '− ৳ ${_fmt.format(ret)}', const Color(0xFF8B5CF6)),
+      const SizedBox(height: 6),
+      _payRow('নেট বিক্রি', '৳ ${_fmt.format(netSales)}', netSales > 0 ? const Color(0xFF0891B2) : Colors.grey),
+      if (cost > 0) ...[const SizedBox(height: 4), _payRow('ক্রয় মূল্য', '− ৳ ${_fmt.format(cost.toInt())}', const Color(0xFFDC2626))],
+      if (disc > 0) _payRow('ডিসকাউন্ট', '− ৳ ${_fmt.format(disc)}', const Color(0xFFD97706)),
+      if (hasSr) ...[const SizedBox(height: 2), _payRow('SR কমিশন (৬%)', '− ৳ ${_fmt.format(comm)}', const Color(0xFF7C3AED))],
+      const SizedBox(height: 6),
+      _payRow('নিট লাভ', '৳ ${_fmt.format(profit)}', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+      if (cost > 0 && netSales > 0) ...[const SizedBox(height: 4), Builder(builder: (_) { final gp = netSales - cost.toInt() - disc; final gpct = (gp / cost * 100).toStringAsFixed(2); final npct = (profit / cost * 100).toStringAsFixed(2); return Column(children: [ _payRow('লাভের হার (SR সহ)', '$gpct%', gp > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)), if (hasSr) ...[const SizedBox(height: 2), _payRow('লাভের হার (SR বাদে)', '$npct%', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626))] ]); })],
+    ]);
+  }
+
+  void _editPaidAmount() async {
+    final ctrl = TextEditingController(text: _currentPaid.toStringAsFixed(0));
+    final ok = await Get.dialog<bool>(AlertDialog(title: const Text('জমা সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('আপডেট'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
+    if (ok == true) { final amt = num.tryParse(ctrl.text.trim()) ?? _currentPaid; await controller.updatePaidAmount(widget.order.id, amt); final nd = (_currentPreviousDue + _savedTotal.toInt() - _currentDeductionAmount.toInt() - _currentReturnAmount.toInt() - amt.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentPaid = amt; _paidCtrl.text = amt.toStringAsFixed(0); _currentUserDue = nd; }); }
+    ctrl.dispose();
+  }
+
+  void _editPreviousDue() async {
+    final ctrl = TextEditingController(text: _currentPreviousDue.toString());
+    final ok = await Get.dialog<bool>(AlertDialog(title: const Text('পূর্বের বাকি সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('সেভ'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
+    if (ok == true) { final v = int.tryParse(ctrl.text.trim()) ?? _currentPreviousDue; await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'previousDue': v}); final nd = (v + _savedTotal.toInt() - _currentDeductionAmount.toInt() - _currentReturnAmount.toInt() - _currentPaid.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentPreviousDue = v; _currentUserDue = nd; }); }
+    ctrl.dispose();
+  }
+
+  void _editDiscount() async {
+    final ctrl = TextEditingController(text: _currentDiscountAmount.toStringAsFixed(0));
+    final ok = await Get.dialog<bool>(AlertDialog(title: const Text('ডিসকাউন্ট সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('আপডেট'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
+    if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? _currentDiscountAmount; await controller.saveDiscountAmount(widget.order.id, v); final nd = (_currentPreviousDue + _savedTotal.toInt() - _currentDeductionAmount.toInt() - _currentReturnAmount.toInt() - _currentPaid.toInt() - v.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentDiscountAmount = v; _currentUserDue = nd; }); }
+    ctrl.dispose();
+  }
+
+  void _editLocalMemo() async {
+    final ctrl = TextEditingController(text: widget.order.localMemo);
+    final ok = await Get.dialog<bool>(AlertDialog(title: const Text('লোকাল মেমো', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(hintText: 'যেমন: 233', prefixText: '#', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('সেভ'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
+    if (ok == true) { final val = ctrl.text.trim(); await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'localMemo': val.isNotEmpty ? val : FieldValue.delete()}); setState(() {}); }
+    ctrl.dispose();
+  }
+
+  void _editPaymentMethod() async {
+    const methods = ['SR হাতে', 'বিকাশ', 'নগদ অ্যাপ', 'রকেট', 'ব্যাংক'];
+    final cur = _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : 'SR হাতে';
+    final result = await showModalBottomSheet<String>(context: context, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [...methods.map((m) => ListTile(leading: Icon(m == cur ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: m == cur ? const Color(0xFF7C3AED) : Colors.grey), title: Text(m), onTap: () => Navigator.pop(ctx, m))), const SizedBox(height: 8)])));
+    if (result != null && result != cur) { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'paymentMethod': result}); setState(() { _currentPaymentMethod = result; }); }
+  }
+
+  Widget _payRow(String label, String value, Color valueColor, {bool bold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: TextStyle(
-                fontSize: 13,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withAlpha(160))),
-        Text(value,
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: valueColor)),
+        Text(label, style: TextStyle(fontSize: bold ? 14 : 13, fontWeight: bold ? FontWeight.w800 : FontWeight.normal, color: Theme.of(context).colorScheme.onSurface.withAlpha(160))),
+        Text(value, style: TextStyle(fontSize: bold ? 16 : 14, fontWeight: bold ? FontWeight.w800 : FontWeight.w700, color: valueColor)),
       ],
     );
   }

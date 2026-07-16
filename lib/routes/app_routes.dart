@@ -5,8 +5,6 @@ abstract class AppRoutes {
   static const createOrder = '/orders/create';
   static const dispatch = '/dispatch';
   static const dispatchHistory = '/dispatch/history';
-  static const manualStockOut = '/manual-stock-out';
-  static const manualStockOutHistory = '/manual-stock-out/history';
   static const stockIn = '/stock-in';
   static const stockInHistory = '/stock-in/history';
   static const products = '/products';

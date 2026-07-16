@@ -35,6 +35,12 @@ class AdminReplaceModel {
   /// Amount deducted from bill if customerResolutionType == 'money_deduct'
   final int deductionAmount;
 
+  /// Price/value of the defective product the customer returned
+  final int defectiveProductPrice;
+
+  /// Price/value of the replacement product the customer receives
+  final int replaceProductPrice;
+
   // Supplier info
   final String supplierId;
   final String supplierName;
@@ -72,6 +78,8 @@ class AdminReplaceModel {
     this.deliveredToCustomerAt,
     this.customerResolutionType = '',
     this.deductionAmount = 0,
+    this.defectiveProductPrice = 0,
+    this.replaceProductPrice = 0,
     required this.supplierId,
     required this.supplierName,
     required this.status,
@@ -106,6 +114,8 @@ class AdminReplaceModel {
       customerResolutionType:
           (d['customerResolutionType'] as String?) ?? '',
       deductionAmount: (d['deductionAmount'] as num?)?.toInt() ?? 0,
+      defectiveProductPrice: (d['defectiveProductPrice'] as num?)?.toInt() ?? 0,
+      replaceProductPrice: (d['replaceProductPrice'] as num?)?.toInt() ?? 0,
       supplierId: (d['supplierId'] as String?) ?? '',
       supplierName: (d['supplierName'] as String?) ?? '',
       status: (d['status'] as String?) ?? 'at_shop',
@@ -137,6 +147,8 @@ class AdminReplaceModel {
             : null,
         'customerResolutionType': customerResolutionType,
         'deductionAmount': deductionAmount,
+        'defectiveProductPrice': defectiveProductPrice,
+        'replaceProductPrice': replaceProductPrice,
         'supplierId': supplierId,
         'supplierName': supplierName,
         'status': status,

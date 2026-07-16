@@ -4,7 +4,6 @@ import '../model/stock_snapshot_model.dart';
 import '../model/product_model.dart';
 import '../../replace/controller/admin_replace_controller.dart';
 import '../controller/product_controller.dart';
-import '../../manual_stock_out/controller/manual_stock_out_controller.dart';
 import '../../stock_in/controller/stock_in_controller.dart';
 import '../../order/controller/order_controller.dart';
 
@@ -182,34 +181,6 @@ class StockSnapshotController extends GetxController {
         await Get.find<AdminReplaceController>().fetchEntries(force: true);
       }
 
-      // Clean up manual stock outs created AFTER snapshot date.
-      // These stock movements have been reversed by the snapshot restore.
-      final stockOutsAfterSnap = await _db
-          .collection('manual_stock_outs')
-          .where('createdAt', isGreaterThan: Timestamp.fromDate(snapshot.savedAt))
-          .get();
-
-      int cleanedStockOuts = 0;
-      if (stockOutsAfterSnap.docs.isNotEmpty) {
-        const deleteChunk = 350;
-        for (var i = 0; i < stockOutsAfterSnap.docs.length; i += deleteChunk) {
-          final end = (i + deleteChunk > stockOutsAfterSnap.docs.length)
-              ? stockOutsAfterSnap.docs.length
-              : i + deleteChunk;
-          final batch = _db.batch();
-          for (final doc in stockOutsAfterSnap.docs.sublist(i, end)) {
-            batch.delete(doc.reference);
-          }
-          await batch.commit();
-        }
-        cleanedStockOuts = stockOutsAfterSnap.docs.length;
-      }
-
-      // Refresh manual stock out controller cache
-      if (Get.isRegistered<ManualStockOutController>()) {
-        await Get.find<ManualStockOutController>().fetchEntries();
-      }
-
       // Clean up stock_ins created AFTER snapshot date (stock reversed by restore)
       final stockInsAfterSnap = await _db
           .collection('stock_ins')
@@ -273,7 +244,6 @@ class StockSnapshotController extends GetxController {
       return {
         'products': allProducts.docs.length,
         'replace': restoreReplaceItems.length,
-        'deletedStockOuts': cleanedStockOuts,
         'revertedOrders': revertedOrders,
         'deletedStockIns': cleanedStockIns,
       };

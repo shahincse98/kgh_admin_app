@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controller/purchase_controller.dart';
 import '../model/purchase_entry_model.dart';
+import '../model/shortage_item_model.dart';
 import '../../product/model/product_model.dart';
 import '../../supplier/controller/supplier_controller.dart';
 import '../../supplier/model/supplier_model.dart';
@@ -18,64 +20,89 @@ class PurchaseView extends GetView<PurchaseController> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Stock Purchase Ledger'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: controller.loadEntries,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Stock Purchase Ledger'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.receipt_long_rounded, size: 18), text: 'Purchase Ledger'),
+              Tab(icon: Icon(Icons.shopping_bag_rounded, size: 18), text: 'সংগ্রহ তালিকা'),
+            ],
           ),
-        ],
-      ),
-      body: ResponsiveWrapper(child: Obx(() {
-        return Column(
-          children: [
-            _monthNav(context, scheme),
-            if (controller.loading.value)
-              const Expanded(child: Center(child: CircularProgressIndicator()))
-            else
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: controller.loadEntries,
-                  child: controller.entries.isEmpty
-                      ? ListView(
-                          children: const [
-                            SizedBox(height: 80),
-                            Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.shopping_cart_outlined,
-                                      size: 56, color: Colors.grey),
-                                  SizedBox(height: 12),
-                                  Text('এই মাসে কোনো purchase নেই',
-                                      style: TextStyle(color: Colors.grey)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        )
-                      : ListView(
-                          padding:
-                              const EdgeInsets.fromLTRB(14, 12, 14, 90),
-                          children: [
-                            _summaryCard(context, scheme),
-                            const SizedBox(height: 14),
-                            ..._groupedEntries(context, scheme),
-                          ],
-                        ),
-                ),
-              ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                controller.loadEntries();
+                controller.computeShortage(force: true);
+              },
+            ),
           ],
-        );
-      })),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddSheet(context),
-        icon: const Icon(Icons.add),
-        label: const Text('Purchase যোগ করুন'),
+        ),
+        body: ResponsiveWrapper(
+          child: TabBarView(
+            children: [
+              _purchaseLedgerTab(context, scheme),
+              _shortageListTab(context, scheme),
+            ],
+          ),
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showAddSheet(context),
+          icon: const Icon(Icons.add),
+          label: const Text('Purchase যোগ করুন'),
+        ),
       ),
     );
+  }
+
+  // ── Purchase Ledger tab (existing) ─────────────────────────────
+
+  Widget _purchaseLedgerTab(BuildContext context, ColorScheme scheme) {
+    return Obx(() {
+      return Column(
+        children: [
+          _monthNav(context, scheme),
+          if (controller.loading.value)
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+          else
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: controller.loadEntries,
+                child: controller.entries.isEmpty
+                    ? ListView(
+                        children: const [
+                          SizedBox(height: 80),
+                          Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.shopping_cart_outlined,
+                                    size: 56, color: Colors.grey),
+                                SizedBox(height: 12),
+                                Text('এই মাসে কোনো purchase নেই',
+                                    style: TextStyle(color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : ListView(
+                        padding:
+                            const EdgeInsets.fromLTRB(14, 12, 14, 90),
+                        children: [
+                          _summaryCard(context, scheme),
+                          const SizedBox(height: 14),
+                          ..._groupedEntries(context, scheme),
+                        ],
+                      ),
+              ),
+            ),
+        ],
+      );
+    });
   }
 
   Widget _monthNav(BuildContext context, ColorScheme scheme) {
@@ -114,6 +141,322 @@ class PurchaseView extends GetView<PurchaseController> {
           }),
         ],
       ),
+    );
+  }
+
+  // ── Shortage list tab ──────────────────────────────────────────
+
+  Widget _shortageListTab(BuildContext context, ColorScheme scheme) {
+    return Obx(() {
+      if (controller.shortageLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
+      if (controller.shortageError.value.isNotEmpty) {
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline_rounded,
+                    size: 48, color: Colors.red),
+                const SizedBox(height: 12),
+                const Text('লোড করতে সমস্যা হয়েছে',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 15)),
+                const SizedBox(height: 8),
+                Text(
+                  controller.shortageError.value,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => controller.computeShortage(force: true),
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('আবার চেষ্টা করুন'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      final list = controller.shortageList;
+
+      return RefreshIndicator(
+        onRefresh: () => controller.computeShortage(force: true),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 90),
+          children: [
+            _shortageSummaryCard(context, scheme),
+            const SizedBox(height: 14),
+            if (list.isEmpty)
+              SizedBox(
+                height: 200,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle_outline_rounded,
+                          size: 56,
+                          color: scheme.onSurface.withAlpha(80)),
+                      const SizedBox(height: 12),
+                      Text(
+                        controller.approvedOrderCount.value == 0
+                            ? 'কোনো approved অর্ডার নেই'
+                            : 'সব প্রডাক্ট স্টকে আছে — শর্ট নেই!',
+                        style: TextStyle(
+                            color: scheme.onSurface.withAlpha(120)),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else ...[
+              _copyButtonRow(context, scheme),
+              const SizedBox(height: 10),
+              ...list.map((item) => _shortageCard(item, scheme)),
+            ],
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _shortageSummaryCard(BuildContext context, ColorScheme scheme) {
+    final approved = controller.approvedOrderCount.value;
+    final shortCount = controller.shortageList.length;
+    final totalShortQty =
+        controller.shortageList.fold(0, (s, e) => s + e.shortQty);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD97706).withAlpha(20),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.shopping_bag_rounded,
+                      color: Color(0xFFD97706), size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('সংগ্রহ করা লাগবে',
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey)),
+                      Text(
+                        '$shortCount টি প্রডাক্ট — $totalShortQty টি',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFD97706),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHigh.withAlpha(80),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.assignment_turned_in_rounded,
+                      size: 16, color: Color(0xFF2563EB)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Approved অর্ডার: $approved টি',
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'তারিখ: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
+                    style: TextStyle(
+                        fontSize: 12, color: scheme.onSurface.withAlpha(140)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _copyButtonRow(BuildContext context, ColorScheme scheme) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              await Clipboard.setData(
+                  ClipboardData(text: controller.shortageAsText));
+              Get.snackbar(
+                'কপি হয়েছে',
+                'সংগ্রহ তালিকা ক্লিপবোর্ডে কপি হয়েছে',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: const Color(0xFF0891B2),
+                colorText: Colors.white,
+              );
+            },
+            icon: const Icon(Icons.copy_rounded, size: 18),
+            label: const Text('তালিকা কপি করুন'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              // Copy only product names + short qty (simple format)
+              final buf = StringBuffer();
+              for (var i = 0;
+                  i < controller.shortageList.length;
+                  i++) {
+                final item = controller.shortageList[i];
+                buf.writeln('${item.displayName} — ${item.shortQty} টি');
+              }
+              await Clipboard.setData(ClipboardData(text: buf.toString()));
+              Get.snackbar(
+                'কপি হয়েছে',
+                'সংক্ষিপ্ত তালিকা কপি হয়েছে',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: const Color(0xFF0891B2),
+                colorText: Colors.white,
+              );
+            },
+            icon: const Icon(Icons.list_rounded, size: 18),
+            label: const Text('সংক্ষিপ্ত কপি'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _shortageCard(ShortageItem item, ColorScheme scheme) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: const Color(0xFFD97706).withAlpha(20),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.shopping_bag_rounded,
+                  color: Color(0xFFD97706), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.productName,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 14),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+                  if (item.brandName.isNotEmpty ||
+                      item.productCode.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        [item.brandName, item.productCode]
+                            .where((s) => s.isNotEmpty)
+                            .join(' • '),
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: scheme.onSurface.withAlpha(140)),
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      _shortageBadge(
+                          'অর্ডার: ${item.orderedQty}', const Color(0xFF2563EB)),
+                      _shortageBadge(
+                          'স্টক: ${item.stockQty}', const Color(0xFF16A34A)),
+                      _shortageBadge(
+                          '${item.orderCount} অর্ডারে', const Color(0xFF6366F1)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDC2626).withAlpha(20),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('শর্ট',
+                      style: TextStyle(
+                          fontSize: 10, color: Color(0xFFDC2626))),
+                  Text(
+                    '${item.shortQty}',
+                    style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFDC2626)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _shortageBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withAlpha(20),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 11, color: color, fontWeight: FontWeight.w600)),
     );
   }
 

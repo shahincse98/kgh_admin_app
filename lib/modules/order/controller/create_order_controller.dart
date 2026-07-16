@@ -112,6 +112,7 @@ class CreateOrderController extends GetxController {
                 quantity: c.quantity,
                 pricePerUnit: c.product.wholesalePrice,
                 totalPrice: c.total,
+                purchasePrice: c.product.purchasePrice,
               ).toMap())
           .toList();
 
@@ -120,6 +121,8 @@ class CreateOrderController extends GetxController {
         'shopName': customer.shopName,
         'shopAddress': customer.address,
         'shopPhone': customer.phone,
+        'userPhone': customer.phone,
+        'userDue': customer.totalDue,
         'items': items,
         'totalAmount': cartTotal,
         'paidAmount': paid,

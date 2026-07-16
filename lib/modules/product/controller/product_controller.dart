@@ -49,7 +49,7 @@ class ProductController extends GetxController {
       }
     }
 
-    categories.assignAll(['All', ...set]);
+    categories.assignAll(['All', '⚠ No Cost', ...set]);
 
     _loadedOnce = true;
     loading.value = false;
@@ -64,7 +64,9 @@ class ProductController extends GetxController {
           p.name.toLowerCase().contains(searchText.value.toLowerCase());
 
       final matchCategory = selectedCategory.value == 'All' ||
-          p.productCategory == selectedCategory.value;
+          (selectedCategory.value == '⚠ No Cost'
+              ? p.purchasePrice <= 0
+              : p.productCategory == selectedCategory.value);
 
       return matchSearch && matchCategory;
     }).toList();
