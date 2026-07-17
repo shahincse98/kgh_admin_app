@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body { margin:0; padding:0; }
+.banner {
+  width: 1200px; height: 628px;
+  background: linear-gradient(135deg, #0a1628 0%, #1b3a5c 40%, #2d6a9f 70%, #0a1628 100%);
+  position: relative; overflow: hidden;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+.banner::before {
+  content: '';
+  position: absolute; top: -60px; right: -60px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.banner::after {
+  content: '';
+  position: absolute; bottom: -80px; left: 100px;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.accent-line {
+  position: absolute; top: 0; left: 0;
+  width: 1200px; height: 6px;
+  background: linear-gradient(90deg, #f4a261, #e76f51, #f4a261);
+}
+.logo {
+  position: absolute; top: 40px; left: 60px;
+  font-size: 22px; color: #f4a261; font-weight: 700;
+  letter-spacing: 3px;
+}
+.logo span { color: #fff; }
+.content {
+  position: absolute; top: 50%; left: 60px;
+  transform: translateY(-55%);
+}
+.tag {
+  font-size: 16px; color: #f4a261; font-weight: 600;
+  letter-spacing: 4px; text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.title {
+  font-size: 44px; color: #fff; font-weight: 800;
+  line-height: 1.2; margin-bottom: 14px;
+  max-width: 700px;
+}
+.title span { color: #f4a261; }
+.subtitle {
+  font-size: 20px; color: rgba(255,255,255,0.8);
+  font-weight: 400; margin-bottom: 24px;
+  max-width: 650px; line-height: 1.5;
+}
+.cta {
+  display: inline-block;
+  background: linear-gradient(90deg, #f4a261, #e76f51);
+  color: #fff; padding: 14px 36px;
+  border-radius: 8px; font-size: 18px; font-weight: 700;
+  letter-spacing: 1px; text-decoration: none;
+}
+.details {
+  position: absolute; bottom: 40px; left: 60px;
+  display: flex; gap: 40px;
+}
+.detail-item {
+  display: flex; align-items: center; gap: 10px;
+  color: rgba(255,255,255,0.7); font-size: 15px;
+}
+.detail-icon {
+  width: 20px; height: 20px;
+  background: #f4a261; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: #0a1628; font-weight: 700;
+}
+.url {
+  position: absolute; bottom: 40px; right: 60px;
+  color: rgba(255,255,255,0.5); font-size: 14px; letter-spacing: 1px;
+}
+.geo-shape {
+  position: absolute; right: 40px; top: 140px;
+  width: 340px; height: 340px;
+  border: 3px solid rgba(244,162,97,0.2);
+  border-radius: 30px; transform: rotate(15deg);
+}
+.geo-shape-2 {
+  position: absolute; right: 70px; top: 170px;
+  width: 280px; height: 280px;
+  border: 2px solid rgba(244,162,97,0.1);
+  border-radius: 24px; transform: rotate(25deg);
+}
+.icon-group {
+  position: absolute; right: 60px; top: 50%;
+  transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 20px;
+}
+.icon-badge {
+  width: 64px; height: 64px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+</style>
+</head>
+<body>
+<div class="banner">
+  <div class="accent-line"></div>
+
+  <div class="logo">BUET<span>EN</span></div>
+
+  <div class="content">
+    <div class="tag">Training Session</div>
+    <div class="title">Level Up Your<br><span>Entrepreneurial</span> Skills</div>
+    <div class="subtitle">Hands-on training for BUETian entrepreneurs to build, scale &amp; lead. Learn from industry experts and connect with fellow founders.</div>
+    <div class="cta">REGISTER NOW</div>
+  </div>
+
+  <div class="geo-shape"></div>
+  <div class="geo-shape-2"></div>
+
+  <div class="details">
+    <div class="detail-item"><div class="detail-icon">&#9654;</div> Expert-Led Sessions</div>
+    <div class="detail-item"><div class="detail-icon">&#9679;</div> Hands-on Workshop</div>
+    <div class="detail-item"><div class="detail-icon">&darr;</div> BUET Graduates Club</div>
+  </div>
+
+  <div class="url">bueten.org</div>
+</div>
+</body>
+</html>

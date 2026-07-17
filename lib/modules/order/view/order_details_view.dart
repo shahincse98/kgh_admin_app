@@ -413,7 +413,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             ),
         ],
       ),
-      body: ResponsiveWrapper(child: ListView(
+      body: ResponsiveWrapper(child: SelectionArea(child: ListView(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
         children: [
           // ── Shop & order info ──────────────────────────────
@@ -441,7 +441,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           // ── Payment ───────────────────────────────────────
           _paymentCard(scheme),
         ],
-      )),
+      ))),
     );
   }
 
