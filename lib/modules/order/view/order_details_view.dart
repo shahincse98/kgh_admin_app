@@ -57,6 +57,15 @@ class _EditItem {
   void dispose() { priceCtrl.dispose(); }
 }
 
+// ─── Payment row state (delivery dialog) ──────────────────────
+class _PaymentRow {
+  final TextEditingController amountCtrl;
+  String method;
+  _PaymentRow({this.method = 'SR হাতে', String amount = ''})
+      : amountCtrl = TextEditingController(text: amount);
+  void dispose() => amountCtrl.dispose();
+}
+
 // ─── Details View ────────────────────────────────────────────────
 
 // ─── Replace return item state (delivery dialog) ────────────────
@@ -127,6 +136,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   late num _currentReturnAmount;
   late num _currentDiscountAmount;
   late String _currentPaymentMethod;
+  late List<Map<String, dynamic>> _currentPayments;
 
   List<UserModel> _allUsers = [];
   bool _loadingUsers = false;
@@ -179,6 +189,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     _currentReturnAmount = widget.order.returnAmount;
     _currentDiscountAmount = widget.order.discountAmount;
     _currentPaymentMethod = widget.order.paymentMethod.isNotEmpty ? widget.order.paymentMethod : 'SR হাতে';
+    _currentPayments = widget.order.payments.isNotEmpty ? List<Map<String, dynamic>>.from(widget.order.payments) : [{'amount': widget.order.paidAmount > 0 ? (widget.order.paidAmount - widget.order.returnAmount - widget.order.deductionAmount).clamp(0, 9999999) : 0, 'method': _currentPaymentMethod}];
     _currentPreviousDue = widget.order.previousDue > 0 ? widget.order.previousDue : widget.order.userDue;
     _initEditItems();
     _loadProducts();
@@ -294,13 +305,24 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
 
   void _initEditItems() {
     _editItems = widget.order.items
-        .map((i) => _EditItem(
-              productId: i.productId,
-              productName: i.productName,
-              image: i.image,
-              quantity: i.quantity,
-              pricePerUnit: i.pricePerUnit,
-            ))
+        .map((i) {
+          num pp = i.purchasePrice;
+          if (pp <= 0) {
+            try {
+              final pc = Get.find<ProductController>();
+              final p = pc.products.firstWhereOrNull((p) => p.id == i.productId);
+              if (p != null) pp = p.purchasePrice;
+            } catch (_) {}
+          }
+          return _EditItem(
+            productId: i.productId,
+            productName: i.productName,
+            image: i.image,
+            quantity: i.quantity,
+            pricePerUnit: i.pricePerUnit,
+            purchasePrice: pp,
+          );
+        })
         .toList();
   }
 
@@ -430,6 +452,11 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           if (widget.order.memoNumber.isNotEmpty) ...[
             const SizedBox(height: 12),
             _dispatchInfoCard(scheme),
+          ],
+          // ── Delivery info ──────────────────────────────────
+          if (_deliveredAt != null) ...[
+            const SizedBox(height: 12),
+            _deliveryInfoCard(scheme),
           ],
           const SizedBox(height: 12),
           // ── Status change ──────────────────────────────────
@@ -738,7 +765,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               ..._editItems.asMap().entries.map((e) =>
                   _editItemRow(e.key, e.value, scheme))
             else
-              ..._savedItems.map((i) => _viewItemRow(i, scheme)),
+              ..._savedItems.asMap().entries.map((e) =>
+                  _viewItemRow(e.key, e.value, scheme)),
             // Product add (edit mode only)
             if (_editMode) ...[
               const SizedBox(height: 10),
@@ -792,7 +820,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     );
   }
 
-  Widget _viewItemRow(OrderItem i, ColorScheme scheme) {
+  Widget _viewItemRow(int index, OrderItem i, ColorScheme scheme) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -827,6 +855,25 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   style: TextStyle(
                       fontSize: 12,
                       color: scheme.onSurface.withAlpha(160)),
+                ),
+                GestureDetector(
+                  onTap: () => _editPurchasePriceViewMode(index, i),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'ক্রয়: ৳${_fmt.format(i.purchasePrice.toInt())}',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: i.purchasePrice > 0
+                                ? const Color(0xFFDC2626)
+                                : scheme.onSurface.withAlpha(120)),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.edit_rounded, size: 12,
+                          color: scheme.onSurface.withAlpha(140)),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -887,6 +934,25 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   style: const TextStyle(
                       fontSize: 12, color: Color(0xFF0891B2),
                       fontWeight: FontWeight.w600),
+                ),
+                GestureDetector(
+                  onTap: () => _editPurchasePriceEditMode(item),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'ক্রয়: ৳${_fmt.format(item.purchasePrice.toInt())}',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: item.purchasePrice > 0
+                                ? const Color(0xFFDC2626)
+                                : scheme.onSurface.withAlpha(120)),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.edit_rounded, size: 12,
+                          color: scheme.onSurface.withAlpha(140)),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -1142,6 +1208,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           image: p.images.isNotEmpty ? p.images.first : '',
           quantity: 1,
           pricePerUnit: p.wholesalePrice,
+          purchasePrice: p.purchasePrice,
         ));
       }
       _productSearchCtrl.clear();
@@ -1423,6 +1490,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             image: p.images.isNotEmpty ? p.images.first : '',
             quantity: 1,
             pricePerUnit: p.wholesalePrice,
+            purchasePrice: p.purchasePrice,
           ));
         }
       }
@@ -1536,9 +1604,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     final grandTotal = (orderDue.toInt() + previousDue).clamp(0, 9999999);
 
     final payCtrl = TextEditingController();
+    List<_PaymentRow> paymentRows = [_PaymentRow()];
     final memoCtrl = TextEditingController();
     final discountCtrl = TextEditingController();
-    _currentPaymentMethod = widget.order.paymentMethod.isNotEmpty ? widget.order.paymentMethod : 'SR হাতে';
 
     List<AdminReplaceModel> pendingReplaces = [];
     final Set<String> selectedPendingIds = {};
@@ -1553,14 +1621,14 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     try { _rc = Get.find<AdminReplaceController>(); } catch (_) { _rc = Get.put(AdminReplaceController()); }
     if (_currentUserId.isNotEmpty) { try { pendingReplaces = await _rc!.fetchPendingForCustomer(_currentUserId); } catch (_) {} }
     loadingPending = false;
-    if (!mounted) { payCtrl.dispose(); memoCtrl.dispose(); discountCtrl.dispose(); return; }
+    if (!mounted) { payCtrl.dispose(); memoCtrl.dispose(); discountCtrl.dispose(); for (final r in paymentRows) { r.dispose(); } return; }
 
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Row(children: [Icon(Icons.local_shipping_rounded, color: Color(0xFF16A34A), size: 22), SizedBox(width: 8), Text('ডেলিভারি পেমেন্ট', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))]),
         content: StatefulBuilder(builder: (ctx, setSt) {
-          final paidNow = num.tryParse(payCtrl.text.trim()) ?? 0;
+          final paidNow = paymentRows.fold<num>(0, (s, r) => s + (num.tryParse(r.amountCtrl.text.trim()) ?? 0));
           final saleReturnTotal = _saleReturnItems.fold<num>(0, (s, r) => s + r.totalPrice).toInt();
           final totalDeduction = returnItems.where((r) => r.resolutionType == 'money_deduct').fold<int>(0, (s, r) => s + r.deductionAmount);
           final discountAmount = num.tryParse(discountCtrl.text.trim()) ?? 0;
@@ -1588,10 +1656,22 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               ),
             ])),
             const SizedBox(height: 14),
-            const Text('নগদ জমা', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
-            TextField(controller: payCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: InputDecoration(prefixText: '৳ ', hintText: 'গ্রাহক যত টাকা দিল', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)), onChanged: (_) => setSt(() {})),
-            const SizedBox(height: 12),
-            const Text('পেমেন্ট মাধ্যম', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4), _paymentMethodDropdown(setSt),
+            Row(children: [const Text('নগদ জমা', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const Spacer(), TextButton.icon(onPressed: () => setSt(() => paymentRows.add(_PaymentRow())), icon: const Icon(Icons.add_rounded, size: 16), label: const Text('আরও মাধ্যম', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact))]),
+            const SizedBox(height: 4),
+            ...paymentRows.asMap().entries.map((e) {
+              final i = e.key;
+              final r = e.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  SizedBox(width: 80, child: _paymentMethodDropdown2(setSt, r)),
+                  const SizedBox(width: 8),
+                  Expanded(child: TextField(controller: r.amountCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(prefixText: '৳ ', hintText: 'টাকা', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10)), onChanged: (_) => setSt(() {}))),
+                  if (paymentRows.length > 1)
+                    Padding(padding: const EdgeInsets.only(left: 4), child: IconButton(icon: const Icon(Icons.close_rounded, size: 16), visualDensity: VisualDensity.compact, color: Colors.red.shade400, onPressed: () => setSt(() { r.dispose(); paymentRows.removeAt(i); }))),
+                ]),
+              );
+            }),
             const SizedBox(height: 12),
             const Text('ডিসকাউন্ট (বাদ)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
             TextField(controller: discountCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(prefixText: '৳ ', hintText: 'যদি ডিসকাউন্ট দিতে চান', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)), onChanged: (_) => setSt(() {})),
@@ -1608,7 +1688,12 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     );
 
     if (confirmed == true) {
-      final paidNow = num.tryParse(payCtrl.text.trim()) ?? 0;
+      final paidNow = paymentRows.fold<num>(0, (s, r) => s + (num.tryParse(r.amountCtrl.text.trim()) ?? 0));
+      final paymentEntries = paymentRows.where((r) => (num.tryParse(r.amountCtrl.text.trim()) ?? 0) > 0).map((r) => {
+        'amount': num.tryParse(r.amountCtrl.text.trim()) ?? 0,
+        'method': r.method,
+      }).toList();
+      final primaryMethod = paymentEntries.isNotEmpty ? paymentEntries.first['method'] as String : 'SR হাতে';
       final totalDeduction = returnItems.where((r) => r.resolutionType == 'money_deduct').fold<int>(0, (s, r) => s + r.deductionAmount);
       final saleReturnTotal = _saleReturnItems.fold<num>(0, (s, r) => s + r.totalPrice).toInt();
       final discountAmount = num.tryParse(discountCtrl.text.trim()) ?? 0;
@@ -1619,7 +1704,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       if (!alreadyDelivered) { setState(() { _currentStatus = 'delivered'; _deliveredAt = DateTime.now(); }); await controller.updateOrderStatus(widget.order.id, 'delivered', previousStatus: previousStatus, deliveredBySrId: widget.srDocId, items: _savedItems.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList()); }
       if (totalPaid != _currentPaid) { await controller.updatePaidAmount(widget.order.id, totalPaid); setState(() { _currentPaid = totalPaid; _paidCtrl.text = totalPaid.toStringAsFixed(0); }); }
       if (discountAmount > 0) await controller.saveDiscountAmount(widget.order.id, discountAmount);
-      if (_currentPaymentMethod.isNotEmpty) await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'paymentMethod': _currentPaymentMethod});
+      if (paymentEntries.isNotEmpty) { try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'payments': paymentEntries, 'paymentMethod': primaryMethod}); } catch (_) {} }
+      if (mounted) setState(() { _currentPayments = paymentEntries; _currentPaymentMethod = primaryMethod; });
       if (memo.isNotEmpty) { try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'localMemo': memo}); } catch (_) {} }
       if (_currentUserId.isNotEmpty) { if (mounted) setState(() => _currentPreviousDue = _currentUserDue); await controller.updateUserDue(_currentUserId, newDue); if (mounted) setState(() => _currentUserDue = newDue); try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'previousDue': _currentPreviousDue}); } catch (_) {} }
       if (!alreadyDelivered && _saleReturnItems.isNotEmpty) { try { final sc = Get.find<StockInController>(); await sc.addMultipleStockIn(date: DateTime.now(), source: 'কাস্টমার ফেরত', note: 'অর্ডার #${widget.order.id} — $_currentShopName', items: _saleReturnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'image': i.product.images.isNotEmpty ? i.product.images.first : '', 'quantity': i.quantity, 'unitPrice': i.unitPrice}).toList()); for (final item in _saleReturnItems) { item.dispose(); } } catch (_) {} await controller.saveReturnAmount(widget.order.id, saleReturnTotal); }
@@ -1632,7 +1718,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       if (returnItems.isNotEmpty) msgParts.add('${returnItems.length} টি ফেরত রিপ্লেস');
       Get.snackbar('সফল', msgParts.join(' • '), snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
     }
-    payCtrl.dispose(); memoCtrl.dispose(); discountCtrl.dispose();
+    payCtrl.dispose(); memoCtrl.dispose(); discountCtrl.dispose(); for (final r in paymentRows) { r.dispose(); }
   }
 
   Widget _dialogPayRow(String label, String value, Color valueColor, {bool bold = false, bool small = false}) {
@@ -1653,6 +1739,17 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
       items: methods.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(fontSize: 13)))).toList(),
       onChanged: (v) { if (v != null) { _currentPaymentMethod = v; setSt(() {}); } },
+    );
+  }
+
+  Widget _paymentMethodDropdown2(StateSetter setSt, _PaymentRow row) {
+    const methods = ['SR হাতে', 'বিকাশ', 'নগদ অ্যাপ', 'রকেট', 'ব্যাংক'];
+    return DropdownButtonFormField<String>(
+      value: methods.contains(row.method) ? row.method : 'SR হাতে',
+      isDense: true,
+      decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10)),
+      items: methods.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(fontSize: 11)))).toList(),
+      onChanged: (v) { if (v != null) { row.method = v; setSt(() {}); } },
     );
   }
 
@@ -1716,14 +1813,80 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             ),
             const SizedBox(height: 10),
             _infoRow(Icons.tag_rounded, 'মেমো: ${widget.order.memoNumber}', scheme, textColor: const Color(0xFFD97706)),
-            if (widget.order.dispatchedAt != null) ...[
+            if (_dispatchedAt != null) ...[
               const SizedBox(height: 6),
-              _infoRow(Icons.access_time_rounded, dateFmt.format(widget.order.dispatchedAt!), scheme),
+              Row(
+                children: [
+                  Icon(Icons.access_time_rounded, size: 15, color: scheme.onSurface.withAlpha(140)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(dateFmt.format(_dispatchedAt!),
+                        style: TextStyle(fontSize: 13, color: scheme.onSurface.withAlpha(180))),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit_rounded, size: 16),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'তারিখ সম্পাদন',
+                    onPressed: () => _editDispatchedAt(),
+                  ),
+                ],
+              ),
             ],
             if (widget.order.dispatchedBy.isNotEmpty) ...[
               const SizedBox(height: 6),
               _infoRow(Icons.person_rounded, 'Dispatched by: ${widget.order.dispatchedBy}', scheme),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Delivery info card ──────────────────────────────────────
+
+  Widget _deliveryInfoCard(ColorScheme scheme) {
+    final deliveredAt = _deliveredAt;
+    if (deliveredAt == null) return const SizedBox.shrink();
+    final dateFmt = DateFormat('dd MMMM yyyy, h:mm a');
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF16A34A).withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 18),
+                ),
+                const SizedBox(width: 12),
+                const Text('ডেলিভারি সম্পন্ন', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(Icons.access_time_rounded, size: 15, color: scheme.onSurface.withAlpha(140)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(dateFmt.format(deliveredAt),
+                      style: TextStyle(fontSize: 13, color: scheme.onSurface.withAlpha(180))),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit_rounded, size: 16),
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'তারিখ সম্পাদন',
+                  onPressed: () => _editDeliveredAt(),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -1800,7 +1963,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: date ?? DateTime.now(),
-                      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                      firstDate: DateTime(2020),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
                     if (picked == null) return;
@@ -2035,7 +2198,10 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             return Column(children: [
               if (_currentDeductionAmount > 0) _payRow('জমা: রিপ্লেস বাবদ', '৳ ${_fmt.format(_currentDeductionAmount.toInt())}', const Color(0xFF7C3AED)),
               if (_currentReturnAmount > 0) _payRow('জমা: ফেরত বাবদ', '৳ ${_fmt.format(_currentReturnAmount.toInt())}', const Color(0xFF8B5CF6)),
-              _payRow('জমা: নগদ (${_currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : "SR হাতে"})', '৳ ${_fmt.format(cashPaid)}', const Color(0xFF16A34A)),
+              if (_currentPayments.isNotEmpty)
+                ..._currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).map((p) => _payRow('জমা: ${p['method'] ?? 'নগদ'}', '৳ ${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)}', const Color(0xFF16A34A)))
+              else
+                _payRow('জমা: নগদ (${_currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : "SR হাতে"})', '৳ ${_fmt.format(cashPaid)}', const Color(0xFF16A34A)),
               const SizedBox(height: 4),
               Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
               const SizedBox(height: 4),
@@ -2045,7 +2211,10 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           const SizedBox(height: 4),
           _payRow('নতুন বাকি', '৳ ${_fmt.format(_currentUserDue)}', _currentUserDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)),
           const SizedBox(height: 4),
-          Row(children: [Expanded(child: _payRow('পেমেন্ট মাধ্যম', _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : '—', const Color(0xFF7C3AED))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'মাধ্যম পরিবর্তন', onPressed: _editPaymentMethod)]),
+          if (_currentPayments.isNotEmpty)
+            _payRow('পেমেন্ট মাধ্যম', _currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).map((p) => '${p['method']} (৳${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)})').join(', '), const Color(0xFF7C3AED))
+          else
+            Row(children: [Expanded(child: _payRow('পেমেন্ট মাধ্যম', _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : '—', const Color(0xFF7C3AED))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'মাধ্যম পরিবর্তন', onPressed: _editPaymentMethod)]),
           if (widget.order.localMemo.isNotEmpty) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('লোকাল মেমো', '#${widget.order.localMemo}', const Color(0xFF0891B2))), IconButton(icon: const Icon(Icons.edit_rounded, size: 16), visualDensity: VisualDensity.compact, tooltip: 'লোকাল মেমো আপডেট', onPressed: _editLocalMemo)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editLocalMemo, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('লোকাল মেমো যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
           if (_currentStatus == 'delivered') ...[
             const SizedBox(height: 4),
@@ -2066,26 +2235,113 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     final ded = _currentDeductionAmount.toInt();
     final ret = _currentReturnAmount.toInt();
     final disc = _currentDiscountAmount.toInt();
-    final netSales = (tot - ded - ret).clamp(0, 9999999).toInt();
+    final netSales = (tot - ded - ret - disc).clamp(0, 9999999).toInt();
     num cost = 0;
     try { final pc = Get.find<ProductController>(); for (final item in _savedItems) { num c = item.purchasePrice; if (c <= 0) { final p = pc.products.firstWhereOrNull((p) => p.id == item.productId); if (p != null) c = p.purchasePrice; } cost += c * item.quantity; } } catch (_) {}
     final hasSr = widget.order.deliveryAssignedSrId.isNotEmpty || widget.order.deliveredBySrId.isNotEmpty;
     final comm = (netSales * 0.06).round();
-    final profit = (netSales - cost.toInt() - disc - (hasSr ? comm : 0)).clamp(0, 9999999);
+    final profit = (netSales - cost.toInt() - (hasSr ? comm : 0)).clamp(0, 9999999);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Text('লাভের হিসাব', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)), const SizedBox(height: 10),
       _payRow('মোট অর্ডার', '৳ ${_fmt.format(tot.toInt())}', const Color(0xFF0891B2)),
-      if (ded > 0) _payRow('  − রিপ্লেস বাবদ বাদ', '− ৳ ${_fmt.format(ded)}', const Color(0xFFDC2626)),
+       if (ded > 0) _payRow('  − রিপ্লেস বাবদ বাদ', '− ৳ ${_fmt.format(ded)}', const Color(0xFFDC2626)),
       if (ret > 0) _payRow('  − ফেরত বাদ', '− ৳ ${_fmt.format(ret)}', const Color(0xFF8B5CF6)),
+      if (disc > 0) _payRow('  − ডিসকাউন্ট', '− ৳ ${_fmt.format(disc)}', const Color(0xFFD97706)),
       const SizedBox(height: 6),
       _payRow('নেট বিক্রি', '৳ ${_fmt.format(netSales)}', netSales > 0 ? const Color(0xFF0891B2) : Colors.grey),
       if (cost > 0) ...[const SizedBox(height: 4), _payRow('ক্রয় মূল্য', '− ৳ ${_fmt.format(cost.toInt())}', const Color(0xFFDC2626))],
-      if (disc > 0) _payRow('ডিসকাউন্ট', '− ৳ ${_fmt.format(disc)}', const Color(0xFFD97706)),
       if (hasSr) ...[const SizedBox(height: 2), _payRow('SR কমিশন (৬%)', '− ৳ ${_fmt.format(comm)}', const Color(0xFF7C3AED))],
       const SizedBox(height: 6),
       _payRow('নিট লাভ', '৳ ${_fmt.format(profit)}', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
-      if (cost > 0 && netSales > 0) ...[const SizedBox(height: 4), Builder(builder: (_) { final gp = netSales - cost.toInt() - disc; final gpct = (gp / cost * 100).toStringAsFixed(2); final npct = (profit / cost * 100).toStringAsFixed(2); return Column(children: [ _payRow('লাভের হার (SR সহ)', '$gpct%', gp > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)), if (hasSr) ...[const SizedBox(height: 2), _payRow('লাভের হার (SR বাদে)', '$npct%', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626))] ]); })],
+      if (cost > 0 && netSales > 0) ...[const SizedBox(height: 4), Builder(builder: (_) { final gp = netSales - cost.toInt(); final gpct = (gp / cost * 100).toStringAsFixed(2); final npct = (profit / cost * 100).toStringAsFixed(2); return Column(children: [ _payRow('লাভের হার (SR সহ)', '$gpct%', gp > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)), if (hasSr) ...[const SizedBox(height: 2), _payRow('লাভের হার (SR বাদে)', '$npct%', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626))] ]); })],
     ]);
+  }
+
+  void _editPurchasePriceViewMode(int index, OrderItem item) async {
+    num defaultPP = 0;
+    try { final pc = Get.find<ProductController>(); final p = pc.products.firstWhereOrNull((p) => p.id == item.productId); if (p != null) defaultPP = p.purchasePrice; } catch (_) {}
+    final ctrl = TextEditingController(text: item.purchasePrice > 0 ? item.purchasePrice.toStringAsFixed(0) : '');
+    final ok = await Get.dialog<bool>(AlertDialog(
+      title: const Text('ক্রয়মূল্য সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(item.productName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        if (defaultPP > 0) ...[
+          const SizedBox(height: 6),
+          Text('ডিফল্ট ক্রয়মূল্য: ৳${_fmt.format(defaultPP.toInt())}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+        ],
+        const SizedBox(height: 12),
+        TextField(
+          controller: ctrl,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          autofocus: true,
+          decoration: InputDecoration(
+            prefixText: '৳ ',
+            hintText: 'ক্রয়মূল্য লিখুন',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')),
+        ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('আপডেট'),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white)),
+      ],
+    ));
+    if (ok == true) {
+      final pp = num.tryParse(ctrl.text.trim()) ?? 0;
+      await controller.updateItemPurchasePrice(widget.order.id, index, pp);
+      final updated = _savedItems.toList();
+      updated[index] = OrderItem(
+        productId: item.productId,
+        productName: item.productName,
+        image: item.image,
+        quantity: item.quantity,
+        pricePerUnit: item.pricePerUnit,
+        totalPrice: item.totalPrice,
+        purchasePrice: pp,
+      );
+      setState(() { _savedItems = updated; });
+    }
+    ctrl.dispose();
+  }
+
+  void _editPurchasePriceEditMode(_EditItem item) async {
+    num defaultPP = 0;
+    try { final pc = Get.find<ProductController>(); final p = pc.products.firstWhereOrNull((p) => p.id == item.productId); if (p != null) defaultPP = p.purchasePrice; } catch (_) {}
+    final ctrl = TextEditingController(text: item.purchasePrice > 0 ? item.purchasePrice.toStringAsFixed(0) : '');
+    final ok = await Get.dialog<bool>(AlertDialog(
+      title: const Text('ক্রয়মূল্য সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(item.productName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        if (defaultPP > 0) ...[
+          const SizedBox(height: 6),
+          Text('ডিফল্ট ক্রয়মূল্য: ৳${_fmt.format(defaultPP.toInt())}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+        ],
+        const SizedBox(height: 12),
+        TextField(
+          controller: ctrl,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          autofocus: true,
+          decoration: InputDecoration(
+            prefixText: '৳ ',
+            hintText: 'ক্রয়মূল্য লিখুন',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')),
+        ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('সেভ'),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white)),
+      ],
+    ));
+    if (ok == true) {
+      final pp = num.tryParse(ctrl.text.trim()) ?? 0;
+      setState(() { item.purchasePrice = pp; });
+    }
+    ctrl.dispose();
   }
 
   void _editPaidAmount() async {
@@ -2153,6 +2409,44 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             fontSize: 12),
       ),
     );
+  }
+
+  void _editDispatchedAt() async {
+    final current = _dispatchedAt ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+    );
+    if (picked == null) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(current),
+    );
+    if (time == null) return;
+    final newDate = DateTime(picked.year, picked.month, picked.day, time.hour, time.minute);
+    await controller.updateDispatchedAt(widget.order.id, newDate);
+    setState(() { _dispatchedAt = newDate; });
+  }
+
+  void _editDeliveredAt() async {
+    final current = _deliveredAt ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+    );
+    if (picked == null) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(current),
+    );
+    if (time == null) return;
+    final newDate = DateTime(picked.year, picked.month, picked.day, time.hour, time.minute);
+    await controller.updateDeliveredAt(widget.order.id, newDate);
+    setState(() { _deliveredAt = newDate; });
   }
 
   String _statusLabel(String s) => {

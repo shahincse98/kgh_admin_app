@@ -664,9 +664,59 @@ class OrderController extends GetxController {
     }
   }
 
+  Future<void> updateItemPurchasePrice(String orderId, int itemIndex, num purchasePrice) async {
+    final idx = orders.indexWhere((o) => o.id == orderId);
+    if (idx == -1) return;
+    final o = orders[idx];
+    final updatedItems = o.items.toList();
+    if (itemIndex < 0 || itemIndex >= updatedItems.length) return;
+    updatedItems[itemIndex] = OrderItem(
+      productId: updatedItems[itemIndex].productId,
+      productName: updatedItems[itemIndex].productName,
+      image: updatedItems[itemIndex].image,
+      quantity: updatedItems[itemIndex].quantity,
+      pricePerUnit: updatedItems[itemIndex].pricePerUnit,
+      totalPrice: updatedItems[itemIndex].totalPrice,
+      purchasePrice: purchasePrice,
+    );
+    await _db.collection('orders').doc(orderId).update({
+      'items': updatedItems.map((i) => i.toMap()).toList(),
+    });
+    orders[idx] = OrderModel(
+      id: o.id,
+      createdAt: o.createdAt,
+      items: updatedItems,
+      status: o.status,
+      totalAmount: o.totalAmount,
+      paidAmount: o.paidAmount,
+      shopName: o.shopName,
+      shopAddress: o.shopAddress,
+      shopPhone: o.shopPhone,
+      userId: o.userId,
+      orderedBy: o.orderedBy,
+      orderedByEmail: o.orderedByEmail,
+      deliveredBySrId: o.deliveredBySrId,
+      commissionConfirmed: o.commissionConfirmed,
+      scheduledDeliveryDate: o.scheduledDeliveryDate,
+      deliveryAssignedSrId: o.deliveryAssignedSrId,
+      deliveryAssignedSrName: o.deliveryAssignedSrName,
+      memoNumber: o.memoNumber,
+      dispatchedAt: o.dispatchedAt,
+      dispatchedBy: o.dispatchedBy,
+      deliveredAt: o.deliveredAt,
+      localMemo: o.localMemo,
+      returnAmount: o.returnAmount,
+      deductionAmount: o.deductionAmount,
+      previousDue: o.previousDue,
+      discountAmount: o.discountAmount,
+      userPhone: o.userPhone,
+      userDue: o.userDue,
+    );
+  }
+
   Future<void> changeCustomer({
-    required String orderId,
-    required String userId,
+      required String orderId,
+      required String userId,
     required String shopName,
     required String shopPhone,
     required String shopAddress,

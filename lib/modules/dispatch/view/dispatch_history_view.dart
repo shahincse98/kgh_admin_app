@@ -133,6 +133,8 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
         if (_selectedProductId.isNotEmpty) _productSummary(scheme),
         _searchBar(scheme),
         Expanded(child: Obx(() {
+          final isSearching = searchText.value.trim().isNotEmpty;
+          final showGrouped = _fromDate == null && _toDate == null && _selectedProductId.isEmpty && !isSearching;
           if (orders.isEmpty && loading.value) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -150,11 +152,13 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
           }
           return RefreshIndicator(
             onRefresh: fetchOrders,
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-              itemCount: filteredOrders.length,
-              itemBuilder: (_, i) => _orderCard(filteredOrders[i], scheme),
-            ),
+            child: showGrouped
+                ? _buildGroupedList(scheme)
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+                    itemCount: filteredOrders.length,
+                    itemBuilder: (_, i) => _orderCard(filteredOrders[i], scheme),
+                  ),
           );
         })),
       ])),
@@ -246,13 +250,22 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
   Widget _productSummary(ColorScheme scheme) {
     if (loading.value) return const SizedBox.shrink();
     int totalQty = 0;
-    final customers = <String>{};
+    final customerData = <String, ({int qty, Set<String> memos})>{};
     for (final o in filteredOrders) {
       for (final item in o.items) {
-        if (item.productId == _selectedProductId) totalQty += item.quantity;
+        if (item.productId == _selectedProductId) {
+          totalQty += item.quantity;
+          final name = o.shopName.isNotEmpty ? o.shopName : 'Unknown';
+          final memo = o.localMemo.isNotEmpty ? '#${o.localMemo}' : (o.memoNumber.isNotEmpty ? o.memoNumber : '');
+          final entry = customerData[name] ?? (qty: 0, memos: <String>{});
+          final updatedMemos = entry.memos;
+          if (memo.isNotEmpty) updatedMemos.add(memo);
+          customerData[name] = (qty: entry.qty + item.quantity, memos: updatedMemos);
+        }
       }
-      customers.add(o.shopName.isNotEmpty ? o.shopName : 'Unknown');
     }
+    final sorted = customerData.entries.toList()
+      ..sort((a, b) => b.value.qty.compareTo(a.value.qty));
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       padding: const EdgeInsets.all(12),
@@ -266,14 +279,40 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
           const Icon(Icons.inventory_2_rounded, size: 16, color: Color(0xFF16A34A)),
           const SizedBox(width: 6),
           Expanded(child: Text(_selectedProductName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800))),
-          Text('$totalQtyটি • ${filteredOrders.length} অর্ডার • ${customers.length} কাস্টমার',
+          Text('$totalQtyটি • ${filteredOrders.length} অর্ডার • ${sorted.length} কাস্টমার',
               style: const TextStyle(fontSize: 11, color: Color(0xFF16A34A), fontWeight: FontWeight.w600)),
         ]),
-        if (customers.length <= 8)
-          Padding(padding: const EdgeInsets.only(top: 4),
-              child: Text(customers.join(' • '),
-                  style: TextStyle(fontSize: 10, color: scheme.onSurface.withAlpha(120)),
-                  maxLines: 2, overflow: TextOverflow.ellipsis)),
+        const SizedBox(height: 6),
+        Divider(height: 1, color: const Color(0xFF16A34A).withAlpha(30)),
+        const SizedBox(height: 6),
+        ...sorted.map((e) {
+          final memos = e.value.memos.isNotEmpty ? ' [${e.value.memos.join(', ')}]' : '';
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(children: [
+              Expanded(
+                child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(text: e.key, style: TextStyle(fontSize: 12, color: scheme.onSurface.withAlpha(180))),
+                    if (memos.isNotEmpty)
+                      TextSpan(text: memos, style: TextStyle(fontSize: 10, color: scheme.onSurface.withAlpha(100))),
+                  ]),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16A34A).withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('${e.value.qty}টি', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF16A34A))),
+              ),
+            ]),
+          );
+        }),
       ]),
     );
   }
@@ -383,6 +422,60 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
             contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16)),
       ),
+    );
+  }
+
+  // ── Grouped list (when "সব" is selected) ──────────────────
+  Map<String, List<OrderModel>> _groupByDate(List<OrderModel> orders) {
+    final map = <String, List<OrderModel>>{};
+    for (var o in orders) {
+      final d = o.deliveredAt ?? o.createdAt;
+      final date = DateFormat('dd MMMM yyyy').format(d);
+      map.putIfAbsent(date, () => []).add(o);
+    }
+    return map;
+  }
+
+  Widget _dateHeader(String date, int count) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
+      child: Row(
+        children: [
+          Text(date,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onPrimaryContainer),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGroupedList(ColorScheme scheme) {
+    final grouped = _groupByDate(filteredOrders);
+    final entries = grouped.entries.map((entry) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _dateHeader(entry.key, entry.value.length),
+            ...entry.value.map((o) => _orderCard(o, scheme)),
+          ],
+        )).toList();
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+      children: entries,
     );
   }
 
