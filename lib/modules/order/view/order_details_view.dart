@@ -2734,7 +2734,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           }),
           const SizedBox(height: 4),
           Builder(builder: (_) {
-            final nd = (_currentPreviousDue + total.toInt() - _currentDeductionAmount.toInt() - _currentReturnAmount.toInt() - paid.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999);
+            final nd = (_currentPreviousDue + total.toInt() - paid.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999);
             return _payRow('নতুন বাকি', '৳ ${_fmt.format(nd)}', nd > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A));
           }),
           const SizedBox(height: 4),
@@ -2910,21 +2910,21 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   void _editPaidAmount() async {
     final ctrl = TextEditingController(text: _currentPaid.toStringAsFixed(0));
     final ok = await Get.dialog<bool>(AlertDialog(title: const Text('জমা সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('আপডেট'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
-    if (ok == true) { final amt = num.tryParse(ctrl.text.trim()) ?? _currentPaid; await controller.updatePaidAmount(widget.order.id, amt); final nd = (_currentPreviousDue + _savedTotal.toInt() - _currentDeductionAmount.toInt() - _currentReturnAmount.toInt() - amt.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentPaid = amt; _paidCtrl.text = amt.toStringAsFixed(0); _currentUserDue = nd; }); }
+    if (ok == true) { final amt = num.tryParse(ctrl.text.trim()) ?? _currentPaid; await controller.updatePaidAmount(widget.order.id, amt); final nd = (_currentPreviousDue + _savedTotal.toInt() - amt.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentPaid = amt; _paidCtrl.text = amt.toStringAsFixed(0); _currentUserDue = nd; }); }
     ctrl.dispose();
   }
 
   void _editPreviousDue() async {
     final ctrl = TextEditingController(text: _currentPreviousDue.toString());
     final ok = await Get.dialog<bool>(AlertDialog(title: const Text('পূর্বের বাকি সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('সেভ'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
-    if (ok == true) { final v = int.tryParse(ctrl.text.trim()) ?? _currentPreviousDue; await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'previousDue': v}); final nd = (v + _savedTotal.toInt() - _currentDeductionAmount.toInt() - _currentReturnAmount.toInt() - _currentPaid.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentPreviousDue = v; _currentUserDue = nd; }); }
+    if (ok == true) { final v = int.tryParse(ctrl.text.trim()) ?? _currentPreviousDue; await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'previousDue': v}); final nd = (v + _savedTotal.toInt() - _currentPaid.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentPreviousDue = v; _currentUserDue = nd; }); }
     ctrl.dispose();
   }
 
   void _editDiscount() async {
     final ctrl = TextEditingController(text: _currentDiscountAmount.toStringAsFixed(0));
     final ok = await Get.dialog<bool>(AlertDialog(title: const Text('ডিসকাউন্ট সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('আপডেট'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
-    if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? _currentDiscountAmount; await controller.saveDiscountAmount(widget.order.id, v); final nd = (_currentPreviousDue + _savedTotal.toInt() - _currentDeductionAmount.toInt() - _currentReturnAmount.toInt() - _currentPaid.toInt() - v.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentDiscountAmount = v; _currentUserDue = nd; }); }
+    if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? _currentDiscountAmount; await controller.saveDiscountAmount(widget.order.id, v); final nd = (_currentPreviousDue + _savedTotal.toInt() - _currentPaid.toInt() - v.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentDiscountAmount = v; _currentUserDue = nd; }); }
     ctrl.dispose();
   }
 
