@@ -5,6 +5,7 @@ import 'package:kgh_admin_app/modules/product/controller/replace_controller.dart
 import 'package:kgh_admin_app/modules/order/controller/order_controller.dart';
 import 'package:kgh_admin_app/modules/user/controller/user_controller.dart';
 import 'package:kgh_admin_app/modules/sr/controller/sr_management_controller.dart';
+import 'package:kgh_admin_app/modules/stock_in/controller/stock_in_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -15,6 +16,7 @@ class InitialBinding extends Bindings {
     Get.put(ReplaceController(), permanent: true);
     Get.put(OrderController(), permanent: true);
     Get.put(SrManagementController(), permanent: true);
+    Get.put(StockInController(), permanent: true);
   }
   
 }

@@ -179,15 +179,13 @@ class AdminReplaceModel {
   String get customerResolutionLabel {
     switch (customerResolutionType) {
       case 'product_replace':
-        return replaceProductName.isNotEmpty
-            ? 'Replace: $replaceProductName'
-            : 'Product Replace';
+        return 'রিপ্লেস নেওয়া হল';
       case 'money_deduct':
         return deductionAmount > 0
-            ? 'Money Deduct: ৳$deductionAmount'
-            : 'Money Deduct';
+            ? 'টাকা কাটা: ৳$deductionAmount'
+            : 'টাকা কাটা';
       default:
-        return 'Resolution Pending';
+        return 'রেজোলিউশন পেন্ডিং';
     }
   }
 

@@ -28,6 +28,7 @@ class AdminReplaceController extends GetxController {
           .get();
       entries.assignAll(
           snap.docs.map((d) => AdminReplaceModel.fromDoc(d)).toList());
+      entries.refresh();
       _loadedOnce = true;
     } finally {
       loading.value = false;
@@ -52,6 +53,9 @@ class AdminReplaceController extends GetxController {
   /// All customer-facing replace entries
   List<AdminReplaceModel> get customerEntries =>
       entries.where((e) => e.entryType == 'customer_in').toList();
+
+  /// Force UI refresh (call after in-place entry mutations)
+  void refreshUI() => entries.refresh();
 
   // ─── ADD FROM CUSTOMER ───────────────────────────────────────────────────
 
@@ -556,6 +560,7 @@ class AdminReplaceController extends GetxController {
     }
 
     entries.removeWhere((e) => e.id == entry.id);
+    entries.refresh();
   }
 
   // ─── REPLACE STOCK ADJUSTMENT ────────────────────────────────────────────

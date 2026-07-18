@@ -189,10 +189,10 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
     String statusText;
     if (isDelivered) {
       statusColor = Colors.green;
-      statusText = 'Delivered';
+      statusText = isMoneyDeduct ? 'টাকা কাটা' : 'রিপ্লেস নেওয়া হল';
     } else if (isProductReplace) {
       statusColor = Colors.deepPurple;
-      statusText = 'রিপ্লেস পাবে';
+      statusText = 'রিপ্লেস নেওয়া হবে';
     } else if (isMoneyDeduct) {
       statusColor = const Color(0xFFDC2626);
       statusText = 'টাকা কাটা';
@@ -1361,8 +1361,8 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
           style:
               ElevatedButton.styleFrom(backgroundColor: Colors.red),
           onPressed: () async {
-            Get.back();
             await _rc.deleteEntry(e);
+            Get.back();
           },
           child: const Text('মুছুন',
               style: TextStyle(color: Colors.white)),

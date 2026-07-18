@@ -81,16 +81,10 @@ class AppPages {
     GetPage(
       name: AppRoutes.stockIn,
       page: () => const StockInView(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<StockInController>(() => StockInController());
-      }),
     ),
     GetPage(
       name: AppRoutes.stockInHistory,
       page: () => const StockInHistoryView(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<StockInController>(() => StockInController());
-      }),
     ),
     GetPage(
       name: AppRoutes.products,
