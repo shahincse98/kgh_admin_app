@@ -1668,8 +1668,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               const SizedBox(height: 4),
               _dialogPayRow('দিতে হবে', '৳ ${_fmt.format(totalPayable)}', const Color(0xFF0891B2), bold: true),
               if (discountAmount > 0) ...[const SizedBox(height: 4), _dialogPayRow('ডিসকাউন্ট', '− ৳ ${_fmt.format(discountAmount.toInt())}', const Color(0xFFD97706))],
-              if (paidNow > 0) ...[const SizedBox(height: 4), _dialogPayRow('আজকের জমা', '৳ ${_fmt.format(paidNow.toInt())}', const Color(0xFF16A34A))],
-              if (paidNow > orderDue) ...[const SizedBox(height: 4), _dialogPayRow('আজকের বাকি কালেকশন', '৳ ${_fmt.format((paidNow.toInt() - orderDue.toInt()))}', const Color(0xFF16A34A))] else if (orderDue > paidNow) ...[const SizedBox(height: 4), _dialogPayRow('আজকের বাকি', '৳ ${_fmt.format((orderDue.toInt() - paidNow.toInt()))}', const Color(0xFFDC2626))],
+              if (paidNow > 0) ...[const SizedBox(height: 4), _dialogPayRow('আজকের জমা', '৳ ${_fmt.format(totalPaidNow.toInt())}', const Color(0xFF16A34A))],
+              if (totalPaidNow > 0) ...[const SizedBox(height: 4), _dialogPayRow('আজকের বাকি', '৳ ${_fmt.format((total.toInt() - totalPaidNow.toInt() - discountAmount.toInt()).clamp(0, 9999999))}', const Color(0xFFDC2626))],
               if (totalDeduction > 0) Padding(padding: const EdgeInsets.only(top: 4), child: _dialogPayRow('  (রিপ্লেস জমা হিসাবে)', '৳ ${_fmt.format(totalDeduction)}', const Color(0xFF16A34A), small: true)),
               const SizedBox(height: 4), Container(height: 1, color: scheme.outlineVariant),
               const SizedBox(height: 4),
@@ -2722,13 +2722,15 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           Builder(builder: (_) {
             final paidInt = paid.toInt();
             final totalInt = total.toInt();
+            final disc = _currentDiscountAmount.toInt();
+            final todayDue = (totalInt - paidInt - disc).clamp(0, 9999999);
             return Column(children: [
-              if (paidInt > totalInt) ...[
+              if (todayDue > 0) ...[
                 const SizedBox(height: 4),
-                _payRow('আজকের বাকি কালেকশন', '৳ ${_fmt.format(paidInt - totalInt)}', const Color(0xFF16A34A)),
-              ] else if (totalInt > paidInt) ...[
+                _payRow('আজকের বাকি', '৳ ${_fmt.format(todayDue)}', const Color(0xFFDC2626)),
+              ] else if (paidInt + disc > totalInt) ...[
                 const SizedBox(height: 4),
-                _payRow('আজকের বাকি', '৳ ${_fmt.format(totalInt - paidInt)}', const Color(0xFFDC2626)),
+                _payRow('আজকের বাকি কালেকশন', '৳ ${_fmt.format((paidInt + disc - totalInt).clamp(0, 9999999))}', const Color(0xFF16A34A)),
               ],
             ]);
           }),
