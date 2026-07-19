@@ -2767,9 +2767,11 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     final netSales = (tot - ded - ret - disc).clamp(0, 9999999).toInt();
     num cost = 0;
     try { final pc = Get.find<ProductController>(); for (final item in _savedItems) { num c = item.purchasePrice; if (c <= 0) { final p = pc.products.firstWhereOrNull((p) => p.id == item.productId); if (p != null) c = p.purchasePrice; } cost += c * item.quantity; } } catch (_) {}
+    final hasSr = widget.order.deliveryAssignedSrId.isNotEmpty || widget.order.deliveredBySrId.isNotEmpty;
     final comm = (netSales * 0.06).round();
     final profitWithSr = (netSales - cost.toInt() - comm).clamp(0, 9999999);
     final profitWithoutSr = (netSales - cost.toInt()).clamp(0, 9999999);
+    final profit = hasSr ? profitWithSr : profitWithoutSr;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Text('লাভের হিসাব', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)), const SizedBox(height: 10),
       _payRow('মোট অর্ডার', '৳ ${_fmt.format(tot.toInt())}', const Color(0xFF0891B2)),
@@ -2779,11 +2781,10 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       const SizedBox(height: 6),
       _payRow('নেট বিক্রি', '৳ ${_fmt.format(netSales)}', netSales > 0 ? const Color(0xFF0891B2) : Colors.grey),
       if (cost > 0) ...[const SizedBox(height: 4), _payRow('ক্রয় মূল্য', '− ৳ ${_fmt.format(cost.toInt())}', const Color(0xFFDC2626))],
-      const SizedBox(height: 2), _payRow('SR কমিশন (৬%)', '− ৳ ${_fmt.format(comm)}', const Color(0xFF7C3AED)),
+      if (hasSr) ...[const SizedBox(height: 2), _payRow('SR কমিশন (৬%)', '− ৳ ${_fmt.format(comm)}', const Color(0xFF7C3AED))],
       const SizedBox(height: 6),
-      _payRow('নিট লাভ (SR সহ)', '৳ ${_fmt.format(profitWithSr)}', profitWithSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
-      _payRow('নিট লাভ (SR বাদে)', '৳ ${_fmt.format(profitWithoutSr)}', profitWithoutSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
-      if (cost > 0 && netSales > 0) ...[const SizedBox(height: 4), Builder(builder: (_) { final gpct = (profitWithoutSr / cost * 100).toStringAsFixed(2); final npct = (profitWithSr / cost * 100).toStringAsFixed(2); return Column(children: [ _payRow('লাভের হার (SR বাদে)', '$gpct%', profitWithoutSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)), const SizedBox(height: 2), _payRow('লাভের হার (SR সহ)', '$npct%', profitWithSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)) ]); })],
+      _payRow('নিট লাভ', '৳ ${_fmt.format(profit)}', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+      if (cost > 0 && netSales > 0) ...[const SizedBox(height: 4), Builder(builder: (_) { final gpct = (profitWithoutSr / cost * 100).toStringAsFixed(2); final npct = (profitWithSr / cost * 100).toStringAsFixed(2); return Column(children: [ if (hasSr) ...[ _payRow('লাভের হার (SR বাদে)', '$gpct%', profitWithoutSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)), const SizedBox(height: 2), _payRow('লাভের হার (SR সহ)', '$npct%', profitWithSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)) ] else _payRow('লাভের হার', '$gpct%', profitWithoutSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)), ]); })],
     ]);
   }
 
