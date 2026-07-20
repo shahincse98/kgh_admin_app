@@ -134,6 +134,7 @@ class StockInController extends GetxController {
     required String source,
     String note = '',
     required List<Map<String, dynamic>> items,
+    bool updatePurchasePrice = true,
   }) async {
     final currentUser = await _getCurrentUserId();
     final batch = _db.batch();
@@ -152,7 +153,7 @@ class StockInController extends GetxController {
       final updates = <String, dynamic>{
         'stock': FieldValue.increment(quantity),
       };
-      if (unitPrice > 0) {
+      if (unitPrice > 0 && updatePurchasePrice) {
         updates['purchasePrice'] = unitPrice;
       }
       batch.update(_db.collection('products').doc(productId), updates);

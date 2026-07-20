@@ -180,10 +180,10 @@ class OrderController extends GetxController {
   }
 
   Future<void> updateOrderStatus(String id, String status,
-      {String? previousStatus, List items = const [], String? deliveredBySrId}) async {
+      {String? previousStatus, List items = const [], String? deliveredBySrId, DateTime? deliveryDate}) async {
     final data = <String, dynamic>{'status': status};
     if (status == 'delivered') {
-      data['deliveredAt'] = FieldValue.serverTimestamp();
+      data['deliveredAt'] = deliveryDate != null ? Timestamp.fromDate(deliveryDate) : FieldValue.serverTimestamp();
       if (deliveredBySrId != null && deliveredBySrId.isNotEmpty) {
         data['deliveredBySrId'] = deliveredBySrId;
       }
@@ -263,6 +263,7 @@ class OrderController extends GetxController {
         dispatchedBy: o.dispatchedBy,
         deliveredAt: date,
         localMemo: o.localMemo,
+        replaceItems: o.replaceItems,
         returnAmount: o.returnAmount,
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
@@ -305,6 +306,7 @@ class OrderController extends GetxController {
         dispatchedBy: o.dispatchedBy,
         deliveredAt: o.deliveredAt,
         localMemo: o.localMemo,
+        replaceItems: o.replaceItems,
         returnAmount: o.returnAmount,
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
@@ -347,6 +349,7 @@ class OrderController extends GetxController {
         dispatchedBy: o.dispatchedBy,
         deliveredAt: o.deliveredAt,
         localMemo: o.localMemo,
+        replaceItems: o.replaceItems,
         returnAmount: o.returnAmount,
         userPhone: o.userPhone,
         userDue: o.userDue,
@@ -471,6 +474,7 @@ class OrderController extends GetxController {
         dispatchedBy: o.dispatchedBy,
         deliveredAt: o.deliveredAt,
         localMemo: o.localMemo,
+        replaceItems: o.replaceItems,
         returnAmount: o.returnAmount,
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
@@ -521,6 +525,7 @@ class OrderController extends GetxController {
         dispatchedBy: o.dispatchedBy,
         deliveredAt: o.deliveredAt,
         localMemo: o.localMemo,
+        replaceItems: o.replaceItems,
         returnAmount: o.returnAmount,
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
@@ -654,6 +659,7 @@ class OrderController extends GetxController {
         dispatchedBy: o.dispatchedBy,
         deliveredAt: o.deliveredAt,
         localMemo: o.localMemo,
+        replaceItems: o.replaceItems,
         returnAmount: o.returnAmount,
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
@@ -705,6 +711,7 @@ class OrderController extends GetxController {
       dispatchedBy: o.dispatchedBy,
       deliveredAt: o.deliveredAt,
       localMemo: o.localMemo,
+        replaceItems: o.replaceItems,
       returnAmount: o.returnAmount,
       deductionAmount: o.deductionAmount,
       previousDue: o.previousDue,
@@ -758,6 +765,7 @@ class OrderController extends GetxController {
         dispatchedBy: o.dispatchedBy,
         deliveredAt: o.deliveredAt,
         localMemo: o.localMemo,
+        replaceItems: o.replaceItems,
         returnAmount: o.returnAmount,
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
@@ -798,6 +806,7 @@ class OrderController extends GetxController {
         dispatchedBy: o.dispatchedBy,
         deliveredAt: o.deliveredAt,
         localMemo: o.localMemo,
+        replaceItems: o.replaceItems,
         returnAmount: amount,
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
@@ -838,6 +847,7 @@ class OrderController extends GetxController {
         dispatchedBy: o.dispatchedBy,
         deliveredAt: o.deliveredAt,
         localMemo: o.localMemo,
+        replaceItems: o.replaceItems,
         returnAmount: o.returnAmount,
         deductionAmount: amount,
         previousDue: o.previousDue,
@@ -878,6 +888,7 @@ class OrderController extends GetxController {
         dispatchedBy: o.dispatchedBy,
         deliveredAt: o.deliveredAt,
         localMemo: o.localMemo,
+        replaceItems: o.replaceItems,
         returnAmount: o.returnAmount,
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
@@ -1003,6 +1014,7 @@ class OrderController extends GetxController {
         dispatchedBy: o.dispatchedBy,
         deliveredAt: o.deliveredAt,
         localMemo: o.localMemo,
+        replaceItems: o.replaceItems,
         returnAmount: o.returnAmount,
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,

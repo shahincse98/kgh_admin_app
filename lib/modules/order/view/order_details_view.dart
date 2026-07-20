@@ -137,6 +137,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   late num _currentDiscountAmount;
   late String _currentPaymentMethod;
   late List<Map<String, dynamic>> _currentPayments;
+  late String _currentLocalMemo;
+  late List<Map<String, dynamic>> _currentReplaceItems;
 
   List<UserModel> _allUsers = [];
   bool _loadingUsers = false;
@@ -191,6 +193,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     _currentPaymentMethod = widget.order.paymentMethod.isNotEmpty ? widget.order.paymentMethod : 'SR হাতে';
     _currentPayments = widget.order.payments.isNotEmpty ? List<Map<String, dynamic>>.from(widget.order.payments) : [{'amount': widget.order.paidAmount > 0 ? (widget.order.paidAmount - widget.order.returnAmount - widget.order.deductionAmount).clamp(0, 9999999) : 0, 'method': _currentPaymentMethod}];
     _currentPreviousDue = widget.order.previousDue > 0 ? widget.order.previousDue : widget.order.userDue;
+    _currentLocalMemo = widget.order.localMemo;
+    _currentReplaceItems = widget.order.replaceItems.isNotEmpty ? List<Map<String, dynamic>>.from(widget.order.replaceItems) : [];
     _initEditItems();
     _loadProducts();
   }
@@ -449,6 +453,30 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             const SizedBox(height: 12),
           // ── Scheduled delivery (admin can set, SR sees) ────
           _scheduledDeliveryCard(scheme),
+          // ── Customer change (admin only, pending orders) ────
+          if (widget.srDocId == null && _currentStatus != 'delivered' && _currentStatus != 'cancelled') ...[
+            const SizedBox(height: 12),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: _changeCustomer,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(children: [
+                    Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFF2563EB).withAlpha(20), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.person_search_rounded, color: Color(0xFF2563EB), size: 18)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Text('ক্রেতা', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
+                      Text(_currentShopName.isNotEmpty ? _currentShopName : 'ক্রেতা নির্বাচিত নেই', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                    ])),
+                    const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                  ]),
+                ),
+              ),
+            ),
+          ],
           // ── Dispatch info ──────────────────────────────────
           if (widget.order.memoNumber.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -811,6 +839,23 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+            if (!_editMode && _currentStatus != 'cancelled') ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _addReplaceFromDetailPage,
+                  icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                  label: const Text('রিপ্লেস প্রডাক্ট যোগ'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF7C3AED),
+                    side: const BorderSide(color: Color(0xFF7C3AED)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -1619,6 +1664,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     List<_PaymentRow> paymentRows = [_PaymentRow()];
     final memoCtrl = TextEditingController();
     final discountCtrl = TextEditingController();
+    DateTime deliveryDate = DateTime.now();
 
     List<AdminReplaceModel> pendingReplaces = [];
     final Set<String> selectedPendingIds = {};
@@ -1714,6 +1760,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 final qtyStr = item.quantity > 1 ? '${item.quantity}টি ' : '';
                 if (item.resolutionType == 'money_deduct') {
                   label = '$qtyStr${item.product.name}: ৳${item.deductionAmount} টাকা কাটা';
+                } else if (item.resolutionType == 'replace_given') {
+                  label = '$qtyStr${item.product.name}: রিপ্লেস দেওয়া হল';
                 } else {
                   label = '$qtyStr${item.product.name}: রিপ্লেস নেওয়া হল';
                 }
@@ -1786,6 +1834,20 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             const SizedBox(height: 12),
             const Text('লোকাল মেমো নাম্বার', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
             TextField(controller: memoCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'যেমন: 233', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10))),
+            const SizedBox(height: 12),
+            const Text('ডেলিভারির তারিখ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
+            InkWell(
+              onTap: () async {
+                final picked = await showDatePicker(context: ctx, initialDate: deliveryDate, firstDate: DateTime(2020), lastDate: DateTime.now().add(const Duration(days: 1)));
+                if (picked != null) setSt(() => deliveryDate = picked);
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                decoration: BoxDecoration(border: Border.all(color: scheme.outlineVariant), borderRadius: BorderRadius.circular(10)),
+                child: Row(children: [Icon(Icons.calendar_today_rounded, size: 16, color: scheme.onSurfaceVariant), const SizedBox(width: 8), Text(DateFormat('dd/MM/yyyy').format(deliveryDate), style: const TextStyle(fontSize: 14)), const Spacer(), Icon(Icons.arrow_drop_down_rounded, color: scheme.onSurfaceVariant)]),
+              ),
+            ),
           ]));
                 }),
               ),
@@ -1822,18 +1884,18 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       final newDue = (grandTotal - totalPaidNow - discountAmount.toInt()).clamp(0, 9999999);
       final totalPaid = _currentPaid.toInt() + totalPaidNow;
 
-      if (!alreadyDelivered) { setState(() { _currentStatus = 'delivered'; _deliveredAt = DateTime.now(); }); await controller.updateOrderStatus(widget.order.id, 'delivered', previousStatus: previousStatus, deliveredBySrId: widget.srDocId, items: _savedItems.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList()); }
+      if (!alreadyDelivered) { setState(() { _currentStatus = 'delivered'; _deliveredAt = deliveryDate; }); await controller.updateOrderStatus(widget.order.id, 'delivered', previousStatus: previousStatus, deliveredBySrId: widget.srDocId, deliveryDate: deliveryDate, items: _savedItems.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList()); }
       if (totalPaid != _currentPaid) { await controller.updatePaidAmount(widget.order.id, totalPaid); setState(() { _currentPaid = totalPaid; _paidCtrl.text = totalPaid.toStringAsFixed(0); }); }
       if (discountAmount > 0) await controller.saveDiscountAmount(widget.order.id, discountAmount);
       if (paymentEntries.isNotEmpty) { try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'payments': paymentEntries, 'paymentMethod': primaryMethod}); } catch (_) {} }
       if (mounted) setState(() { _currentPayments = paymentEntries; _currentPaymentMethod = primaryMethod; });
-      if (memo.isNotEmpty) { try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'localMemo': memo}); } catch (_) {} }
+      if (memo.isNotEmpty) { try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'localMemo': memo}); } catch (_) {} if (mounted) setState(() => _currentLocalMemo = memo); }
       if (_currentUserId.isNotEmpty) { if (mounted) setState(() => _currentPreviousDue = _currentUserDue); await controller.updateUserDue(_currentUserId, newDue); if (mounted) setState(() => _currentUserDue = newDue); try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'previousDue': _currentPreviousDue}); } catch (_) {} }
-      if (!alreadyDelivered && _saleReturnItems.isNotEmpty) { try { final sc = Get.find<StockInController>(); await sc.addMultipleStockIn(date: DateTime.now(), source: _currentShopName, note: 'অর্ডার #${widget.order.id} — ফেরত', items: _saleReturnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'image': i.product.images.isNotEmpty ? i.product.images.first : '', 'quantity': i.quantity, 'unitPrice': i.unitPrice}).toList()); for (final item in _saleReturnItems) { item.dispose(); } } catch (_) {} await controller.saveReturnAmount(widget.order.id, saleReturnTotal); }
+      if (!alreadyDelivered && _saleReturnItems.isNotEmpty) { try { final sc = Get.find<StockInController>(); await sc.addMultipleStockIn(date: deliveryDate, source: _currentShopName, note: 'অর্ডার #${widget.order.id} — ফেরত', updatePurchasePrice: false, items: _saleReturnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'image': i.product.images.isNotEmpty ? i.product.images.first : '', 'quantity': i.quantity, 'unitPrice': i.unitPrice}).toList()); for (final item in _saleReturnItems) { item.dispose(); } } catch (_) {} await controller.saveReturnAmount(widget.order.id, saleReturnTotal); }
       if (totalDeduction > 0) await controller.saveDeductionAmount(widget.order.id, totalDeduction);
       if (mounted) setState(() { _currentDeductionAmount = totalDeduction; _currentReturnAmount = saleReturnTotal; _currentDiscountAmount = discountAmount; });
       if (!alreadyDelivered && selectedPendingIds.isNotEmpty) { try { for (final r in pendingReplaces) { if (selectedPendingIds.contains(r.id)) await _rc!.deliverToCustomer(entry: r, note: 'অর্ডার #${widget.order.id} এর সাথে ডেলিভারি'); } await _rc!.fetchEntries(force: true); } catch (_) {} }
-      if (!alreadyDelivered && returnItems.isNotEmpty) { try { for (final item in returnItems) { await _rc!.addCustomerIn(productId: item.product.id, productName: item.product.name, quantity: item.quantity, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: item.resolutionType, deductionAmount: item.deductionAmount, note: 'ডেলিভারি #${widget.order.id} এ ফেরত', date: DateTime.now()); } await _rc!.fetchEntries(force: true); } catch (_) {} }
+      if (!alreadyDelivered && returnItems.isNotEmpty) { try { for (final item in returnItems) { await _rc!.addCustomerIn(productId: item.product.id, productName: item.product.name, quantity: item.quantity, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: item.resolutionType, deductionAmount: item.deductionAmount, note: 'ডেলিভারি #${widget.order.id} এ ফেরত', date: DateTime.now()); } final stockBatch = FirebaseFirestore.instance.batch(); for (final item in returnItems.where((i) => i.resolutionType == 'product_replace' || i.resolutionType == 'replace_given')) { stockBatch.update(FirebaseFirestore.instance.collection('products').doc(item.product.id), {'stock': FieldValue.increment(-item.quantity)}); } await stockBatch.commit(); try { Get.find<ProductController>().fetchProducts(forceRefresh: true); } catch (_) {} final replaceItemsData = returnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'quantity': i.quantity, 'resolutionType': i.resolutionType, 'deductionAmount': i.deductionAmount}).toList(); await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'replaceItems': replaceItemsData}); setState(() => _currentReplaceItems = replaceItemsData); await _rc!.fetchEntries(force: true); } catch (_) {} }
       final msgParts = <String>['ডেলিভারি সম্পন্ন ও পেমেন্ট আপডেট হয়েছে'];
       if (selectedPendingIds.isNotEmpty) msgParts.add('${selectedPendingIds.length} টি রিপ্লেস ডেলিভারি');
       if (returnItems.isNotEmpty) msgParts.add('${returnItems.length} টি ফেরত রিপ্লেস');
@@ -2028,6 +2090,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     items: const [
                       DropdownMenuItem(value: 'money_deduct', child: Text('টাকা কাটা', style: TextStyle(fontSize: 13))),
                       DropdownMenuItem(value: 'product_replace', child: Text('রিপ্লেস নেওয়া হল', style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 'replace_given', child: Text('রিপ্লেস দেওয়া হল', style: TextStyle(fontSize: 13))),
                     ],
                     onChanged: (v) => sheetSt(() {
                       res = v!;
@@ -2744,7 +2807,26 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             _payRow('পেমেন্ট মাধ্যম', _currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).map((p) => '${p['method']} (৳${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)})').join(', '), const Color(0xFF7C3AED))
           else
             Row(children: [Expanded(child: _payRow('পেমেন্ট মাধ্যম', _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : '—', const Color(0xFF7C3AED))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'মাধ্যম পরিবর্তন', onPressed: _editPaymentMethod)]),
-          if (widget.order.localMemo.isNotEmpty) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('লোকাল মেমো', '#${widget.order.localMemo}', const Color(0xFF0891B2))), IconButton(icon: const Icon(Icons.edit_rounded, size: 16), visualDensity: VisualDensity.compact, tooltip: 'লোকাল মেমো আপডেট', onPressed: _editLocalMemo)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editLocalMemo, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('লোকাল মেমো যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+          if (_currentLocalMemo.isNotEmpty) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('লোকাল মেমো', '#$_currentLocalMemo', const Color(0xFF0891B2))), IconButton(icon: const Icon(Icons.edit_rounded, size: 16), visualDensity: VisualDensity.compact, tooltip: 'লোকাল মেমো আপডেট', onPressed: _editLocalMemo)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editLocalMemo, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('লোকাল মেমো যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+          if (_currentReplaceItems.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: const Color(0xFF7C3AED).withAlpha(12), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF7C3AED).withAlpha(40))),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [const Icon(Icons.swap_horiz_rounded, size: 15, color: Color(0xFF7C3AED)), const SizedBox(width: 6), Text('রিপ্লেস প্রডাক্ট (${_currentReplaceItems.length}টি)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF7C3AED)))]),
+                const SizedBox(height: 6),
+                ..._currentReplaceItems.map((item) {
+                  final name = item['productName'] ?? '';
+                  final qty = item['quantity'] ?? 0;
+                  final type = item['resolutionType'] ?? '';
+                  final ded = item['deductionAmount'] ?? 0;
+                  final label = type == 'money_deduct' ? '$name × $qty — ৳${_fmt.format(ded)} টাকা কাটা' : type == 'replace_given' ? '$name × $qty — রিপ্লেস দেওয়া হল' : '$name × $qty — রিপ্লেস নেওয়া হল';
+                  return Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('• $label', style: const TextStyle(fontSize: 11, color: Color(0xFF7C3AED))));
+                }),
+              ]),
+            ),
+          ],
           if (_currentStatus == 'delivered') ...[
             const SizedBox(height: 4),
             Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editPaidAmount, icon: const Icon(Icons.edit_rounded, size: 14), label: const Text('জমা সম্পাদন', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
@@ -2933,9 +3015,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   }
 
   void _editLocalMemo() async {
-    final ctrl = TextEditingController(text: widget.order.localMemo);
+    final ctrl = TextEditingController(text: _currentLocalMemo);
     final ok = await Get.dialog<bool>(AlertDialog(title: const Text('লোকাল মেমো', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(hintText: 'যেমন: 233', prefixText: '#', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('সেভ'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
-    if (ok == true) { final val = ctrl.text.trim(); await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'localMemo': val.isNotEmpty ? val : FieldValue.delete()}); setState(() {}); }
+    if (ok == true) { final val = ctrl.text.trim(); await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'localMemo': val.isNotEmpty ? val : FieldValue.delete()}); setState(() => _currentLocalMemo = val); }
     ctrl.dispose();
   }
 
@@ -3014,6 +3096,208 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     final newDate = DateTime(picked.year, picked.month, picked.day, time.hour, time.minute);
     await controller.updateDeliveredAt(widget.order.id, newDate);
     setState(() { _deliveredAt = newDate; });
+  }
+
+  void _addReplaceFromDetailPage() async {
+    String q = '';
+    ProductModel? sel;
+    String res = 'replace_given';
+    final dedC = TextEditingController();
+    int qty = 1;
+
+    await showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, sheetSt) {
+        final displayed = q.isEmpty ? _allProducts : _allProducts.where((p) => p.name.toLowerCase().contains(q) || p.brandName.toLowerCase().contains(q) || p.productCode.toLowerCase().contains(q)).toList();
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.88, minChildSize: 0.5, maxChildSize: 0.96,
+          builder: (_, scrollCtrl) => Container(
+            decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+            child: Column(children: [
+              const SizedBox(height: 10),
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Theme.of(context).colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 12),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [
+                Expanded(child: Text('রিপ্লেস প্রডাক্ট যোগ', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+                if (sel != null) TextButton.icon(onPressed: () => sheetSt(() { sel = null; res = 'replace_given'; qty = 1; dedC.clear(); }), icon: const Icon(Icons.arrow_back_rounded, size: 16), label: const Text('তালিকায় ফিরুন', style: TextStyle(fontSize: 12)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact)),
+              ])),
+              const SizedBox(height: 10),
+              if (sel == null) ...[
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(onChanged: (v) => sheetSt(() => q = v.trim().toLowerCase()), decoration: InputDecoration(hintText: 'নাম বা কোড দিয়ে খুঁজুন...', prefixIcon: const Icon(Icons.search_rounded, size: 20), filled: true, fillColor: Theme.of(context).colorScheme.surfaceContainerHigh, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(vertical: 11, horizontal: 14)))),
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+                Expanded(child: _loadingProducts ? const Center(child: CircularProgressIndicator()) : displayed.isEmpty ? const Center(child: Text('কোনো প্রডাক্ট পাওয়া যায়নি')) : ListView.separated(controller: scrollCtrl, itemCount: displayed.length, separatorBuilder: (_, __) => const Divider(height: 1), itemBuilder: (_, i) {
+                  final p = displayed[i];
+                  return InkWell(onTap: () => sheetSt(() { sel = p; res = 'replace_given'; qty = 1; dedC.text = p.wholesalePrice.toStringAsFixed(0); }), child: Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 10), child: Row(children: [
+                    ClipRRect(borderRadius: BorderRadius.circular(8), child: p.images.isNotEmpty ? Image.network(p.images.first, width: 46, height: 46, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _imgPlaceholder(46, Theme.of(context).colorScheme)) : _imgPlaceholder(46, Theme.of(context).colorScheme)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(p.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                      const SizedBox(height: 3),
+                      Text('৳${_fmt.format(p.wholesalePrice)}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF0891B2))),
+                    ])),
+                    const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                  ])));
+                })),
+              ] else ...[
+                Expanded(child: SingleChildScrollView(controller: scrollCtrl, padding: const EdgeInsets.symmetric(horizontal: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(14), border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withAlpha(80))), child: Row(children: [
+                    ClipRRect(borderRadius: BorderRadius.circular(10), child: sel!.images.isNotEmpty ? Image.network(sel!.images.first, width: 56, height: 56, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _imgPlaceholder(56, Theme.of(context).colorScheme)) : _imgPlaceholder(56, Theme.of(context).colorScheme)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(sel!.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                      const SizedBox(height: 4),
+                      Text('৳${_fmt.format(sel!.wholesalePrice)}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF7C3AED))),
+                    ])),
+                  ])),
+                  const SizedBox(height: 20),
+                  Text('পরিমাণ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    _qtyBtnPurple(Icons.remove_rounded, () { if (qty > 1) sheetSt(() => qty--); }),
+                    const SizedBox(width: 4),
+                    Container(width: 50, padding: const EdgeInsets.symmetric(vertical: 8), decoration: BoxDecoration(border: Border.all(color: Theme.of(context).colorScheme.outlineVariant), borderRadius: BorderRadius.circular(10)), alignment: Alignment.center, child: Text('$qty', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
+                    const SizedBox(width: 4),
+                    _qtyBtnPurple(Icons.add_rounded, () => sheetSt(() => qty++)),
+                  ]),
+                  const SizedBox(height: 20),
+                  Text('রিপ্লেস স্ট্যাটাস', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: res,
+                    decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
+                    items: const [
+                      DropdownMenuItem(value: 'replace_given', child: Text('রিপ্লেস দিতে হবে', style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 'product_replace', child: Text('রিপ্লেস নেওয়া হল', style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 'money_deduct', child: Text('টাকা কাটা', style: TextStyle(fontSize: 13))),
+                    ],
+                    onChanged: (v) => sheetSt(() { res = v!; if (res == 'money_deduct') dedC.text = sel!.wholesalePrice.toStringAsFixed(0); }),
+                  ),
+                  if (res == 'money_deduct') ...[
+                    const SizedBox(height: 16),
+                    Text('টাকার পরিমাণ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    const SizedBox(height: 8),
+                    TextField(controller: dedC, keyboardType: TextInputType.number, decoration: InputDecoration(prefixText: '৳ ', hintText: 'টাকার পরিমাণ লিখুন', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12))),
+                  ],
+                  const SizedBox(height: 24),
+                  SizedBox(width: double.infinity, child: ElevatedButton.icon(
+                    onPressed: () async {
+                      if (_currentUserId.isEmpty) {
+                        Get.snackbar('ত্রুটি', 'আগে ক্রেতা নির্বাচন করুন', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                        return;
+                      }
+                      final ded = res == 'money_deduct' ? (int.tryParse(dedC.text.trim()) ?? sel!.wholesalePrice.toInt()) : 0;
+                      final replaceItem = {'productId': sel!.id, 'productName': sel!.name, 'quantity': qty, 'resolutionType': res, 'deductionAmount': ded * qty};
+                      try {
+                        AdminReplaceController rc;
+                        try { rc = Get.find<AdminReplaceController>(); } catch (_) { rc = Get.put(AdminReplaceController()); }
+                        await rc.addCustomerIn(productId: sel!.id, productName: sel!.name, quantity: qty, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: res, deductionAmount: ded * qty, note: 'অর্ডার #${widget.order.id} — রিপ্লেস', date: DateTime.now());
+                        if (res == 'replace_given' || res == 'product_replace') {
+                          await FirebaseFirestore.instance.collection('products').doc(sel!.id).update({'stock': FieldValue.increment(-qty)});
+                          try { Get.find<ProductController>().fetchProducts(forceRefresh: true); } catch (_) {}
+                        }
+                        final newList = [..._currentReplaceItems, replaceItem];
+                        await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'replaceItems': newList});
+                        setState(() => _currentReplaceItems = newList);
+                        await rc.fetchEntries(force: true);
+                        Navigator.pop(ctx);
+                        Get.snackbar('সফল', 'রিপ্লেস প্রডাক্ট যোগ হয়েছে', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
+                      } catch (e) {
+                        Get.snackbar('ত্রুটি', 'যোগ হয়নি: $e', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                      }
+                    },
+                    icon: const Icon(Icons.add_rounded), label: const Text('যোগ করুন'),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  )),
+                  const SizedBox(height: 16),
+                ]))),
+              ],
+            ]),
+          ),
+        );
+      }),
+    );
+    dedC.dispose();
+  }
+
+  void _changeCustomer() async {
+    String q = '';
+    List<Map<String, dynamic>> users = [];
+    bool loading = true;
+
+    await showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, sheetSt) {
+        if (loading) {
+          FirebaseFirestore.instance.collection('users').orderBy('shopName').limit(200).get().then((snap) {
+            sheetSt(() {
+              users = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+              loading = false;
+            });
+          });
+        }
+        final filtered = q.isEmpty ? users : users.where((u) {
+          final name = (u['shopName'] ?? '').toString().toLowerCase();
+          final phone = (u['phone'] ?? '').toString().toLowerCase();
+          return name.contains(q) || phone.contains(q);
+        }).toList();
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.8, minChildSize: 0.5, maxChildSize: 0.95,
+          builder: (_, scrollCtrl) => Container(
+            decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(20))),
+            child: Column(children: [
+              const SizedBox(height: 10),
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Theme.of(context).colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 12),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text('ক্রেতা পরিবর্তন', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+              const SizedBox(height: 10),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(onChanged: (v) => sheetSt(() => q = v.trim().toLowerCase()), decoration: InputDecoration(hintText: 'নাম বা ফোন দিয়ে খুঁজুন...', prefixIcon: const Icon(Icons.search_rounded, size: 20), filled: true, fillColor: Theme.of(context).colorScheme.surfaceContainerHigh, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(vertical: 11, horizontal: 14)))),
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              Expanded(child: loading ? const Center(child: CircularProgressIndicator()) : filtered.isEmpty ? const Center(child: Text('কোনো ক্রেতা পাওয়া যায়নি')) : ListView.separated(controller: scrollCtrl, itemCount: filtered.length, separatorBuilder: (_, __) => const Divider(height: 1), itemBuilder: (_, i) {
+                final u = filtered[i];
+                return ListTile(
+                  leading: CircleAvatar(backgroundColor: const Color(0xFF2563EB).withAlpha(20), child: Text((u['shopName'] ?? '?')[0].toUpperCase(), style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700))),
+                  title: Text(u['shopName'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  subtitle: Text('${u['proprietorName'] ?? ''} • ${u['phone'] ?? ''}${(u['address'] ?? '').toString().isNotEmpty ? '\n${u['address']}' : ''}', style: const TextStyle(fontSize: 11)),
+                  onTap: () async {
+                    final orderId = widget.order.id;
+                    final newUserId = u['id'] as String;
+                    final newShopName = u['shopName'] ?? '';
+                    final newShopPhone = u['phone'] ?? '';
+                      final newShopAddress = u['address'] ?? '';
+                      final newDue = (u['due'] as num?)?.toInt() ?? 0;
+                      try {
+                        await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
+                          'userId': newUserId,
+                          'shopName': newShopName,
+                          'phone': newShopPhone,
+                          'shopAddress': newShopAddress,
+                          'previousDue': newDue,
+                        });
+                        setState(() {
+                          _currentUserId = newUserId;
+                          _currentShopName = newShopName;
+                          _currentShopPhone = newShopPhone;
+                          _currentShopAddress = newShopAddress;
+                          _currentPreviousDue = newDue;
+                          _currentUserDue = newDue;
+                        });
+                      Navigator.pop(ctx);
+                      Get.snackbar('সফল', 'ক্রেতা পরিবর্তন হয়েছে', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
+                    } catch (e) {
+                      Get.snackbar('ত্রুটি', 'ক্রেতা পরিবর্তন হয়নি', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                    }
+                  },
+                );
+              })),
+            ]),
+          ),
+        );
+      }),
+    );
   }
 
   String _statusLabel(String s) => {

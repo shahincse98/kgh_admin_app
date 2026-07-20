@@ -70,6 +70,7 @@ class OrderModel {
   final num discountAmount;            // Discount given at delivery
   final String paymentMethod;           // নগদ / বিকাশ / রকেট / SR হাতে
   final List<Map<String, dynamic>> payments; // Multiple payment entries [{amount, method}]
+  final List<Map<String, dynamic>> replaceItems; // Replace products given during delivery
   final int previousDue;               // User's due at time of delivery
   String userPhone;            // resolved after load from users collection
   int userDue;                 // resolved after load from users collection
@@ -102,6 +103,7 @@ class OrderModel {
     this.discountAmount = 0,
     this.paymentMethod = '',
     this.payments = const [],
+    this.replaceItems = const [],
     this.previousDue = 0,
     this.userPhone = '',
     this.userDue = 0,
@@ -143,6 +145,10 @@ class OrderModel {
       discountAmount: data['discountAmount'] ?? 0,
       paymentMethod: data['paymentMethod'] ?? '',
       payments: (data['payments'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ??
+          [],
+      replaceItems: (data['replaceItems'] as List?)
               ?.map((e) => Map<String, dynamic>.from(e as Map))
               .toList() ??
           [],
