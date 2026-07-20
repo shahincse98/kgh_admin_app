@@ -421,6 +421,14 @@ class _OrderListViewState extends State<OrderListView> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _statusBadge(order.status, statusColor),
+                              if (order.isDueCollection) ...[
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(color: const Color(0xFF16A34A).withAlpha(20), borderRadius: BorderRadius.circular(6)),
+                                  child: const Text('বাকি জমা', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF16A34A))),
+                                ),
+                              ],
                               if (order.status != 'delivered' &&
                                   order.status != 'cancelled') ...[
                                 const SizedBox(height: 5),
@@ -491,7 +499,7 @@ class _OrderListViewState extends State<OrderListView> {
                               scheme),
                           _chip(Icons.schedule_rounded, time, scheme),
                           _chip(Icons.shopping_bag_outlined,
-                              '${order.items.length} পণ্য', scheme),
+                              order.isDueCollection ? 'বাকি জমা' : '${order.items.length} পণ্য', scheme),
                           if (order.userPhone.isNotEmpty)
                             GestureDetector(
                               onTap: () => launchPhone(order.userPhone),
@@ -583,16 +591,21 @@ class _OrderListViewState extends State<OrderListView> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color:
-                                  const Color(0xFF0891B2).withAlpha(18),
+                              color: order.isDueCollection
+                                  ? const Color(0xFF16A34A).withAlpha(18)
+                                  : const Color(0xFF0891B2).withAlpha(18),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              '৳ ${_fmt.format(order.totalAmount.toInt())}',
-                              style: const TextStyle(
+                              order.isDueCollection
+                                  ? '৳ ${_fmt.format(order.paidAmount.toInt())}'
+                                  : '৳ ${_fmt.format(order.totalAmount.toInt())}',
+                              style: TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 14,
-                                color: Color(0xFF0891B2),
+                                color: order.isDueCollection
+                                    ? const Color(0xFF16A34A)
+                                    : const Color(0xFF0891B2),
                               ),
                             ),
                           ),

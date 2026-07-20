@@ -552,11 +552,17 @@ class AdminReplaceController extends GetxController {
 
     // Reverse replaceCount if still pending
     if (entry.productId.isNotEmpty && entry.status != 'resolved') {
-      await _db.collection('products').doc(entry.productId).update({
+      final updates = <String, dynamic>{
         'replaceCount': FieldValue.increment(-entry.quantity),
-      });
+      };
+      // Restore stock for 'replace_given' entries (stock was deducted when given)
+      if (entry.customerResolutionType == 'replace_given') {
+        updates['stock'] = FieldValue.increment(entry.quantity);
+      }
+      await _db.collection('products').doc(entry.productId).update(updates);
       _localProductUpdate(entry.productId,
-          replaceCountDelta: -entry.quantity);
+          replaceCountDelta: -entry.quantity,
+          stockDelta: entry.customerResolutionType == 'replace_given' ? entry.quantity : 0);
     }
 
     entries.removeWhere((e) => e.id == entry.id);

@@ -71,6 +71,7 @@ class OrderModel {
   final String paymentMethod;           // নগদ / বিকাশ / রকেট / SR হাতে
   final List<Map<String, dynamic>> payments; // Multiple payment entries [{amount, method}]
   final List<Map<String, dynamic>> replaceItems; // Replace products given during delivery
+  final bool isDueCollection;          // True if this is a due collection entry (no products)
   final int previousDue;               // User's due at time of delivery
   String userPhone;            // resolved after load from users collection
   int userDue;                 // resolved after load from users collection
@@ -104,6 +105,7 @@ class OrderModel {
     this.paymentMethod = '',
     this.payments = const [],
     this.replaceItems = const [],
+    this.isDueCollection = false,
     this.previousDue = 0,
     this.userPhone = '',
     this.userDue = 0,
@@ -152,6 +154,7 @@ class OrderModel {
               ?.map((e) => Map<String, dynamic>.from(e as Map))
               .toList() ??
           [],
+      isDueCollection: data['isDueCollection'] as bool? ?? false,
       previousDue: (data['previousDue'] as num?)?.toInt() ?? 0,
       userPhone: data['userPhone'] ?? data['orderedByPhone'] ?? '',
       items: (data['items'] as List? ?? [])

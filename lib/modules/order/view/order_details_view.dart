@@ -1895,7 +1895,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       if (totalDeduction > 0) await controller.saveDeductionAmount(widget.order.id, totalDeduction);
       if (mounted) setState(() { _currentDeductionAmount = totalDeduction; _currentReturnAmount = saleReturnTotal; _currentDiscountAmount = discountAmount; });
       if (!alreadyDelivered && selectedPendingIds.isNotEmpty) { try { for (final r in pendingReplaces) { if (selectedPendingIds.contains(r.id)) await _rc!.deliverToCustomer(entry: r, note: 'অর্ডার #${widget.order.id} এর সাথে ডেলিভারি'); } await _rc!.fetchEntries(force: true); } catch (_) {} }
-      if (!alreadyDelivered && returnItems.isNotEmpty) { try { for (final item in returnItems) { await _rc!.addCustomerIn(productId: item.product.id, productName: item.product.name, quantity: item.quantity, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: item.resolutionType, deductionAmount: item.deductionAmount, note: 'ডেলিভারি #${widget.order.id} এ ফেরত', date: DateTime.now()); } final stockBatch = FirebaseFirestore.instance.batch(); for (final item in returnItems.where((i) => i.resolutionType == 'product_replace' || i.resolutionType == 'replace_given')) { stockBatch.update(FirebaseFirestore.instance.collection('products').doc(item.product.id), {'stock': FieldValue.increment(-item.quantity)}); } await stockBatch.commit(); try { Get.find<ProductController>().fetchProducts(forceRefresh: true); } catch (_) {} final replaceItemsData = returnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'quantity': i.quantity, 'resolutionType': i.resolutionType, 'deductionAmount': i.deductionAmount}).toList(); await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'replaceItems': replaceItemsData}); setState(() => _currentReplaceItems = replaceItemsData); await _rc!.fetchEntries(force: true); } catch (_) {} }
+      if (!alreadyDelivered && returnItems.isNotEmpty) { try { for (final item in returnItems.where((i) => i.resolutionType != 'replace_given')) { await _rc!.addCustomerIn(productId: item.product.id, productName: item.product.name, quantity: item.quantity, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: item.resolutionType, deductionAmount: item.deductionAmount, note: 'ডেলিভারি #${widget.order.id} এ ফেরত', date: DateTime.now()); } final stockBatch = FirebaseFirestore.instance.batch(); for (final item in returnItems.where((i) => i.resolutionType == 'product_replace' || i.resolutionType == 'replace_given')) { stockBatch.update(FirebaseFirestore.instance.collection('products').doc(item.product.id), {'stock': FieldValue.increment(-item.quantity)}); } await stockBatch.commit(); try { Get.find<ProductController>().fetchProducts(forceRefresh: true); } catch (_) {} final replaceItemsData = returnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'quantity': i.quantity, 'resolutionType': i.resolutionType, 'deductionAmount': i.deductionAmount}).toList(); await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'replaceItems': replaceItemsData}); setState(() => _currentReplaceItems = replaceItemsData); await _rc!.fetchEntries(force: true); } catch (_) {} }
       final msgParts = <String>['ডেলিভারি সম্পন্ন ও পেমেন্ট আপডেট হয়েছে'];
       if (selectedPendingIds.isNotEmpty) msgParts.add('${selectedPendingIds.length} টি রিপ্লেস ডেলিভারি');
       if (returnItems.isNotEmpty) msgParts.add('${returnItems.length} টি ফেরত রিপ্লেস');
@@ -2827,7 +2827,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               ]),
             ),
           ],
-          if (_currentStatus == 'delivered') ...[
+          if (_currentStatus == 'delivered' && !widget.order.isDueCollection) ...[
             const SizedBox(height: 4),
             Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editPaidAmount, icon: const Icon(Icons.edit_rounded, size: 14), label: const Text('জমা সম্পাদন', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
             const SizedBox(height: 4),
@@ -2849,7 +2849,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     final netSales = (tot - ded - ret - disc).clamp(0, 9999999).toInt();
     num cost = 0;
     try { final pc = Get.find<ProductController>(); for (final item in _savedItems) { num c = item.purchasePrice; if (c <= 0) { final p = pc.products.firstWhereOrNull((p) => p.id == item.productId); if (p != null) c = p.purchasePrice; } cost += c * item.quantity; } } catch (_) {}
-    final hasSr = widget.order.deliveryAssignedSrId.isNotEmpty || widget.order.deliveredBySrId.isNotEmpty;
+    final hasSr = _assignedSrId.isNotEmpty || widget.order.deliveredBySrId.isNotEmpty;
     final comm = (netSales * 0.06).round();
     final profitWithSr = (netSales - cost.toInt() - comm).clamp(0, 9999999);
     final profitWithoutSr = (netSales - cost.toInt()).clamp(0, 9999999);
@@ -2866,7 +2866,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       if (hasSr) ...[const SizedBox(height: 2), _payRow('SR কমিশন (৬%)', '− ৳ ${_fmt.format(comm)}', const Color(0xFF7C3AED))],
       const SizedBox(height: 6),
       _payRow('নিট লাভ', '৳ ${_fmt.format(profit)}', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
-      if (cost > 0 && netSales > 0) ...[const SizedBox(height: 4), Builder(builder: (_) { final gpct = (profitWithoutSr / cost * 100).toStringAsFixed(2); final npct = (profitWithSr / cost * 100).toStringAsFixed(2); return Column(children: [ if (hasSr) ...[ _payRow('লাভের হার (SR বাদে)', '$gpct%', profitWithoutSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)), const SizedBox(height: 2), _payRow('লাভের হার (SR সহ)', '$npct%', profitWithSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)) ] else _payRow('লাভের হার', '$gpct%', profitWithoutSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)), ]); })],
+      if (cost > 0 && hasSr) ...[const SizedBox(height: 4), Builder(builder: (_) { final gpct = cost > 0 ? (profitWithoutSr / cost * 100).toStringAsFixed(2) : '0.00'; final npct = cost > 0 ? (profitWithSr / cost * 100).toStringAsFixed(2) : '0.00'; return Column(children: [ _payRow('লাভের হার (SR বাদে)', '$gpct%', profitWithoutSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)), const SizedBox(height: 2), _payRow('লাভের হার (SR সহ)', '$npct%', profitWithSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)) ]); })],
     ]);
   }
 
@@ -3190,17 +3190,19 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                       final ded = res == 'money_deduct' ? (int.tryParse(dedC.text.trim()) ?? sel!.wholesalePrice.toInt()) : 0;
                       final replaceItem = {'productId': sel!.id, 'productName': sel!.name, 'quantity': qty, 'resolutionType': res, 'deductionAmount': ded * qty};
                       try {
-                        AdminReplaceController rc;
-                        try { rc = Get.find<AdminReplaceController>(); } catch (_) { rc = Get.put(AdminReplaceController()); }
-                        await rc.addCustomerIn(productId: sel!.id, productName: sel!.name, quantity: qty, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: res, deductionAmount: ded * qty, note: 'অর্ডার #${widget.order.id} — রিপ্লেস', date: DateTime.now());
                         if (res == 'replace_given' || res == 'product_replace') {
                           await FirebaseFirestore.instance.collection('products').doc(sel!.id).update({'stock': FieldValue.increment(-qty)});
                           try { Get.find<ProductController>().fetchProducts(forceRefresh: true); } catch (_) {}
                         }
+                        if (res != 'replace_given') {
+                          AdminReplaceController rc;
+                          try { rc = Get.find<AdminReplaceController>(); } catch (_) { rc = Get.put(AdminReplaceController()); }
+                          await rc.addCustomerIn(productId: sel!.id, productName: sel!.name, quantity: qty, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: res, deductionAmount: ded * qty, note: 'অর্ডার #${widget.order.id} — রিপ্লেস', date: DateTime.now());
+                          await rc.fetchEntries(force: true);
+                        }
                         final newList = [..._currentReplaceItems, replaceItem];
                         await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'replaceItems': newList});
                         setState(() => _currentReplaceItems = newList);
-                        await rc.fetchEntries(force: true);
                         Navigator.pop(ctx);
                         Get.snackbar('সফল', 'রিপ্লেস প্রডাক্ট যোগ হয়েছে', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
                       } catch (e) {

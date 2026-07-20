@@ -192,7 +192,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
       statusText = isMoneyDeduct ? 'টাকা কাটা' : 'রিপ্লেস নেওয়া হল';
     } else if (isProductReplace) {
       statusColor = Colors.deepPurple;
-      statusText = 'রিপ্লেস নেওয়া হবে';
+      statusText = 'রিপ্লেস নেওয়া হল';
     } else if (isMoneyDeduct) {
       statusColor = const Color(0xFFDC2626);
       statusText = 'টাকা কাটা';

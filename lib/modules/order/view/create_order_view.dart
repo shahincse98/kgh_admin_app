@@ -265,65 +265,253 @@ class _ProductStep extends StatelessWidget {
           );
         }),
 
-        // Search bar
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-          child: TextField(
-            onChanged: (v) => ctrl.productSearch.value = v,
-            decoration: InputDecoration(
-              hintText: 'পণ্যের নাম বা কোড দিয়ে খুঁজুন…',
-              prefixIcon: const Icon(Icons.search_rounded),
-              filled: true,
-              fillColor: scheme.surfaceContainerHigh,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                  vertical: 12, horizontal: 16),
+        // Due collection toggle
+        Obx(() {
+          final cust = ctrl.selectedCustomer.value;
+          if (cust == null) return const SizedBox();
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => ctrl.isDueCollection.value = false,
+                    icon: Icon(Icons.shopping_cart_rounded, size: 16, color: !ctrl.isDueCollection.value ? scheme.primary : scheme.onSurfaceVariant),
+                    label: Text('পণ্য যোগ', style: TextStyle(fontSize: 12, color: !ctrl.isDueCollection.value ? scheme.primary : scheme.onSurfaceVariant)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      side: BorderSide(color: !ctrl.isDueCollection.value ? scheme.primary : scheme.outlineVariant),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => ctrl.isDueCollection.value = true,
+                    icon: Icon(Icons.account_balance_wallet_rounded, size: 16, color: ctrl.isDueCollection.value ? const Color(0xFF16A34A) : scheme.onSurfaceVariant),
+                    label: Text('বাকি জমা', style: TextStyle(fontSize: 12, color: ctrl.isDueCollection.value ? const Color(0xFF16A34A) : scheme.onSurfaceVariant)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      side: BorderSide(color: ctrl.isDueCollection.value ? const Color(0xFF16A34A) : scheme.outlineVariant),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ),
+          );
+        }),
 
-        // Product list
-        Expanded(
-          child: Obx(() {
-            final q = ctrl.productSearch.value.trim().toLowerCase();
-            final products = q.isEmpty
-                ? pc.products
-                    .where((p) => p.isAvailable && p.stock > 0)
-                    .toList()
-                : pc.products
-                    .where((p) =>
-                        p.isAvailable &&
-                        p.stock > 0 &&
-                        (p.name.toLowerCase().contains(q) ||
-                            p.productCode.toLowerCase().contains(q)))
-                    .toList();
-
-            if (pc.loading.value) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (products.isEmpty) {
-              return Center(
-                child: Text('কোনো পণ্য পাওয়া যায়নি',
-                    style: TextStyle(
-                        color: scheme.onSurface.withAlpha(120))),
-              );
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 120),
-              itemCount: products.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 6),
-              itemBuilder: (_, i) =>
-                  _ProductTile(
-                      product: products[i],
-                      ctrl: ctrl,
-                      scheme: scheme,
-                      fmt: fmt),
+        // Search bar or Due collection form
+        Obx(() {
+          if (ctrl.isDueCollection.value) {
+            // ── Due Collection Form ──
+            return Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 120),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16A34A).withAlpha(12),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF16A34A).withAlpha(40)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF16A34A), size: 20),
+                            const SizedBox(width: 8),
+                            const Text('বাকি জমা', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF16A34A))),
+                          ]),
+                          const SizedBox(height: 6),
+                          Obx(() {
+                            final cust = ctrl.selectedCustomer.value;
+                            final due = cust?.totalDue ?? 0;
+                            return Text('বর্তমান বাকি: ৳${fmt.format(due)}', style: TextStyle(fontSize: 13, color: due > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A), fontWeight: FontWeight.w600));
+                          }),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('জমা পরিমাণ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: ctrl.dueCollectionAmountCtrl,
+                      keyboardType: TextInputType.number,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        prefixText: '৳ ',
+                        hintText: 'টাকার পরিমাণ লিখুন',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('পেমেন্ট মাধ্যম', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    Obx(() {
+                      return DropdownButtonFormField<String>(
+                        value: ctrl.dueCollectionMethod.value,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'SR হাতে', child: Text('SR হাতে', style: TextStyle(fontSize: 13))),
+                          DropdownMenuItem(value: 'বিকাশ', child: Text('বিকাশ', style: TextStyle(fontSize: 13))),
+                          DropdownMenuItem(value: 'রকেট', child: Text('রকেট', style: TextStyle(fontSize: 13))),
+                          DropdownMenuItem(value: 'নগদ', child: Text('নগদ', style: TextStyle(fontSize: 13))),
+                          DropdownMenuItem(value: 'ব্যাংক', child: Text('ব্যাংক', style: TextStyle(fontSize: 13))),
+                        ],
+                        onChanged: (v) { if (v != null) ctrl.dueCollectionMethod.value = v; },
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                    const Text('তারিখ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    Obx(() {
+                      return InkWell(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: ctrl.dueCollectionDate.value,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now().add(const Duration(days: 1)),
+                          );
+                          if (picked != null) ctrl.dueCollectionDate.value = picked;
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: scheme.outlineVariant),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(children: [
+                            Icon(Icons.calendar_today_rounded, size: 16, color: scheme.onSurfaceVariant),
+                            const SizedBox(width: 10),
+                            Text(DateFormat('dd/MM/yyyy').format(ctrl.dueCollectionDate.value), style: const TextStyle(fontSize: 14)),
+                            const Spacer(),
+                            Icon(Icons.arrow_drop_down_rounded, color: scheme.onSurfaceVariant),
+                          ]),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 24),
+                    // Submit button
+                    Obx(() {
+                      final cust = ctrl.selectedCustomer.value;
+                      final due = cust?.totalDue ?? 0;
+                      final amount = num.tryParse(ctrl.dueCollectionAmountCtrl.text.trim()) ?? 0;
+                      final canSubmit = amount > 0 && amount <= due;
+                      return Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: ctrl.submitting.value || !canSubmit ? null : () async {
+                                final success = await ctrl.submitOrder();
+                                if (success) {
+                                  Get.find<OrderController>().fetchOrders();
+                                  ctrl.reset();
+                                  Get.back();
+                                  Get.snackbar('সফল', 'বাকি জমা হয়েছে', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
+                                }
+                              },
+                              icon: ctrl.submitting.value
+                                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Icon(Icons.check_rounded),
+                              label: Text(ctrl.submitting.value ? 'সাবমিট হচ্ছে…' : 'বাকি জমা করুন'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF16A34A),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                          if (amount > due && due > 0) ...[
+                            const SizedBox(height: 8),
+                            Text('বাকির চেয়ে বেশি টাকা দেওয়া যাবে না', style: TextStyle(fontSize: 12, color: Colors.red.shade400)),
+                          ],
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
             );
-          }),
-        ),
+          }
+
+          // ── Normal Product Selection ──
+          return Expanded(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+                  child: TextField(
+                    onChanged: (v) => ctrl.productSearch.value = v,
+                    decoration: InputDecoration(
+                      hintText: 'পণ্যের নাম বা কোড দিয়ে খুঁজুন…',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      filled: true,
+                      fillColor: scheme.surfaceContainerHigh,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 16),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Obx(() {
+                    final q = ctrl.productSearch.value.trim().toLowerCase();
+                    final products = q.isEmpty
+                        ? pc.products
+                            .where((p) => p.isAvailable && p.stock > 0)
+                            .toList()
+                        : pc.products
+                            .where((p) =>
+                                p.isAvailable &&
+                                p.stock > 0 &&
+                                (p.name.toLowerCase().contains(q) ||
+                                    p.productCode.toLowerCase().contains(q)))
+                            .toList();
+
+                    if (pc.loading.value) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (products.isEmpty) {
+                      return Center(
+                        child: Text('কোনো পণ্য পাওয়া যায়নি',
+                            style: TextStyle(
+                                color: scheme.onSurface.withAlpha(120))),
+                      );
+                    }
+                    return ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 120),
+                      itemCount: products.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 6),
+                      itemBuilder: (_, i) =>
+                          _ProductTile(
+                              product: products[i],
+                              ctrl: ctrl,
+                              scheme: scheme,
+                              fmt: fmt),
+                    );
+                  }),
+                ),
+              ],
+            ),
+          );
+        }),
       ],
     );
   }
@@ -697,7 +885,7 @@ class CreateOrderFab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (ctrl.currentStep.value != 1) return const SizedBox();
+      if (ctrl.currentStep.value != 1 || ctrl.isDueCollection.value) return const SizedBox();
       final count = ctrl.cartCount;
       final total = ctrl.cartTotal;
       final fmt = NumberFormat('#,##,##0');

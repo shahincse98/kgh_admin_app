@@ -34,6 +34,12 @@ class CreateOrderController extends GetxController {
   // ── Step 3: Review / payment ────────────────────────────────────────────────
   final paidAmountCtrl = TextEditingController();
 
+  // ── Due collection mode ────────────────────────────────────────────────────
+  final isDueCollection = false.obs;
+  final dueCollectionAmountCtrl = TextEditingController();
+  final dueCollectionMethod = 'SR হাতে'.obs;
+  final dueCollectionDate = DateTime.now().obs;
+
   // ── Submission state ────────────────────────────────────────────────────────
   final submitting = false.obs;
   final error = ''.obs;
@@ -41,6 +47,7 @@ class CreateOrderController extends GetxController {
   @override
   void onClose() {
     paidAmountCtrl.dispose();
+    dueCollectionAmountCtrl.dispose();
     super.onClose();
   }
 
@@ -86,6 +93,57 @@ class CreateOrderController extends GetxController {
       error.value = 'কাস্টমার নির্বাচন করুন';
       return false;
     }
+
+    // Due collection mode
+    if (isDueCollection.value) {
+      final dueAmount = num.tryParse(dueCollectionAmountCtrl.text.trim()) ?? 0;
+      if (dueAmount <= 0) {
+        error.value = 'জমা পরিমাণ লিখুন';
+        return false;
+      }
+
+      submitting.value = true;
+      error.value = '';
+
+      try {
+        final currentUser = FirebaseAuth.instance.currentUser;
+        final orderedBy = currentUser?.uid ?? '';
+        final orderedByEmail = currentUser?.email ?? '';
+
+        await _db.collection('orders').add({
+          'userId': customer.id,
+          'shopName': customer.shopName,
+          'shopAddress': customer.address,
+          'shopPhone': customer.phone,
+          'userPhone': customer.phone,
+          'userDue': customer.totalDue,
+          'items': <Map<String, dynamic>>[],
+          'totalAmount': 0,
+          'paidAmount': dueAmount,
+          'status': 'delivered',
+          'isDueCollection': true,
+          'paymentMethod': dueCollectionMethod.value,
+          'payments': [{'amount': dueAmount, 'method': dueCollectionMethod.value}],
+          'deliveredAt': Timestamp.fromDate(dueCollectionDate.value),
+          'orderedBy': orderedBy,
+          'orderedByEmail': orderedByEmail,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // Update user's due
+        final newDue = (customer.totalDue - dueAmount.toInt()).clamp(0, 9999999);
+        await _db.collection('users').doc(customer.id).update({'totalDue': newDue});
+
+        return true;
+      } catch (e) {
+        error.value = 'সাবমিট করতে ব্যর্থ: $e';
+        return false;
+      } finally {
+        submitting.value = false;
+      }
+    }
+
+    // Normal order mode
     if (cart.isEmpty) {
       error.value = 'কমপক্ষে একটি পণ্য যোগ করুন';
       return false;
@@ -151,5 +209,9 @@ class CreateOrderController extends GetxController {
     cart.clear();
     paidAmountCtrl.clear();
     error.value = '';
+    isDueCollection.value = false;
+    dueCollectionAmountCtrl.clear();
+    dueCollectionMethod.value = 'SR হাতে';
+    dueCollectionDate.value = DateTime.now();
   }
 }
