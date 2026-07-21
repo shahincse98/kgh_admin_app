@@ -60,13 +60,16 @@ class OrderController extends GetxController {
     loading.value = true;
 
     final statusFilter = selectedStatus.value;
-    // 'all' and 'scheduled' both need unfiltered fetch (scheduled is
-    // derived from scheduledDeliveryDate, not a status field).
-    final needsStatusFilter =
-        statusFilter != 'all' && statusFilter != 'scheduled';
 
     Query query;
-    if (needsStatusFilter) {
+    if (statusFilter == 'scheduled') {
+      // Scheduled: query orders that have a scheduledDeliveryDate set
+      query = _db
+          .collection('orders')
+          .where('scheduledDeliveryDate', isGreaterThan: Timestamp.fromDate(DateTime(2020)))
+          .orderBy('scheduledDeliveryDate', descending: true)
+          .limit(limit);
+    } else if (statusFilter != 'all') {
       query = _db
           .collection('orders')
           .where('status', isEqualTo: statusFilter)
@@ -153,16 +156,12 @@ class OrderController extends GetxController {
 
   List<OrderModel> get filteredOrders {
     List<OrderModel> list = orders;
-    // 'scheduled' is a derived filter (not a Firestore status field),
-    // so we filter it locally. Other status filters are already
-    // applied at the Firestore query level in fetchOrders().
+    // 'scheduled' filter now queries Firestore directly with scheduledDeliveryDate.
+    // But we still need to exclude delivered/cancelled locally since the
+    // Firestore query returns all scheduled orders regardless of status.
     if (selectedStatus.value == 'scheduled') {
       list = list
-          .where((o) =>
-              (o.scheduledDeliveryDate != null ||
-               o.deliveryAssignedSrId.isNotEmpty) &&
-              o.status != 'delivered' &&
-              o.status != 'cancelled')
+          .where((o) => o.status != 'delivered' && o.status != 'cancelled')
           .toList();
     }
     final q = searchText.value.trim().toLowerCase();
@@ -223,9 +222,16 @@ class OrderController extends GetxController {
       batch.update(_db.collection('orders').doc(id), data);
       await batch.commit();
 
-      // Refresh products globally
+      // Update product stock locally (no need to re-fetch all products)
       try {
-        Get.find<ProductController>().fetchProducts(forceRefresh: true);
+        final pc = Get.find<ProductController>();
+        for (final item in items) {
+          final productId = (item is Map) ? (item['productId'] ?? '').toString() : '';
+          final qty = (item is Map) ? (item['quantity'] as num?)?.toInt() ?? 0 : 0;
+          if (productId.isEmpty || qty == 0) continue;
+          final delta = needsStockDeduction ? -qty : qty;
+          pc.updateStockLocally(productId, delta);
+        }
       } catch (_) {}
     } else {
       await _db.collection('orders').doc(id).update(data);
@@ -392,9 +398,15 @@ class OrderController extends GetxController {
 
     await batch.commit();
 
-    // Refresh products globally
+    // Update product stock locally (no need to re-fetch all products)
     try {
-      Get.find<ProductController>().fetchProducts(forceRefresh: true);
+      final pc = Get.find<ProductController>();
+      for (final item in items) {
+        final productId = (item is Map) ? (item['productId'] ?? '').toString() : '';
+        final qty = (item is Map) ? (item['quantity'] as num?)?.toInt() ?? 0 : 0;
+        if (productId.isEmpty || qty == 0) continue;
+        pc.updateStockLocally(productId, -qty);
+      }
     } catch (_) {}
 
     // 3. Update local cache
@@ -956,9 +968,15 @@ class OrderController extends GetxController {
 
     await batch.commit();
 
-    // 4. Refresh products globally
+    // 4. Update product stock locally (no need to re-fetch all products)
     try {
-      Get.find<ProductController>().fetchProducts(forceRefresh: true);
+      final pc = Get.find<ProductController>();
+      if (o.status == 'dispatched' || o.status == 'delivered') {
+        for (final item in o.items) {
+          if (item.productId.isEmpty) continue;
+          pc.updateStockLocally(item.productId, item.quantity);
+        }
+      }
     } catch (_) {}
 
     // 5. Remove from local cache

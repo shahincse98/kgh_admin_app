@@ -29,9 +29,12 @@ class DispatchController extends GetxController {
           .get();
 
       // Fetch delivered orders that were never dispatched (no memoNumber)
+      // Use recent 90 days to avoid fetching ALL delivered orders ever
+      final ninetyDaysAgo = DateTime.now().subtract(const Duration(days: 90));
       final deliveredSnap = await _db
           .collection('orders')
           .where('status', isEqualTo: 'delivered')
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(ninetyDaysAgo))
           .get();
 
       final list = <OrderModel>[];

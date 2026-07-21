@@ -25,11 +25,6 @@ class _OrderListViewState extends State<OrderListView> {
     super.initState();
     _scrollCtrl.addListener(() {
       final pos = _scrollCtrl.position;
-      // Guard against infinite loadMore when filtered list is short
-      if (pos.maxScrollExtent <= 0 && !controller.loading.value) {
-        controller.fetchOrders(loadMore: true);
-        return;
-      }
       if (pos.pixels >= pos.maxScrollExtent - 200 &&
           controller.hasMore.value &&
           !controller.loading.value) {
@@ -357,9 +352,6 @@ class _OrderListViewState extends State<OrderListView> {
       child: InkWell(
         onTap: () async {
           await Get.to(() => OrderDetailsView(order: order));
-          controller.lastDoc = null;
-          controller.hasMore.value = true;
-          controller.fetchOrders();
         },
         onLongPress: () => _showOrderActions(order, scheme),
         child: IntrinsicHeight(
@@ -723,10 +715,27 @@ class _OrderListViewState extends State<OrderListView> {
 
   Map<String, List<OrderModel>> _groupByDate(List<OrderModel> orders) {
     final map = <String, List<OrderModel>>{};
+    final dateMap = <String, DateTime>{};
+    final isDelivered = controller.selectedStatus.value == 'delivered';
+    final isScheduled = controller.selectedStatus.value == 'scheduled';
     for (var o in orders) {
-      final date = DateFormat('dd MMMM yyyy').format(o.createdAt);
-      map.putIfAbsent(date, () => []).add(o);
+      DateTime date;
+      if (isDelivered && o.deliveredAt != null) {
+        date = o.deliveredAt!;
+      } else if (isScheduled && o.scheduledDeliveryDate != null) {
+        date = o.scheduledDeliveryDate!;
+      } else {
+        date = o.createdAt;
+      }
+      final key = DateFormat('dd MMMM yyyy').format(date);
+      map.putIfAbsent(key, () => []).add(o);
+      dateMap.putIfAbsent(key, () => date);
     }
-    return map;
+    // Sort by date descending (newest first)
+    final sorted = Map.fromEntries(
+      map.entries.toList()
+        ..sort((a, b) => dateMap[b.key]!.compareTo(dateMap[a.key]!)),
+    );
+    return sorted;
   }
 }

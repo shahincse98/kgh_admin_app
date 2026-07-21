@@ -10,6 +10,7 @@ class StockInController extends GetxController {
   final entries = <StockInModel>[].obs;
   final loading = false.obs;
   final searchText = ''.obs;
+  bool _loadedOnce = false;
 
   @override
   void onInit() {
@@ -17,7 +18,8 @@ class StockInController extends GetxController {
     fetchEntries();
   }
 
-  Future<void> fetchEntries() async {
+  Future<void> fetchEntries({bool force = false}) async {
+    if (_loadedOnce && !force) return;
     loading.value = true;
     try {
       final snap = await _db
@@ -27,6 +29,7 @@ class StockInController extends GetxController {
 
       entries.assignAll(
           snap.docs.map((e) => StockInModel.fromFirestore(e)).toList());
+      _loadedOnce = true;
     } catch (_) {}
     loading.value = false;
   }
@@ -120,13 +123,26 @@ class StockInController extends GetxController {
 
     await batch.commit();
 
-    // Refresh products globally + local cache
+    // Update product stock locally (no need to re-fetch all products)
     try {
-      final pc = Get.find<ProductController>();
-      pc.fetchProducts(forceRefresh: true);
+      Get.find<ProductController>().updateStockLocally(productId, quantity);
     } catch (_) {}
 
-    await fetchEntries();
+    // Add to local cache
+    entries.insert(0, StockInModel(
+      id: docRef.id,
+      productId: productId,
+      productName: productName,
+      image: image,
+      quantity: quantity,
+      unitPrice: unitPrice,
+      totalPrice: totalPrice,
+      source: source,
+      note: note,
+      date: date,
+      createdAt: DateTime.now(),
+      createdBy: currentUser,
+    ));
   }
 
   Future<void> addMultipleStockIn({
@@ -177,11 +193,21 @@ class StockInController extends GetxController {
 
     await batch.commit();
 
+    // Update product stock locally (no need to re-fetch all products)
     try {
-      Get.find<ProductController>().fetchProducts(forceRefresh: true);
+      final pc = Get.find<ProductController>();
+      final deltas = <String, int>{};
+      for (final item in items) {
+        final productId = item['productId'] as String? ?? '';
+        final quantity = (item['quantity'] as num?)?.toInt() ?? 0;
+        if (productId.isEmpty || quantity <= 0) continue;
+        deltas[productId] = (deltas[productId] ?? 0) + quantity;
+      }
+      pc.updateStockLocallyBatch(deltas);
     } catch (_) {}
 
-    await fetchEntries();
+    // Mark entries need refresh
+    _loadedOnce = false;
   }
 
   Future<void> deleteEntry(String id) async {
@@ -194,8 +220,9 @@ class StockInController extends GetxController {
       batch.delete(_db.collection('stock_ins').doc(id));
       await batch.commit();
 
+      // Update product stock locally
       try {
-        Get.find<ProductController>().fetchProducts(forceRefresh: true);
+        Get.find<ProductController>().updateStockLocally(entry.productId, -entry.quantity);
       } catch (_) {}
     } else {
       await _db.collection('stock_ins').doc(id).delete();
@@ -251,11 +278,35 @@ class StockInController extends GetxController {
 
     await batch.commit();
 
+    // Update product stock locally
     try {
-      Get.find<ProductController>().fetchProducts(forceRefresh: true);
+      final pc = Get.find<ProductController>();
+      if (oldEntry.productId.isNotEmpty) {
+        pc.updateStockLocally(oldEntry.productId, -oldEntry.quantity);
+      }
+      if (productId.isNotEmpty) {
+        pc.updateStockLocally(productId, quantity);
+      }
     } catch (_) {}
 
-    await fetchEntries();
+    // Update local cache
+    final idx = entries.indexWhere((e) => e.id == id);
+    if (idx != -1) {
+      entries[idx] = StockInModel(
+        id: id,
+        productId: productId,
+        productName: productName,
+        image: oldEntry.image,
+        quantity: quantity,
+        unitPrice: unitPrice,
+        totalPrice: newTotalPrice,
+        source: source,
+        note: note,
+        date: date,
+        createdAt: oldEntry.createdAt,
+        createdBy: oldEntry.createdBy,
+      );
+    }
   }
 
   Future<String> _getCurrentUserId() async {

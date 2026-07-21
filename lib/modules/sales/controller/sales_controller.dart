@@ -73,12 +73,14 @@ class SalesController extends GetxController {
   Future<void> loadData() async {
     loading.value = true;
     try {
-      final start = fromDate.value;
-      final end = toDate.value;
+      final start = fromDate.value ?? DateTime.now().subtract(const Duration(days: 30));
+      final end = toDate.value ?? DateTime.now();
 
       final snap = await _db
           .collection('orders')
           .where('status', isEqualTo: 'delivered')
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(end))
           .orderBy('createdAt', descending: true)
           .get();
 

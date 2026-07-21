@@ -48,6 +48,8 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
       final snap = await _db
           .collection('orders')
           .where('status', isEqualTo: 'delivered')
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(end))
           .get();
 
       final all = snap.docs

@@ -49,9 +49,13 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
   Future<void> fetchOrders() async {
     loading.value = true;
     try {
+      // Limit to recent 90 days to avoid fetching ALL delivered orders
+      final ninetyDaysAgo = DateTime.now().subtract(const Duration(days: 90));
       final snap = await _db
           .collection('orders')
           .where('status', isEqualTo: 'delivered')
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(ninetyDaysAgo))
+          .orderBy('createdAt', descending: true)
           .get();
       final list = snap.docs
           .map((e) => OrderModel.fromFirestore(e))

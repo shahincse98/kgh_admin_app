@@ -83,6 +83,31 @@ class ProductController extends GetxController {
     }
   }
 
+  /// Update stock locally for a single product (Firestore already updated via batch).
+  /// Use this instead of fetchProducts(forceRefresh: true) after batch stock operations.
+  void updateStockLocally(String productId, int delta) {
+    final index = products.indexWhere((p) => p.id == productId);
+    if (index != -1) {
+      final p = products[index];
+      products[index] = p.copyWithMap({'stock': p.stock + delta});
+      products.refresh();
+    }
+  }
+
+  /// Update stock locally for multiple products at once.
+  void updateStockLocallyBatch(Map<String, int> deltas) {
+    bool changed = false;
+    for (final entry in deltas.entries) {
+      final index = products.indexWhere((p) => p.id == entry.key);
+      if (index != -1) {
+        final p = products[index];
+        products[index] = p.copyWithMap({'stock': p.stock + entry.value});
+        changed = true;
+      }
+    }
+    if (changed) products.refresh();
+  }
+
   Future<void> deleteProduct(String id) async {
     await _db.collection('products').doc(id).delete();
     products.removeWhere((p) => p.id == id);

@@ -61,7 +61,7 @@ class _EditItem {
 class _PaymentRow {
   final TextEditingController amountCtrl;
   String method;
-  _PaymentRow({this.method = 'SR হাতে', String amount = ''})
+  _PaymentRow({this.method = '', String amount = ''})
       : amountCtrl = TextEditingController(text: amount);
   void dispose() => amountCtrl.dispose();
 }
@@ -163,6 +163,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   static const _statuses = ['pending', 'approved', 'dispatched', 'delivered', 'cancelled'];
   static final _fmt = NumberFormat('#,##,##0');
 
+  bool get _hasSr => _assignedSrId.isNotEmpty || widget.order.deliveredBySrId.isNotEmpty;
+  String get _handLabel => _hasSr ? 'SR হাতে' : 'হাতে';
+
   @override
   void initState() {
     super.initState();
@@ -190,7 +193,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     _currentDeductionAmount = widget.order.deductionAmount;
     _currentReturnAmount = widget.order.returnAmount;
     _currentDiscountAmount = widget.order.discountAmount;
-    _currentPaymentMethod = widget.order.paymentMethod.isNotEmpty ? widget.order.paymentMethod : 'SR হাতে';
+    _currentPaymentMethod = widget.order.paymentMethod.isNotEmpty ? widget.order.paymentMethod : _handLabel;
     _currentPayments = widget.order.payments.isNotEmpty ? List<Map<String, dynamic>>.from(widget.order.payments) : [{'amount': widget.order.paidAmount > 0 ? (widget.order.paidAmount - widget.order.returnAmount - widget.order.deductionAmount).clamp(0, 9999999) : 0, 'method': _currentPaymentMethod}];
     _currentPreviousDue = widget.order.previousDue > 0 ? widget.order.previousDue : widget.order.userDue;
     _currentLocalMemo = widget.order.localMemo;
@@ -1875,7 +1878,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         'amount': num.tryParse(r.amountCtrl.text.trim()) ?? 0,
         'method': r.method,
       }).toList();
-      final primaryMethod = paymentEntries.isNotEmpty ? paymentEntries.first['method'] as String : 'SR হাতে';
+      final primaryMethod = paymentEntries.isNotEmpty ? paymentEntries.first['method'] as String : _handLabel;
       final totalDeduction = returnItems.where((r) => r.resolutionType == 'money_deduct').fold<int>(0, (s, r) => s + r.deductionAmount);
       final saleReturnTotal = _saleReturnItems.fold<num>(0, (s, r) => s + r.totalPrice).toInt();
       final discountAmount = num.tryParse(discountCtrl.text.trim()) ?? 0;
@@ -1915,9 +1918,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   }
 
   Widget _paymentMethodDropdown(StateSetter setSt) {
-    const methods = ['SR হাতে', 'বিকাশ', 'নগদ অ্যাপ', 'রকেট', 'ব্যাংক'];
+    final methods = [_handLabel, 'বিকাশ', 'নগদ অ্যাপ', 'রকেট', 'ব্যাংক'];
     return DropdownButtonFormField<String>(
-      value: methods.contains(_currentPaymentMethod) ? _currentPaymentMethod : 'SR হাতে',
+      value: methods.contains(_currentPaymentMethod) ? _currentPaymentMethod : _handLabel,
       isDense: true,
       decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
       items: methods.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(fontSize: 13)))).toList(),
@@ -2300,9 +2303,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   }
 
   Widget _paymentMethodDropdown2(StateSetter setSt, _PaymentRow row) {
-    const methods = ['SR হাতে', 'বিকাশ', 'নগদ', 'রকেট', 'ব্যাংক'];
+    final methods = [_handLabel, 'বিকাশ', 'নগদ', 'রকেট', 'ব্যাংক'];
     return DropdownButtonFormField<String>(
-      value: methods.contains(row.method) ? row.method : 'SR হাতে',
+      value: methods.contains(row.method) ? row.method : _handLabel,
       isDense: true,
       isExpanded: false,
       decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10)),
@@ -2761,21 +2764,24 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
           const SizedBox(height: 4),
           _payRow('মোট দেনা', '৳ ${_fmt.format((total.toInt() + _currentPreviousDue))}', const Color(0xFF0891B2), bold: true),
-          if (_currentDeductionAmount > 0) ...[const SizedBox(height: 4), _payRow('রিপ্লেস বাবদ বাদ', '− ৳ ${_fmt.format(_currentDeductionAmount.toInt())}', const Color(0xFFDC2626))],
-          if (_currentReturnAmount > 0) ...[const SizedBox(height: 4), _payRow('ফেরত বাদ', '− ৳ ${_fmt.format(_currentReturnAmount.toInt())}', const Color(0xFF8B5CF6))],
+          if (_currentDeductionAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('রিপ্লেস বাবদ বাদ', '− ৳ ${_fmt.format(_currentDeductionAmount.toInt())}', const Color(0xFFDC2626))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'রিপ্লেস বাবদ সম্পাদন', onPressed: _editDeductionAmount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editDeductionAmount, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('রিপ্লেস বাবদ যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+          if (_currentReturnAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('ফেরত বাদ', '− ৳ ${_fmt.format(_currentReturnAmount.toInt())}', const Color(0xFF8B5CF6))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'ফেরত বাদ সম্পাদন', onPressed: _editReturnAmount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editReturnAmount, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('ফেরত বাদ যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
           if (_currentDiscountAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('ডিসকাউন্ট', '− ৳ ${_fmt.format(_currentDiscountAmount.toInt())}', const Color(0xFFD97706))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'ডিসকাউন্ট সম্পাদন', onPressed: _editDiscount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editDiscount, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('ডিসকাউন্ট যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
           const SizedBox(height: 4),
           Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
           const SizedBox(height: 4),
           Builder(builder: (_) {
-            final cashPaid = (paid.toInt() - _currentDeductionAmount.toInt() - _currentReturnAmount.toInt()).clamp(0, 9999999);
+            final deduction = _currentDeductionAmount.toInt();
+            final returnAmt = _currentReturnAmount.toInt();
+            final cashFromPayments = _currentPayments.fold<num>(0, (s, p) => s + ((p['amount'] as num?)?.toInt() ?? 0));
+            final cashPaid = cashFromPayments > 0 ? cashFromPayments.toInt() : (paid.toInt() - deduction - returnAmt).clamp(0, 9999999);
             return Column(children: [
-              if (_currentDeductionAmount > 0) _payRow('জমা: রিপ্লেস বাবদ', '৳ ${_fmt.format(_currentDeductionAmount.toInt())}', const Color(0xFF7C3AED)),
-              if (_currentReturnAmount > 0) _payRow('জমা: ফেরত বাবদ', '৳ ${_fmt.format(_currentReturnAmount.toInt())}', const Color(0xFF8B5CF6)),
+              if (deduction > 0) _payRow('জমা: রিপ্লেস বাবদ', '৳ ${_fmt.format(deduction)}', const Color(0xFF7C3AED)),
+              if (returnAmt > 0) _payRow('জমা: ফেরত বাবদ', '৳ ${_fmt.format(returnAmt)}', const Color(0xFF8B5CF6)),
               if (_currentPayments.isNotEmpty)
                 ..._currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).map((p) => _payRow('জমা: ${p['method'] ?? 'নগদ'}', '৳ ${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)}', const Color(0xFF16A34A)))
-              else
-                _payRow('জমা: নগদ (${_currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : "SR হাতে"})', '৳ ${_fmt.format(cashPaid)}', const Color(0xFF16A34A)),
+              else if (cashPaid > 0)
+                _payRow('জমা: নগদ (${_currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : _handLabel})', '৳ ${_fmt.format(cashPaid)}', const Color(0xFF16A34A)),
               const SizedBox(height: 4),
               Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
               const SizedBox(height: 4),
@@ -2816,13 +2822,28 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [const Icon(Icons.swap_horiz_rounded, size: 15, color: Color(0xFF7C3AED)), const SizedBox(width: 6), Text('রিপ্লেস প্রডাক্ট (${_currentReplaceItems.length}টি)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF7C3AED)))]),
                 const SizedBox(height: 6),
-                ..._currentReplaceItems.map((item) {
+                ..._currentReplaceItems.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final item = entry.value;
                   final name = item['productName'] ?? '';
                   final qty = item['quantity'] ?? 0;
                   final type = item['resolutionType'] ?? '';
                   final ded = item['deductionAmount'] ?? 0;
                   final label = type == 'money_deduct' ? '$name × $qty — ৳${_fmt.format(ded)} টাকা কাটা' : type == 'replace_given' ? '$name × $qty — রিপ্লেস দেওয়া হল' : '$name × $qty — রিপ্লেস নেওয়া হল';
-                  return Padding(padding: const EdgeInsets.only(bottom: 2), child: Text('• $label', style: const TextStyle(fontSize: 11, color: Color(0xFF7C3AED))));
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Row(children: [
+                      Expanded(child: Text('• $label', style: const TextStyle(fontSize: 11, color: Color(0xFF7C3AED)))),
+                      InkWell(
+                        onTap: () => _removeReplaceItem(idx, item),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(Icons.close_rounded, size: 14, color: Colors.red.shade400),
+                        ),
+                      ),
+                    ]),
+                  );
                 }),
               ]),
             ),
@@ -3014,6 +3035,20 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     ctrl.dispose();
   }
 
+  void _editDeductionAmount() async {
+    final ctrl = TextEditingController(text: _currentDeductionAmount.toStringAsFixed(0));
+    final ok = await Get.dialog<bool>(AlertDialog(title: const Text('রিপ্লেস বাবদ সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('আপডেট'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED), foregroundColor: Colors.white))]));
+    if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? 0; await controller.saveDeductionAmount(widget.order.id, v); setState(() => _currentDeductionAmount = v); }
+    ctrl.dispose();
+  }
+
+  void _editReturnAmount() async {
+    final ctrl = TextEditingController(text: _currentReturnAmount.toStringAsFixed(0));
+    final ok = await Get.dialog<bool>(AlertDialog(title: const Text('ফেরত বাদ সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('আপডেট'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6), foregroundColor: Colors.white))]));
+    if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? 0; await controller.saveReturnAmount(widget.order.id, v); setState(() => _currentReturnAmount = v); }
+    ctrl.dispose();
+  }
+
   void _editLocalMemo() async {
     final ctrl = TextEditingController(text: _currentLocalMemo);
     final ok = await Get.dialog<bool>(AlertDialog(title: const Text('লোকাল মেমো', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(hintText: 'যেমন: 233', prefixText: '#', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('সেভ'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
@@ -3022,8 +3057,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   }
 
   void _editPaymentMethod() async {
-    const methods = ['SR হাতে', 'বিকাশ', 'নগদ অ্যাপ', 'রকেট', 'ব্যাংক'];
-    final cur = _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : 'SR হাতে';
+    final methods = [_handLabel, 'বিকাশ', 'নগদ অ্যাপ', 'রকেট', 'ব্যাংক'];
+    final cur = _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : _handLabel;
     final result = await showModalBottomSheet<String>(context: context, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))), builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [...methods.map((m) => ListTile(leading: Icon(m == cur ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: m == cur ? const Color(0xFF7C3AED) : Colors.grey), title: Text(m), onTap: () => Navigator.pop(ctx, m))), const SizedBox(height: 8)])));
     if (result != null && result != cur) { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'paymentMethod': result}); setState(() { _currentPaymentMethod = result; }); }
   }
@@ -3096,6 +3131,75 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     final newDate = DateTime(picked.year, picked.month, picked.day, time.hour, time.minute);
     await controller.updateDeliveredAt(widget.order.id, newDate);
     setState(() { _deliveredAt = newDate; });
+  }
+
+  Future<void> _removeReplaceItem(int index, Map<String, dynamic> item) async {
+    final name = item['productName'] ?? '';
+    final qty = item['quantity'] ?? 0;
+    final type = item['resolutionType'] ?? '';
+    
+    final ok = await _confirm(
+      'রিপ্লেস সরাবেন?',
+      '"$name" × $qty রিপ্লেস আইটেম সরিয়ে দিতে চান?',
+    );
+    if (ok != true) return;
+
+    try {
+      // Restore stock if it was deducted (product_replace or replace_given)
+      if (type == 'product_replace' || type == 'replace_given') {
+        final productId = item['productId'] ?? '';
+        if (productId.isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('products')
+              .doc(productId)
+              .update({'stock': FieldValue.increment(qty)});
+          try {
+            Get.find<ProductController>().fetchProducts(forceRefresh: true);
+          } catch (_) {}
+        }
+      }
+
+      // Remove from replace entries if it was added (money_deduct or product_replace)
+      if (type == 'money_deduct' || type == 'product_replace') {
+        try {
+          AdminReplaceController rc;
+          try {
+            rc = Get.find<AdminReplaceController>();
+          } catch (_) {
+            rc = Get.put(AdminReplaceController());
+          }
+          // Find and delete the matching customer-in entry
+          final matchingEntry = rc.entries.firstWhereOrNull((e) =>
+              e.productId == (item['productId'] ?? '') &&
+              e.customerId == _currentUserId &&
+              e.quantity == qty &&
+              !e.deliveredToCustomer);
+          if (matchingEntry != null) {
+            await rc.deleteEntry(matchingEntry);
+          }
+          await rc.fetchEntries(force: true);
+        } catch (_) {}
+      }
+
+      // Update Firestore and local state
+      final newList = List<Map<String, dynamic>>.from(_currentReplaceItems);
+      newList.removeAt(index);
+      await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(widget.order.id)
+          .update({'replaceItems': newList});
+      setState(() => _currentReplaceItems = newList);
+
+      Get.snackbar('সফল', 'রিপ্লেস আইটেম সরানো হয়েছে',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF16A34A),
+          colorText: Colors.white);
+    } catch (e) {
+      Get.snackbar('ত্রুটি', 'সরানো যায়নি: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white);
+    }
   }
 
   void _addReplaceFromDetailPage() async {

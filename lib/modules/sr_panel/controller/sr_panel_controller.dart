@@ -118,15 +118,13 @@ class SrPanelController extends GetxController {
         .collection('orders')
         .where('orderedBy', isEqualTo: srDocId)
         .where('status', isEqualTo: 'delivered')
+        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('createdAt', isLessThan: Timestamp.fromDate(end))
         .get();
 
     int count = 0;
     double rev = 0;
     for (final doc in snap.docs) {
-      final ts = doc.data()['createdAt'];
-      if (ts is! Timestamp) continue;
-      final dt = ts.toDate();
-      if (dt.isBefore(start) || !dt.isBefore(end)) continue;
       count++;
       rev += (doc.data()['totalAmount'] as num?)?.toDouble() ?? 0;
     }
@@ -166,29 +164,38 @@ class SrPanelController extends GetxController {
     try {
       final sr = srProfile.value;
       if (sr == null) return;
+
+      // Single query: fetch all non-delivered orders for this SR
+      final snap = await _db
+          .collection('orders')
+          .where('orderedBy', isEqualTo: srDocId)
+          .where('status', whereNotIn: ['delivered', 'cancelled'])
+          .get();
+
+      // Group by userId
+      final dueMap = <String, num>{};
+      final countMap = <String, int>{};
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final userId = (data['userId'] ?? '').toString();
+        if (userId.isEmpty) continue;
+        final total = (data['totalAmount'] as num?) ?? 0;
+        final paid = (data['paidAmount'] as num?) ?? 0;
+        final due = (total - paid).clamp(0, double.infinity);
+        dueMap[userId] = (dueMap[userId] ?? 0) + due;
+        countMap[userId] = (countMap[userId] ?? 0) + 1;
+      }
+
       final dues = <CustomerDueSummary>[];
       for (final u in assignedShops) {
-        // Sum unpaid orders for this customer from this SR
-        final snap = await _db
-            .collection('orders')
-            .where('userId', isEqualTo: u.id)
-            .where('orderedBy', isEqualTo: srDocId)
-            .where('status', whereNotIn: ['delivered', 'cancelled'])
-            .get();
-        num totalDue = 0;
-        for (final doc in snap.docs) {
-          final data = doc.data();
-          final total = (data['totalAmount'] as num?) ?? 0;
-          final paid = (data['paidAmount'] as num?) ?? 0;
-          totalDue += (total - paid).clamp(0, double.infinity);
-        }
+        final totalDue = dueMap[u.id] ?? 0;
         if (totalDue > 0) {
           dues.add(CustomerDueSummary(
             userId: u.id,
             shopName: u.shopName.isNotEmpty ? u.shopName : u.proprietorName,
             proprietorName: u.proprietorName,
             totalDue: totalDue,
-            pendingOrders: snap.docs.length,
+            pendingOrders: countMap[u.id] ?? 0,
           ));
         }
       }

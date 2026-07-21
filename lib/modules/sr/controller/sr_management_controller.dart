@@ -321,6 +321,9 @@ class SrManagementController extends GetxController {
     final ordersSnap = await _db
         .collection('orders')
         .where('status', isEqualTo: 'delivered')
+        .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('createdAt', isLessThan: Timestamp.fromDate(end))
+        .orderBy('createdAt', descending: true)
         .get();
 
     int deliveries = 0;
@@ -329,10 +332,6 @@ class SrManagementController extends GetxController {
       final data = doc.data();
       final srId = data['srId'] ?? data['orderedBy'] ?? '';
       if (srId != sr.id) continue;
-      final ts = data['createdAt'];
-      if (ts is! Timestamp) continue;
-      final dt = ts.toDate();
-      if (dt.isBefore(start) || !dt.isBefore(end)) continue;
       deliveries++;
       revenue += (data['totalAmount'] as num?)?.toDouble() ?? 0;
     }
