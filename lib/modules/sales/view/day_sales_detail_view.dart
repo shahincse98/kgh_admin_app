@@ -61,7 +61,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           .where('status', isEqualTo: 'delivered')
           .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(queryStart))
           .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(queryEnd))
-          .orderBy('createdAt', descending: false)
+          .orderBy('createdAt', descending: true)
           .get();
 
       final all = <Map<String, dynamic>>[];
@@ -204,7 +204,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
       });
 
       _totalExpenses = _expenses.fold(0.0, (s, e) => s + ((e['amount'] as num?)?.toDouble() ?? 0));
-    } catch (_) {}
+    } catch (e) { debugPrint('DaySalesDetailView loadData error: $e'); }
     setState(() => _loading = false);
   }
 
