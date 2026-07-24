@@ -151,12 +151,13 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           }
         } else {
           cashPaid = paidAmount;
-          actualCash = paidAmount;
+          actualCash = (paidAmount - deduction - returnAmt).clamp(0, double.infinity).toDouble();
+          _adjustments += (deduction + returnAmt);
           final method = (o['paymentMethod'] ?? '').toString().trim();
           if (method == 'বিকাশ') {
-            _bkash += cashPaid;
+            _bkash += actualCash;
           } else {
-            _srHand += cashPaid;
+            _srHand += actualCash;
           }
         }
 
