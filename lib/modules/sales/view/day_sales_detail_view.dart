@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../../widgets/call_button.dart';
@@ -20,14 +19,21 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
 
   List<Map<String, dynamic>> _orders = [];
   List<Map<String, dynamic>> _expenses = [];
+  Map<String, num> _productCostById = {};
+  int _orderCount = 0;
   double _srHand = 0;
   double _bkash = 0;
   double _others = 0;
-  double _totalRevenue = 0;
+  double _adjustments = 0;
+  double _totalNetSales = 0;
+  double _totalGross = 0;
+  double _totalPurchaseCost = 0;
+  double _totalSrCommission = 0;
+  double _commissionPercent = 6.0;
   double _totalDeduction = 0;
   double _totalReturn = 0;
   double _totalDiscount = 0;
-  double _totalDueCollected = 0;
+  double _totalPreviousDue = 0;
   double _totalNewDue = 0;
   double _totalExpenses = 0;
   bool _loading = true;
@@ -42,104 +48,154 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
     setState(() => _loading = true);
     try {
       final d = widget.date;
-      final start = DateTime(d.year, d.month, d.day);
-      final end = DateTime(d.year, d.month, d.day, 23, 59, 59);
+      final dayStart = DateTime(d.year, d.month, d.day);
+      final dayEnd = DateTime(d.year, d.month, d.day, 23, 59, 59);
 
+      await _loadProductCosts();
+      await _loadCommissionPercent();
+
+      final queryStart = DateTime(d.year - 1, d.month, d.day);
+      final queryEnd = DateTime(d.year + 1, d.month, d.day);
       final snap = await _db
           .collection('orders')
           .where('status', isEqualTo: 'delivered')
-          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-          .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(end))
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(queryStart))
+          .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(queryEnd))
+          .orderBy('createdAt', descending: false)
           .get();
 
-      final all = snap.docs
-          .map((doc) {
-            final data = doc.data() as Map<String, dynamic>?;
-            if (data == null) return null;
-            final da = data['deliveredAt'];
-            final dt = da is Timestamp ? da.toDate() : (data['createdAt'] is Timestamp ? (data['createdAt'] as Timestamp).toDate() : null);
-            if (dt == null) return null;
-            if (dt.isBefore(start) || dt.isAfter(end)) return null;
-            data['_docId'] = doc.id;
-            return data;
-          })
-          .whereType<Map<String, dynamic>>()
-          .toList();
+      final all = <Map<String, dynamic>>[];
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final da = data['deliveredAt'];
+        final dt = da is Timestamp
+            ? da.toDate()
+            : (data['createdAt'] is Timestamp
+                ? (data['createdAt'] as Timestamp).toDate()
+                : null);
+        if (dt == null) continue;
+        if (dt.isBefore(dayStart) || dt.isAfter(dayEnd)) continue;
+        data['_docId'] = doc.id;
+        all.add(data);
+      }
 
       _orders = all;
-      _totalRevenue = 0;
+      _orderCount = all.length;
+      _totalGross = 0;
+      _totalNetSales = 0;
+      _totalPurchaseCost = 0;
       _srHand = 0;
       _bkash = 0;
       _others = 0;
+      _adjustments = 0;
       _totalDeduction = 0;
       _totalReturn = 0;
       _totalDiscount = 0;
-      _totalDueCollected = 0;
+      _totalPreviousDue = 0;
       _totalNewDue = 0;
+
+      final Map<String, Map<String, dynamic>> lastOrderByShop = {};
 
       for (final o in _orders) {
         final orderTotal = (o['totalAmount'] as num?)?.toDouble() ?? 0;
-        _totalRevenue += orderTotal;
+        final paidAmount = (o['paidAmount'] as num?)?.toDouble() ?? 0;
         final deduction = (o['deductionAmount'] as num?)?.toDouble() ?? 0;
         final returnAmt = (o['returnAmount'] as num?)?.toDouble() ?? 0;
         final discount = (o['discountAmount'] as num?)?.toDouble() ?? 0;
+        final previousDue = (o['previousDue'] as num?)?.toDouble() ?? 0;
+
+        _totalGross += orderTotal;
         _totalDeduction += deduction;
         _totalReturn += returnAmt;
         _totalDiscount += discount;
 
-        final orderNet = (orderTotal - discount - deduction - returnAmt).clamp(0, double.infinity).toDouble();
-        double cashPaid = 0;
+        final net = (orderTotal - discount - deduction - returnAmt).clamp(0, double.infinity).toDouble();
+        _totalNetSales += net;
 
+        final items = (o['items'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
+        double purchaseCost = 0;
+        for (final item in items) {
+          final pid = (item['productId'] ?? '').toString();
+          final qty = (item['quantity'] as num?)?.toInt() ?? 1;
+          final costInOrder = (item['purchasePrice'] as num?) ?? 0;
+          if (costInOrder > 0) {
+            purchaseCost += costInOrder * qty;
+          } else {
+            purchaseCost += (_productCostById[pid] ?? 0) * qty;
+          }
+        }
+        _totalPurchaseCost += purchaseCost;
+        o['_purchaseCost'] = purchaseCost;
+
+        double actualCash = 0;
+        double cashPaid = 0;
         final payments = o['payments'];
         if (payments is List && payments.isNotEmpty) {
           for (final p in payments) {
             if (p is! Map) continue;
-            final method = (p['method'] ?? '').toString();
+            final method = (p['method'] ?? '').toString().trim();
             final amt = (p['amount'] as num?)?.toDouble() ?? 0;
             cashPaid += amt;
             if (method == 'SR হাতে') {
               _srHand += amt;
+              actualCash += amt;
             } else if (method == 'বিকাশ') {
               _bkash += amt;
-            } else {
+              actualCash += amt;
+            } else if (['নগদ', 'রকেট', 'ব্যাংক'].contains(method)) {
               _others += amt;
+              actualCash += amt;
+            } else {
+              _adjustments += amt;
             }
           }
         } else {
-          final method = (o['paymentMethod'] ?? 'SR হাতে').toString();
-          cashPaid = orderNet;
-          if (method == 'SR হাতে') {
-            _srHand += orderNet;
-          } else if (method == 'বিকাশ') {
-            _bkash += orderNet;
+          cashPaid = paidAmount;
+          actualCash = paidAmount;
+          final method = (o['paymentMethod'] ?? '').toString().trim();
+          if (method == 'বিকাশ') {
+            _bkash += cashPaid;
           } else {
-            _others += orderNet;
+            _srHand += cashPaid;
           }
         }
 
-        final dueCollected = (cashPaid - orderNet).clamp(0, double.infinity);
-        _totalDueCollected += dueCollected;
-        final previousDue = (o['previousDue'] as num?)?.toDouble() ?? 0;
-        final newDue = (previousDue + orderNet - cashPaid).clamp(0, double.infinity);
+        final newDue = (previousDue + net - cashPaid).clamp(0, double.infinity);
         _totalNewDue += newDue;
 
-        o['_orderNet'] = orderNet;
-        o['_cashPaid'] = cashPaid;
-        o['_dueCollected'] = dueCollected;
+        o['_orderNet'] = net;
+        o['_cashPaid'] = actualCash;
         o['_newDue'] = newDue;
+
+        final userId = (o['userId'] ?? o['uid'] ?? '').toString();
+        if (userId.isNotEmpty) {
+          lastOrderByShop[userId] = o;
+        }
       }
+
+      _totalPreviousDue = 0;
+      double distinctNewDue = 0;
+      for (final o in lastOrderByShop.values) {
+        final previousDue = (o['previousDue'] as num?)?.toDouble() ?? 0;
+        final net = (o['_orderNet'] as num?)?.toDouble() ?? 0;
+        final actualCash = (o['_cashPaid'] as num?)?.toDouble() ?? 0;
+        _totalPreviousDue += previousDue;
+        distinctNewDue += (previousDue + net - actualCash).clamp(0, double.infinity);
+      }
+      _totalNewDue = distinctNewDue;
+
+      _totalSrCommission = _totalNetSales * (_commissionPercent / 100);
 
       final eSnap = await _db
           .collection('expenses')
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(end))
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(dayStart))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(dayEnd))
           .get();
 
       _expenses = eSnap.docs.map((d) {
-        final data = d.data() as Map<String, dynamic>?;
-        if (data == null) return null;
+        final data = d.data();
         return <String, dynamic>{...data, 'id': d.id};
-      }).whereType<Map<String, dynamic>>().toList();
+      }).toList();
       _expenses.sort((a, b) {
         final aT = a['date'] as Timestamp?;
         final bT = b['date'] as Timestamp?;
@@ -150,6 +206,27 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
       _totalExpenses = _expenses.fold(0.0, (s, e) => s + ((e['amount'] as num?)?.toDouble() ?? 0));
     } catch (_) {}
     setState(() => _loading = false);
+  }
+
+  Future<void> _loadProductCosts() async {
+    try {
+      final snap = await _db.collection('products').get();
+      _productCostById = {};
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        _productCostById[doc.id] = (data['purchasePrice'] as num?) ?? 0;
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadCommissionPercent() async {
+    try {
+      final doc = await _db.collection('admin_settings').doc('finance').get();
+      if (doc.exists) {
+        final data = doc.data();
+        _commissionPercent = (data?['srCommissionPercent'] as num?)?.toDouble() ?? 6.0;
+      }
+    } catch (_) {}
   }
 
   Future<void> _addExpense() async {
@@ -255,16 +332,31 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
   }
 
   Widget _summaryCards(ColorScheme scheme) {
-    final net = _totalRevenue - _totalExpenses;
+    final totalDue = _totalPreviousDue + _totalNetSales;
+    final totalCash = _srHand + _bkash + _others;
+    final netProfit = _totalNetSales - _totalPurchaseCost - _totalSrCommission - _totalExpenses;
+    final profitRateNoSr = _totalNetSales > 0 ? ((_totalNetSales - _totalPurchaseCost) / _totalNetSales * 100) : 0.0;
+    final profitRateWithSr = _totalNetSales > 0 ? (netProfit / _totalNetSales * 100) : 0.0;
     return Wrap(spacing: 10, runSpacing: 10, children: [
-      _card('মোট বিক্রি', '৳ ${_fmtInt.format(_totalRevenue.toInt())}', Icons.trending_up_rounded, const Color(0xFF0891B2)),
-      _card('SR হাতে', '৳ ${_fmtInt.format(_srHand.toInt())}', Icons.person_pin_rounded, const Color(0xFF7C3AED)),
+      _card('মোট অর্ডার', '$_orderCount টি', Icons.receipt_long_rounded, const Color(0xFF0891B2)),
+      _card('Gross বিক্রি', '৳ ${_fmtInt.format(_totalGross.toInt())}', Icons.shopping_cart_rounded, const Color(0xFF0891B2)),
+      _card('পূর্বের বাকি', '৳ ${_fmtInt.format(_totalPreviousDue.toInt())}', Icons.history_rounded, const Color(0xFFD97706)),
+      _card('মোট দেনা', '৳ ${_fmtInt.format(totalDue.toInt())}', Icons.account_balance_rounded, const Color(0xFF0891B2)),
+      if (_totalDeduction > 0) _card('রিপ্লেস বাবদ', '৳ ${_fmtInt.format(_totalDeduction.toInt())}', Icons.swap_horiz_rounded, const Color(0xFF8B5CF6)),
+      if (_totalReturn > 0) _card('ফেরত বাদ', '৳ ${_fmtInt.format(_totalReturn.toInt())}', Icons.keyboard_return_rounded, const Color(0xFF8B5CF6)),
+      if (_totalDiscount > 0) _card('ডিসকাউন্ট', '৳ ${_fmtInt.format(_totalDiscount.toInt())}', Icons.discount_rounded, const Color(0xFFD97706)),
+      _card('নেট বিক্রি', '৳ ${_fmtInt.format(_totalNetSales.toInt())}', Icons.trending_up_rounded, const Color(0xFF16A34A)),
+      _card('জমা: SR হাতে', '৳ ${_fmtInt.format(_srHand.toInt())}', Icons.person_pin_rounded, const Color(0xFF7C3AED)),
       _card('বিকাশ/অন্যান্য', '৳ ${_fmtInt.format((_bkash + _others).toInt())}', Icons.account_balance_wallet_rounded, const Color(0xFFD97706)),
+      _card('মোট জমা', '৳ ${_fmtInt.format(totalCash.toInt())}', Icons.payments_rounded, const Color(0xFF16A34A)),
+      if (_adjustments > 0) _card('অ্যাডজাস্টমেন্ট', '৳ ${_fmtInt.format(_adjustments.toInt())}', Icons.tune_rounded, const Color(0xFF8B5CF6)),
+      _card('নতুন বাকি', '৳ ${_fmtInt.format(_totalNewDue.toInt())}', Icons.hourglass_bottom_rounded, _totalNewDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)),
+      _card('ক্রয় মূল্য', '৳ ${_fmtInt.format(_totalPurchaseCost.toInt())}', Icons.shopping_bag_rounded, const Color(0xFFD97706)),
+      _card('SR কমিশন (${_commissionPercent.toStringAsFixed(0)}%)', '৳ ${_fmtInt.format(_totalSrCommission.toInt())}', Icons.person_pin_rounded, const Color(0xFF8B5CF6)),
+      _card('নিট লাভ', '৳ ${_fmtInt.format(netProfit.toInt())}', Icons.savings_rounded, netProfit >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+      _card('লাভের হার (SR বাদে)', '${profitRateNoSr.toStringAsFixed(2)}%', Icons.percent_rounded, const Color(0xFF10B981)),
+      _card('লাভের হার (SR সহ)', '${profitRateWithSr.toStringAsFixed(2)}%', Icons.percent_rounded, const Color(0xFF8B5CF6)),
       _card('খরচ', '৳ ${_fmtInt.format(_totalExpenses.toInt())}', Icons.money_off_rounded, const Color(0xFFDC2626)),
-      _card('বাকি কালেকশন', '৳ ${_fmtInt.format(_totalDueCollected.toInt())}', Icons.payments_rounded, const Color(0xFF10B981)),
-      _card('রিপ্লেস/ফেরত বাদ', '৳ ${_fmtInt.format((_totalDeduction + _totalReturn).toInt())}', Icons.swap_horiz_rounded, const Color(0xFF8B5CF6)),
-      _card('আজ বাকি পড়েছে', '৳ ${_fmtInt.format(_totalNewDue.toInt())}', Icons.hourglass_bottom_rounded, _totalNewDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)),
-      _card('নিট', '৳ ${_fmtInt.format(net.toInt())}', Icons.savings_rounded, net >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
     ]);
   }
 
@@ -295,7 +387,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           const SizedBox(width: 8),
           Text('অর্ডার সমূহ (${_orders.length}টি)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
           const Spacer(),
-          Text('৳ ${_fmtInt.format(_totalRevenue.toInt())}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0891B2))),
+          Text('৳ ${_fmtInt.format(_totalNetSales.toInt())}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0891B2))),
         ]),
         childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
         children: _orders.map((o) => _orderCard(scheme, o)).toList(),
@@ -316,9 +408,12 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
     final deduction = (o['deductionAmount'] as num?)?.toDouble() ?? 0;
     final returnAmt = (o['returnAmount'] as num?)?.toDouble() ?? 0;
     final discount = (o['discountAmount'] as num?)?.toDouble() ?? 0;
-    final dueCollected = (o['_dueCollected'] as num?)?.toDouble() ?? 0;
     final newDue = (o['_newDue'] as num?)?.toDouble() ?? 0;
     final cashPaid = (o['_cashPaid'] as num?)?.toDouble() ?? 0;
+    final orderNet = (o['_orderNet'] as num?)?.toDouble() ?? 0;
+    final purchaseCost = (o['_purchaseCost'] as num?)?.toDouble() ?? 0;
+    final commission = orderNet * (_commissionPercent / 100);
+    final profit = orderNet - purchaseCost - commission;
 
     return Card(
       elevation: 0, margin: const EdgeInsets.only(bottom: 8),
@@ -373,13 +468,8 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
               Text(payments.map((p) => '${p['method']}: ৳${_fmtInt.format((p['amount'] as num?)?.toInt() ?? 0)}').join('  •  '),
                   style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w600))
             else
-              Text('${o['paymentMethod'] ?? 'SR হাতে'}: ৳${_fmtInt.format(cashPaid.toInt())}',
+              Text('${o['paymentMethod'] ?? ''}: ৳${_fmtInt.format(cashPaid.toInt())}',
                   style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED))),
-            if (dueCollected > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: _tag('বাকি কালেকশন: +৳${_fmtInt.format(dueCollected.toInt())}', const Color(0xFF10B981)),
-              ),
           ],
           if (deduction > 0 || returnAmt > 0 || discount > 0) ...[
             const SizedBox(height: 2),
@@ -394,6 +484,21 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
               padding: const EdgeInsets.only(top: 2),
               child: _tag('নতুন বাকি: ৳${_fmtInt.format(newDue.toInt())}', const Color(0xFFDC2626)),
             ),
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: profit >= 0 ? const Color(0xFF16A34A).withAlpha(10) : const Color(0xFFDC2626).withAlpha(10),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(children: [
+              Text('নেট: ৳${_fmtInt.format(orderNet.toInt())}', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(150))),
+              const SizedBox(width: 8),
+              Text('ক্রয়: ৳${_fmtInt.format(purchaseCost.toInt())}', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(150))),
+              const SizedBox(width: 8),
+              Text('লাভ: ৳${_fmtInt.format(profit.toInt())}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: profit >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626))),
+            ]),
+          ),
           if (memo.isNotEmpty || dispatchMemo.isNotEmpty) ...[
             const SizedBox(height: 3),
             Row(children: [

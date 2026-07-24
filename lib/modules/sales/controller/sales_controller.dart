@@ -8,8 +8,27 @@ class SalesOrderRow {
   final String shopPhone;
   final String status;
   final double totalAmount;
+  final double paidAmount;
+  final double deductionAmount;
+  final double returnAmount;
+  final double discountAmount;
+  final double purchaseCost;
+  final int previousDue;
+  final String localMemo;
+  final String memoNumber;
+  final String paymentMethod;
+  final String deliveryAssignedSrId;
+  final String deliveryAssignedSrName;
+  final String deliveredBySrId;
   final List<Map<String, dynamic>> items;
   final List<Map<String, dynamic>> payments;
+
+  double get netSales =>
+      (totalAmount - discountAmount - deductionAmount - returnAmount)
+          .clamp(0, double.infinity);
+  double get profit => netSales - purchaseCost;
+  bool get hasSr =>
+      deliveryAssignedSrId.isNotEmpty || deliveredBySrId.isNotEmpty;
 
   SalesOrderRow({
     required this.id,
@@ -18,6 +37,18 @@ class SalesOrderRow {
     required this.shopPhone,
     required this.status,
     required this.totalAmount,
+    required this.paidAmount,
+    required this.deductionAmount,
+    required this.returnAmount,
+    required this.discountAmount,
+    required this.purchaseCost,
+    required this.previousDue,
+    required this.localMemo,
+    required this.memoNumber,
+    required this.paymentMethod,
+    required this.deliveryAssignedSrId,
+    required this.deliveryAssignedSrName,
+    required this.deliveredBySrId,
     required this.items,
     required this.payments,
   });
@@ -26,8 +57,17 @@ class SalesOrderRow {
 class SalesDayRow {
   final DateTime date;
   final List<SalesOrderRow> orders;
-  double get totalRevenue =>
-      orders.fold(0.0, (s, o) => s + o.totalAmount);
+
+  double get totalNetSales =>
+      orders.fold(0.0, (s, o) => s + o.netSales);
+  double get totalPurchaseCost =>
+      orders.fold(0.0, (s, o) => s + o.purchaseCost);
+  double get totalDeduction =>
+      orders.fold(0.0, (s, o) => s + o.deductionAmount);
+  double get totalReturn =>
+      orders.fold(0.0, (s, o) => s + o.returnAmount);
+  double get totalDiscount =>
+      orders.fold(0.0, (s, o) => s + o.discountAmount);
   int get orderCount => orders.length;
 
   SalesDayRow({required this.date, required this.orders});
@@ -44,16 +84,22 @@ class SalesController extends GetxController {
   final allOrders = <SalesOrderRow>[].obs;
   final dayRows = <SalesDayRow>[].obs;
 
-  final monthRevenue = 0.0.obs;
+  final monthNetSales = 0.0.obs;
   final monthOrderCount = 0.obs;
   final avgOrderValue = 0.0.obs;
   final totalExpenses = 0.0.obs;
   final totalPurchaseCost = 0.0.obs;
+  final totalDeduction = 0.0.obs;
+  final totalReturn = 0.0.obs;
+  final totalDiscount = 0.0.obs;
+  final srCommissionPercent = 6.0.obs;
 
   final topProducts = <MapEntry<String, int>>[].obs;
   final topShops = <MapEntry<String, double>>[].obs;
 
   final paymentBreakdown = <MapEntry<String, double>>[].obs;
+
+  Map<String, num> _productCostById = {};
 
   @override
   void onInit() {
@@ -61,26 +107,60 @@ class SalesController extends GetxController {
     final today = DateTime.now();
     fromDate.value = DateTime(today.year, today.month, today.day);
     toDate.value = DateTime(today.year, today.month, today.day, 23, 59, 59);
+    _loadCommissionPercent();
     loadData();
   }
 
   void setDateRange(DateTime? from, DateTime? to) {
     fromDate.value = from;
-    toDate.value = to != null ? DateTime(to.year, to.month, to.day, 23, 59, 59) : null;
+    toDate.value =
+        to != null ? DateTime(to.year, to.month, to.day, 23, 59, 59) : null;
     loadData();
+  }
+
+  Future<void> _loadProductCosts() async {
+    try {
+      final snap = await _db.collection('products').get();
+      _productCostById = {};
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final cost = (data['purchasePrice'] as num?) ?? 0;
+        _productCostById[doc.id] = cost;
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadCommissionPercent() async {
+    try {
+      final doc = await _db.collection('admin_settings').doc('finance').get();
+      if (doc.exists) {
+        final data = doc.data();
+        srCommissionPercent.value =
+            (data?['srCommissionPercent'] as num?)?.toDouble() ?? 6.0;
+      }
+    } catch (_) {}
   }
 
   Future<void> loadData() async {
     loading.value = true;
     try {
-      final start = fromDate.value ?? DateTime.now().subtract(const Duration(days: 30));
+      await _loadProductCosts();
+
+      final start =
+          fromDate.value ?? DateTime.now().subtract(const Duration(days: 30));
       final end = toDate.value ?? DateTime.now();
+
+      // Query a wide range by createdAt so we catch orders created earlier
+      // but delivered within the selected period.
+      final queryStart = DateTime(start.year - 1, start.month, start.day);
+      final queryEnd = DateTime(end.year + 1, end.month, end.day);
 
       final snap = await _db
           .collection('orders')
           .where('status', isEqualTo: 'delivered')
-          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-          .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(end))
+          .where('createdAt',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(queryStart))
+          .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(queryEnd))
           .orderBy('createdAt', descending: true)
           .get();
 
@@ -101,6 +181,15 @@ class SalesController extends GetxController {
             : <Map<String, dynamic>>[];
         final da = data['deliveredAt'];
         final deliveredAt = da is Timestamp ? da.toDate() : null;
+
+        final purchaseCost = items.fold<num>(0, (s, item) {
+          final pid = (item['productId'] ?? '').toString();
+          final qty = (item['quantity'] as num?)?.toInt() ?? 1;
+          final costInOrder = (item['purchasePrice'] as num?) ?? 0;
+          if (costInOrder > 0) return s + costInOrder * qty;
+          return s + (_productCostById[pid] ?? 0) * qty;
+        });
+
         return SalesOrderRow(
           id: doc.id,
           createdAt: deliveredAt ?? createdAt,
@@ -108,30 +197,37 @@ class SalesController extends GetxController {
           shopPhone: (data['shopPhone'] ?? '').toString(),
           status: (data['status'] ?? '').toString(),
           totalAmount: (data['totalAmount'] as num?)?.toDouble() ?? 0,
+          paidAmount: (data['paidAmount'] as num?)?.toDouble() ?? 0,
+          deductionAmount:
+              (data['deductionAmount'] as num?)?.toDouble() ?? 0,
+          returnAmount: (data['returnAmount'] as num?)?.toDouble() ?? 0,
+          discountAmount:
+              (data['discountAmount'] as num?)?.toDouble() ?? 0,
+          purchaseCost: purchaseCost.toDouble(),
+          previousDue: (data['previousDue'] as num?)?.toInt() ?? 0,
+          localMemo: (data['localMemo'] ?? '').toString(),
+          memoNumber: (data['memoNumber'] ?? '').toString(),
+          paymentMethod: (data['paymentMethod'] ?? '').toString(),
+          deliveryAssignedSrId:
+              (data['deliveryAssignedSrId'] ?? '').toString(),
+          deliveryAssignedSrName:
+              (data['deliveryAssignedSrName'] ?? '').toString(),
+          deliveredBySrId: (data['deliveredBySrId'] ?? '').toString(),
           items: items,
           payments: payments,
         );
       }).whereType<SalesOrderRow>().toList();
 
-      // Filter by date range in Dart (using the order's effective date)
-      var filtered = rows;
-      if (start != null) {
-        filtered = filtered.where((r) {
-          final d = DateTime(r.createdAt.year, r.createdAt.month, r.createdAt.day);
-          return !d.isBefore(DateTime(start.year, start.month, start.day));
-        }).toList();
-      }
-      if (end != null) {
-        filtered = filtered.where((r) {
-          final d = DateTime(r.createdAt.year, r.createdAt.month, r.createdAt.day);
-          return !d.isAfter(end);
-        }).toList();
-      }
+      var filtered = rows.where((r) {
+        final d = DateTime(r.createdAt.year, r.createdAt.month, r.createdAt.day);
+        return !d.isBefore(DateTime(start.year, start.month, start.day)) &&
+            !d.isAfter(DateTime(end.year, end.month, end.day));
+      }).toList();
 
       allOrders.assignAll(filtered);
       _buildSummary(filtered);
 
-      _loadExpenses(start, end); // fire-and-forget
+      _loadExpenses(start, end);
     } catch (e) {
       print('SalesController loadData error: $e');
     } finally {
@@ -143,7 +239,9 @@ class SalesController extends GetxController {
     try {
       Query q = _db.collection('expenses');
       if (start != null) {
-        q = q.where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime(start.year, start.month, start.day)));
+        q = q.where('date',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(
+                DateTime(start.year, start.month, start.day)));
       }
       if (end != null) {
         q = q.where('date', isLessThanOrEqualTo: Timestamp.fromDate(end));
@@ -156,24 +254,6 @@ class SalesController extends GetxController {
       });
     } catch (_) {
       totalExpenses.value = 0;
-    }
-
-    try {
-      Query q = _db.collection('purchases');
-      if (start != null) {
-        q = q.where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime(start.year, start.month, start.day)));
-      }
-      if (end != null) {
-        q = q.where('date', isLessThanOrEqualTo: Timestamp.fromDate(end));
-      }
-      final snap = await q.get();
-      totalPurchaseCost.value = snap.docs.fold(0.0, (s, d) {
-        final data = d.data() as Map<String, dynamic>?;
-        if (data == null) return s;
-        return s + ((data['totalAmount'] as num?)?.toDouble() ?? 0);
-      });
-    } catch (_) {
-      totalPurchaseCost.value = 0;
     }
   }
 
@@ -190,15 +270,25 @@ class SalesController extends GetxController {
           orders: dayMap[k]!,
         )));
 
-    final total = rows.fold(0.0, (s, r) => s + r.totalAmount);
-    monthRevenue.value = total;
+    final netSales = rows.fold(0.0, (s, r) => s + r.netSales);
+    final purchaseCost = rows.fold(0.0, (s, r) => s + r.purchaseCost);
+    final deduction = rows.fold(0.0, (s, r) => s + r.deductionAmount);
+    final returnAmt = rows.fold(0.0, (s, r) => s + r.returnAmount);
+    final discount = rows.fold(0.0, (s, r) => s + r.discountAmount);
+
+    monthNetSales.value = netSales;
     monthOrderCount.value = rows.length;
-    avgOrderValue.value = rows.isEmpty ? 0 : total / rows.length;
+    avgOrderValue.value = rows.isEmpty ? 0 : netSales / rows.length;
+    totalPurchaseCost.value = purchaseCost;
+    totalDeduction.value = deduction;
+    totalReturn.value = returnAmt;
+    totalDiscount.value = discount;
 
     final prodMap = <String, int>{};
     for (final r in rows) {
       for (final item in r.items) {
-        final name = (item['productName'] ?? item['name'] ?? '').toString();
+        final name =
+            (item['productName'] ?? item['name'] ?? '').toString();
         final qty = (item['quantity'] as num?)?.toInt() ?? 1;
         if (name.isNotEmpty) {
           prodMap[name] = (prodMap[name] ?? 0) + qty;
@@ -212,7 +302,7 @@ class SalesController extends GetxController {
     final shopMap = <String, double>{};
     for (final r in rows) {
       if (r.shopName.isNotEmpty) {
-        shopMap[r.shopName] = (shopMap[r.shopName] ?? 0) + r.totalAmount;
+        shopMap[r.shopName] = (shopMap[r.shopName] ?? 0) + r.netSales;
       }
     }
     final sortedShops = shopMap.entries.toList()
@@ -229,9 +319,8 @@ class SalesController extends GetxController {
             payMap[method] = (payMap[method] ?? 0) + amt;
           }
         }
-      } else if (r.totalAmount > 0) {
-        // Fallback: use totalAmount for old orders
-        payMap['জমা'] = (payMap['জমা'] ?? 0) + r.totalAmount;
+      } else if (r.netSales > 0) {
+        payMap['জমা'] = (payMap['জমা'] ?? 0) + r.netSales;
       }
     }
     final sortedPay = payMap.entries.toList()
