@@ -697,7 +697,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 final color = _statusColor(s);
                 return GestureDetector(
                   onTap: () async {
-                    if (s == _currentStatus) return;
+                    if (s == _currentStatus && s != 'delivered') return;
                     if (s == 'delivered') {
                       await _showDeliveryPaymentDialog(_currentStatus);
                     } else if (s == 'dispatched') {
@@ -2770,18 +2770,24 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           const SizedBox(height: 4),
           Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
           const SizedBox(height: 4),
-          Builder(builder: (_) {
+           Builder(builder: (_) {
             final deduction = _currentDeductionAmount.toInt();
             final returnAmt = _currentReturnAmount.toInt();
             final cashFromPayments = _currentPayments.fold<num>(0, (s, p) => s + ((p['amount'] as num?)?.toInt() ?? 0));
             final cashPaid = cashFromPayments > 0 ? cashFromPayments.toInt() : (paid.toInt() - deduction - returnAmt).clamp(0, 9999999);
+            final payMethod = _currentPayments.isNotEmpty ? (_currentPayments.first['method'] ?? '').toString() : '';
+            final methodLabel = payMethod.isNotEmpty ? payMethod : _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : _handLabel;
             return Column(children: [
               if (deduction > 0) _payRow('জমা: রিপ্লেস বাবদ', '৳ ${_fmt.format(deduction)}', const Color(0xFF7C3AED)),
               if (returnAmt > 0) _payRow('জমা: ফেরত বাবদ', '৳ ${_fmt.format(returnAmt)}', const Color(0xFF8B5CF6)),
-              if (_currentPayments.isNotEmpty)
-                ..._currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).map((p) => _payRow('জমা: ${p['method'] ?? 'নগদ'}', '৳ ${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)}', const Color(0xFF16A34A)))
+              if (_currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).isNotEmpty)
+                ..._currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).map((p) {
+                  final m = (p['method'] ?? '').toString();
+                  final label = m.isNotEmpty ? m : methodLabel;
+                  return _payRow('জমা: $label', '৳ ${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)}', const Color(0xFF16A34A));
+                })
               else if (cashPaid > 0)
-                _payRow('জমা: নগদ (${_currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : _handLabel})', '৳ ${_fmt.format(cashPaid)}', const Color(0xFF16A34A)),
+                _payRow('জমা: $methodLabel', '৳ ${_fmt.format(cashPaid)}', const Color(0xFF16A34A)),
               const SizedBox(height: 4),
               Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
               const SizedBox(height: 4),
@@ -2809,10 +2815,10 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             return _payRow('নতুন বাকি', '৳ ${_fmt.format(nd)}', nd > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A));
           }),
           const SizedBox(height: 4),
-          if (_currentPayments.isNotEmpty)
-            _payRow('পেমেন্ট মাধ্যম', _currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).map((p) => '${p['method']} (৳${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)})').join(', '), const Color(0xFF7C3AED))
+          if (_currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).isNotEmpty)
+            _payRow('পেমেন্ট মাধ্যম', _currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).map((p) { final m = (p['method'] ?? '').toString(); final label = m.isNotEmpty ? m : _handLabel; return '$label (৳${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)})'; }).join(', '), const Color(0xFF7C3AED))
           else
-            Row(children: [Expanded(child: _payRow('পেমেন্ট মাধ্যম', _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : '—', const Color(0xFF7C3AED))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'মাধ্যম পরিবর্তন', onPressed: _editPaymentMethod)]),
+            Row(children: [Expanded(child: _payRow('পেমেন্ট মাধ্যম', _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : _handLabel, const Color(0xFF7C3AED))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'মাধ্যম পরিবর্তন', onPressed: _editPaymentMethod)]),
           if (_currentLocalMemo.isNotEmpty) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('লোকাল মেমো', '#$_currentLocalMemo', const Color(0xFF0891B2))), IconButton(icon: const Icon(Icons.edit_rounded, size: 16), visualDensity: VisualDensity.compact, tooltip: 'লোকাল মেমো আপডেট', onPressed: _editLocalMemo)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editLocalMemo, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('লোকাল মেমো যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
           if (_currentReplaceItems.isNotEmpty) ...[
             const SizedBox(height: 8),

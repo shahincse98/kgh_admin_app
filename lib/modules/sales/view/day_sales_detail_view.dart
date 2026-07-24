@@ -130,26 +130,32 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
         double actualCash = 0;
         double cashPaid = 0;
         final payments = o['payments'];
+        bool processedPayments = false;
         if (payments is List && payments.isNotEmpty) {
           for (final p in payments) {
-            if (p is! Map) continue;
-            final method = (p['method'] ?? '').toString().trim();
-            final amt = (p['amount'] as num?)?.toDouble() ?? 0;
-            cashPaid += amt;
-            if (method == 'SR হাতে') {
-              _srHand += amt;
-              actualCash += amt;
-            } else if (method == 'বিকাশ') {
-              _bkash += amt;
-              actualCash += amt;
-            } else if (['নগদ', 'রকেট', 'ব্যাংক'].contains(method)) {
-              _others += amt;
-              actualCash += amt;
-            } else {
-              _adjustments += amt;
-            }
+            try {
+              final pMap = Map<String, dynamic>.from(p as Map);
+              final method = (pMap['method'] ?? '').toString().trim();
+              final amt = (pMap['amount'] as num?)?.toDouble() ?? 0;
+              if (amt <= 0) continue;
+              processedPayments = true;
+              cashPaid += amt;
+              if (method == 'SR হাতে') {
+                _srHand += amt;
+                actualCash += amt;
+              } else if (method == 'বিকাশ') {
+                _bkash += amt;
+                actualCash += amt;
+              } else if (['নগদ', 'রকেট', 'ব্যাংক'].contains(method)) {
+                _others += amt;
+                actualCash += amt;
+              } else {
+                _adjustments += amt;
+              }
+            } catch (_) {}
           }
-        } else {
+        }
+        if (!processedPayments) {
           cashPaid = paidAmount;
           actualCash = (paidAmount - deduction - returnAmt).clamp(0, double.infinity).toDouble();
           _adjustments += (deduction + returnAmt);

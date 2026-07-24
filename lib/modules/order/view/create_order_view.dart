@@ -475,12 +475,11 @@ class _ProductStep extends StatelessWidget {
                     final q = ctrl.productSearch.value.trim().toLowerCase();
                     final products = q.isEmpty
                         ? pc.products
-                            .where((p) => p.isAvailable && p.stock > 0)
+                            .where((p) => p.isAvailable)
                             .toList()
                         : pc.products
                             .where((p) =>
                                 p.isAvailable &&
-                                p.stock > 0 &&
                                 (p.name.toLowerCase().contains(q) ||
                                     p.productCode.toLowerCase().contains(q)))
                             .toList();

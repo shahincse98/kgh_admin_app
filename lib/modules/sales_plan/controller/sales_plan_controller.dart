@@ -3,6 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../model/sales_plan_model.dart';
 
+class SrEntry {
+  final String id;
+  final String name;
+  const SrEntry({required this.id, required this.name});
+}
+
 class SalesPlanController extends GetxController {
   final _db = FirebaseFirestore.instance;
 
@@ -19,6 +25,10 @@ class SalesPlanController extends GetxController {
   final actuals = <String, double>{}.obs;
   final actualsLoading = false.obs;
 
+  // ── SR list for form picker ──────────────────────────────────────────────
+  final srLoading = false.obs;
+  final srList = <SrEntry>[].obs;
+
   // ── Available months (current + next 5 + past 6) ─────────────────────────
   List<DateTime> get months {
     final now = DateTime.now();
@@ -34,11 +44,32 @@ class SalesPlanController extends GetxController {
   void onInit() {
     super.onInit();
     fetchPlan();
+    _loadSrList();
   }
 
   void selectMonth(DateTime m) {
     selectedMonth.value = m;
     fetchPlan();
+  }
+
+  // ── Load SR list ─────────────────────────────────────────────────────────
+
+  Future<void> _loadSrList() async {
+    srLoading.value = true;
+    try {
+      final snap = await _db.collection('sr_staff').get();
+      srList.assignAll(snap.docs.map((doc) {
+        final data = doc.data();
+        return SrEntry(
+          id: doc.id,
+          name: (data['name'] ?? '').toString(),
+        );
+      }).toList());
+    } catch (_) {
+      srList.clear();
+    } finally {
+      srLoading.value = false;
+    }
   }
 
   // ── Load plan ─────────────────────────────────────────────────────────────
@@ -123,6 +154,17 @@ class SalesPlanController extends GetxController {
     }
   }
 
+  /// Public wrapper for detail view to reload actuals.
+  Future<Map<String, double>> loadActuals(SalesPlanModel plan) async {
+    await _loadActuals();
+    return Map.from(actuals);
+  }
+
+  /// Clears the cached actuals (triggers refresh on next load).
+  void clearActualsCache(String planId) {
+    actuals.clear();
+  }
+
   /// Returns the actual amount for a plan item.
   double actualFor(CustomerPlanItem item) {
     if (item.userId.isNotEmpty && actuals.containsKey(item.userId)) {
@@ -137,15 +179,29 @@ class SalesPlanController extends GetxController {
 
   // ── Save full plan ────────────────────────────────────────────────────────
 
-  Future<void> savePlan() async {
-    final plan = CustomerSalesPlan(
-      month: _monthKey,
-      items: List.from(planItems),
-    );
-    await _db
-        .collection('customer_sales_plans')
-        .doc(_monthKey)
-        .set(plan.toFirestore());
+  Future<void> savePlan([SalesPlanModel? plan]) async {
+    if (plan != null) {
+      await _db
+          .collection('customer_sales_plans')
+          .doc(plan.id.isEmpty ? plan.period : plan.id)
+          .set(plan.toFirestore());
+    } else {
+      final p = CustomerSalesPlan(
+        month: _monthKey,
+        items: List.from(planItems),
+      );
+      await _db
+          .collection('customer_sales_plans')
+          .doc(_monthKey)
+          .set(p.toFirestore());
+    }
+  }
+
+  // ── Delete plan ───────────────────────────────────────────────────────────
+
+  Future<void> deletePlan(String planId) async {
+    if (planId.isEmpty) return;
+    await _db.collection('customer_sales_plans').doc(planId).delete();
   }
 
   // ── Add / update item ─────────────────────────────────────────────────────
@@ -169,4 +225,3 @@ class SalesPlanController extends GetxController {
     await _loadActuals();
   }
 }
-

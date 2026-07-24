@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../controller/sales_plan_controller.dart';
 import '../model/sales_plan_model.dart';
 
@@ -14,7 +15,7 @@ class SalesPlanDetailView extends StatefulWidget {
 
 class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
   late final SalesPlanController _ctrl;
-  Map<String, int> _actuals = {};
+  Map<String, double> _actuals = {};
   bool _loading = true;
 
   @override
@@ -40,7 +41,8 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
     final plan = widget.plan;
 
     // Compute overall achievement
-    int totalTarget = 0, totalActual = 0;
+    int totalTarget = 0;
+    double totalActual = 0;
     for (final item in plan.items) {
       totalTarget += item.targetQty;
       totalActual += _actuals[item.productName] ?? 0;
@@ -102,7 +104,7 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
                 _sectionHeader('প্রডাক্টওয়ারি অর্জন', cs),
                 const SizedBox(height: 10),
                 ...plan.items.map((item) =>
-                    _productRow(item, _actuals[item.productName] ?? 0,
+                    _productRow(item, (_actuals[item.productName] ?? 0).toInt(),
                         cs)),
 
                 // ── Extra actuals (sold but not in plan) ──────────────────
@@ -152,7 +154,7 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
 
   // ── Summary card ──────────────────────────────────────────────────────────
 
-  Widget _summaryCard(int totalTarget, int totalActual,
+  Widget _summaryCard(int totalTarget, double totalActual,
       double overallPct, String pctDisplay, ColorScheme cs) {
     Color pctColor;
     if (overallPct >= 1.0) {
@@ -181,7 +183,7 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
                 ),
                 Expanded(
                   child: _statCol('মোট বিক্রি',
-                      '$totalActual টি', const Color(0xFF0891B2)),
+                      '৳ ${NumberFormat('#,##0').format(totalActual.toInt())}', const Color(0xFF0891B2)),
                 ),
                 Expanded(
                   child: _statCol('অর্জন %', pctDisplay, pctColor),
@@ -323,7 +325,7 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
 
   // ── Extra actuals ─────────────────────────────────────────────────────────
 
-  List<MapEntry<String, int>> _extraActuals(SalesPlanModel plan) {
+  List<MapEntry<String, double>> _extraActuals(SalesPlanModel plan) {
     final planNames =
         plan.items.map((i) => i.productName).toSet();
     return _actuals.entries
@@ -332,7 +334,7 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
       ..sort((a, b) => b.value.compareTo(a.value));
   }
 
-  Widget _extraRow(String name, int qty, ColorScheme cs) {
+  Widget _extraRow(String name, double qty, ColorScheme cs) {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
@@ -350,7 +352,7 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
           Expanded(
               child:
                   Text(name, style: const TextStyle(fontSize: 13))),
-          Text('$qty টি',
+          Text('৳ ${NumberFormat('#,##0').format(qty.toInt())}',
               style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
