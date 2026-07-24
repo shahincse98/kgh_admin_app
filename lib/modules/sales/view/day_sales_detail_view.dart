@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../../widgets/call_button.dart';
@@ -38,7 +37,6 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
   double _totalNewDue = 0;
   double _totalExpenses = 0;
   bool _loading = true;
-  String _debugInfo = '';
 
   @override
   void initState() {
@@ -97,7 +95,6 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
       _totalNewDue = 0;
 
       final Map<String, Map<String, dynamic>> lastOrderByShop = {};
-      final debugInfo = <String>[];
 
       for (final o in _orders) {
         final orderTotal = (o['totalAmount'] as num?)?.toDouble() ?? 0;
@@ -106,7 +103,6 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
         final returnAmt = (o['returnAmount'] as num?)?.toDouble() ?? 0;
         final discount = (o['discountAmount'] as num?)?.toDouble() ?? 0;
         final previousDue = (o['previousDue'] as num?)?.toDouble() ?? 0;
-        final memo = (o['localMemo'] ?? '').toString();
 
         _totalGross += orderTotal;
         _totalDeduction += deduction;
@@ -160,8 +156,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
               } else {
                 _adjustments += amt;
               }
-              debugInfo.add('#$memo method=[$method] amt=$amt → cash=$actualCash');
-            } catch (_) { debugInfo.add('#$memo PARSE ERROR'); }
+            } catch (_) {}
           }
         }
         if (!processedPayments) {
@@ -174,9 +169,6 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           } else {
             _srHand += actualCash;
           }
-          debugInfo.add('#$memo paid=$paidAmount ded=$deduction ret=$returnAmt → cash=$actualCash payExists=${payments is List ? payments.length : 'null'} processed=$processedPayments');
-        } else {
-          debugInfo.add('#$memo paid=$paidAmount ded=$deduction ret=$returnAmt → sr=$actualCash payCount=${(payments as List).length} viaPayments');
         }
 
         final newDue = (previousDue + net - cashPaid).clamp(0, double.infinity);
@@ -223,7 +215,6 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
       });
 
       _totalExpenses = _expenses.fold(0.0, (s, e) => s + ((e['amount'] as num?)?.toDouble() ?? 0));
-      _debugInfo = debugInfo.join('\n');
     } catch (e) { debugPrint('DaySalesDetailView loadData error: $e'); }
     setState(() => _loading = false);
   }
@@ -330,7 +321,6 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 80),
                 children: [
                   _summaryCards(scheme),
-                  if (_debugInfo.isNotEmpty) _debugPanel(),
                   const SizedBox(height: 16),
                   if (_orders.isNotEmpty) ...[
                     _ordersDropdown(scheme),
@@ -349,31 +339,6 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
                 ],
               ),
             ),
-    );
-  }
-
-  Widget _debugPanel() {
-    return Card(
-      elevation: 0, color: Colors.red.shade50,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            const Text('DEBUG', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.red)),
-            const Spacer(),
-            GestureDetector(
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: _debugInfo));
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('কপি করা হয়েছে!'), duration: Duration(seconds: 1)));
-              },
-              child: const Icon(Icons.copy_rounded, size: 16, color: Colors.red),
-            ),
-          ]),
-          const SizedBox(height: 4),
-          SelectableText(_debugInfo, style: const TextStyle(fontSize: 10, fontFamily: 'monospace')),
-        ]),
-      ),
     );
   }
 
