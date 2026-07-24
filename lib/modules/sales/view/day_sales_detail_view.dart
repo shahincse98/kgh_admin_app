@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../../widgets/call_button.dart';
@@ -143,7 +144,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
               if (amt <= 0) continue;
               processedPayments = true;
               cashPaid += amt;
-              if (method == 'SR হাতে') {
+              if (method == 'SR হাতে' || method == 'হাতে') {
                 _srHand += amt;
                 actualCash += amt;
               } else if (method == 'বিকাশ') {
@@ -155,7 +156,8 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
               } else {
                 _adjustments += amt;
               }
-            } catch (_) {}
+              debugInfo.add('#$memo method=[$method] amt=$amt → cash=$actualCash');
+            } catch (_) { debugInfo.add('#$memo PARSE ERROR'); }
           }
         }
         if (!processedPayments) {
@@ -168,7 +170,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           } else {
             _srHand += actualCash;
           }
-          debugInfo.add('#$memo paid=$paidAmount ded=$deduction ret=$returnAmt → cash=$actualCash payExists=${payments is List ? (payments as List).length : 'null'} processed=$processedPayments');
+          debugInfo.add('#$memo paid=$paidAmount ded=$deduction ret=$returnAmt → cash=$actualCash payExists=${payments is List ? payments.length : 'null'} processed=$processedPayments');
         } else {
           debugInfo.add('#$memo paid=$paidAmount ded=$deduction ret=$returnAmt → sr=$actualCash payCount=${(payments as List).length} viaPayments');
         }
@@ -353,9 +355,19 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
       child: Padding(
         padding: const EdgeInsets.all(10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('DEBUG', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.red)),
+          Row(children: [
+            const Text('DEBUG', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.red)),
+            const Spacer(),
+            GestureDetector(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: _debugInfo));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('কপি করা হয়েছে!'), duration: Duration(seconds: 1)));
+              },
+              child: const Icon(Icons.copy_rounded, size: 16, color: Colors.red),
+            ),
+          ]),
           const SizedBox(height: 4),
-          Text(_debugInfo, style: const TextStyle(fontSize: 10, fontFamily: 'monospace')),
+          SelectableText(_debugInfo, style: const TextStyle(fontSize: 10, fontFamily: 'monospace')),
         ]),
       ),
     );
