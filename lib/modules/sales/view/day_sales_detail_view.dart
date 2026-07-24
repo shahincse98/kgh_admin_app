@@ -139,9 +139,13 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           for (final p in payments) {
             try {
               final pMap = Map<String, dynamic>.from(p as Map);
-              final method = (pMap['method'] ?? '').toString().trim();
+              var method = (pMap['method'] ?? '').toString().trim();
               final amt = (pMap['amount'] as num?)?.toDouble() ?? 0;
               if (amt <= 0) continue;
+              if (method.isEmpty) {
+                method = (o['paymentMethod'] ?? '').toString().trim();
+                if (method.isEmpty) method = 'SR হাতে';
+              }
               processedPayments = true;
               cashPaid += amt;
               if (method == 'SR হাতে' || method == 'হাতে') {
