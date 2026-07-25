@@ -10,6 +10,10 @@ class StockInController extends GetxController {
   final entries = <StockInModel>[].obs;
   final loading = false.obs;
   final searchText = ''.obs;
+  final selectedProductId = ''.obs;
+  final selectedProductName = ''.obs;
+  final fromDate = Rxn<DateTime>();
+  final toDate = Rxn<DateTime>();
   bool _loadedOnce = false;
 
   @override
@@ -36,6 +40,22 @@ class StockInController extends GetxController {
 
   List<StockInModel> get filteredEntries {
     var list = entries.toList();
+
+    if (selectedProductId.value.isNotEmpty) {
+      list = list
+          .where((e) => e.productId == selectedProductId.value)
+          .toList();
+    }
+
+    if (fromDate.value != null) {
+      list = list.where((e) => !e.date.isBefore(fromDate.value!)).toList();
+    }
+    if (toDate.value != null) {
+      final toEnd = DateTime(
+          toDate.value!.year, toDate.value!.month, toDate.value!.day, 23, 59, 59);
+      list = list.where((e) => !e.date.isAfter(toEnd)).toList();
+    }
+
     final q = searchText.value.trim().toLowerCase();
     if (q.isNotEmpty) {
       list = list.where((e) =>
@@ -307,6 +327,14 @@ class StockInController extends GetxController {
         createdBy: oldEntry.createdBy,
       );
     }
+  }
+
+  void clearFilters() {
+    searchText.value = '';
+    selectedProductId.value = '';
+    selectedProductName.value = '';
+    fromDate.value = null;
+    toDate.value = null;
   }
 
   Future<String> _getCurrentUserId() async {

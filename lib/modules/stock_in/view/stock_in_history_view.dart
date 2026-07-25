@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controller/stock_in_controller.dart';
+import '../../product/controller/product_controller.dart';
 import 'stock_in_detail_view.dart';
 import '../../../widgets/responsive.dart';
 
@@ -9,6 +10,7 @@ class StockInHistoryView extends GetView<StockInController> {
   const StockInHistoryView({super.key});
 
   static final _fmt = NumberFormat('#,##,##0');
+  static final _dayFmt = DateFormat('dd MMM yyyy');
 
   @override
   Widget build(BuildContext context) {
@@ -28,11 +30,26 @@ class StockInHistoryView extends GetView<StockInController> {
                         fontSize: 12, color: scheme.onSurface.withAlpha(160))),
               ],
             )),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list_rounded),
+            tooltip: 'ফিল্টার',
+            onPressed: () => _showFilterSheet(scheme),
+          ),
+        ],
       ),
       body: ResponsiveWrapper(
         child: Column(
           children: [
             _searchBar(scheme),
+            _quickDateChips(scheme),
+            _activeFilterChips(scheme),
+            Obx(() {
+              if (controller.selectedProductId.value.isNotEmpty) {
+                return _productSummary(scheme);
+              }
+              return const SizedBox.shrink();
+            }),
             _summaryBar(scheme),
             Expanded(
               child: Obx(() {
@@ -56,7 +73,7 @@ class StockInHistoryView extends GetView<StockInController> {
                   );
                 }
                 return RefreshIndicator(
-                  onRefresh: () => controller.fetchEntries(),
+                  onRefresh: () => controller.fetchEntries(force: true),
                   child: ListView.builder(
                     padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
                     itemCount: groups.length,
@@ -73,12 +90,18 @@ class StockInHistoryView extends GetView<StockInController> {
 
   Widget _searchBar(ColorScheme scheme) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 2),
       child: TextField(
         onChanged: (v) => controller.searchText.value = v,
         decoration: InputDecoration(
           hintText: 'প্রডাক্ট নাম, সোর্স বা নোট দিয়ে খুঁজুন…',
           prefixIcon: const Icon(Icons.search_rounded),
+          suffixIcon: Obx(() => controller.searchText.value.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear_rounded),
+                  onPressed: () => controller.searchText.value = '',
+                )
+              : const SizedBox.shrink()),
           filled: true,
           fillColor: scheme.surfaceContainerHigh,
           border: OutlineInputBorder(
@@ -87,6 +110,320 @@ class StockInHistoryView extends GetView<StockInController> {
               const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         ),
       ),
+    );
+  }
+
+  Widget _quickDateChips(ColorScheme scheme) {
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final ctx = Get.context!;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+      child: SizedBox(
+        height: 36,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: [
+            _dateChip('আজ', todayDate, todayDate),
+            const SizedBox(width: 6),
+            _dateChip('গতকাল', todayDate.subtract(const Duration(days: 1)),
+                todayDate.subtract(const Duration(days: 1))),
+            const SizedBox(width: 6),
+            _dateChip('সপ্তাহ',
+                todayDate.subtract(const Duration(days: 7)), todayDate),
+            const SizedBox(width: 6),
+            _dateChip('মাস', DateTime(today.year, today.month, 1), todayDate),
+            const SizedBox(width: 6),
+            _dateChip('সব', null, null),
+            const SizedBox(width: 6),
+            ActionChip(
+              avatar: const Icon(Icons.calendar_today_rounded, size: 16),
+              label: const Text('কাস্টম', style: TextStyle(fontSize: 11)),
+              onPressed: () async {
+                final p = await showDatePicker(
+                  context: ctx,
+                  initialDate: controller.fromDate.value ?? today,
+                  firstDate: DateTime(2020),
+                  lastDate: today.add(const Duration(days: 1)),
+                );
+                if (p != null) {
+                  controller.fromDate.value = p;
+                  controller.toDate.value = p;
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dateChip(String label, DateTime? from, DateTime? to) {
+    return Obx(() {
+      final active = controller.fromDate.value == from &&
+          controller.toDate.value == to;
+      return ChoiceChip(
+        label: Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
+        selected: active,
+        onSelected: (_) {
+          controller.fromDate.value = from;
+          controller.toDate.value = to;
+        },
+        selectedColor: const Color(0xFF16A34A).withAlpha(30),
+        labelStyle:
+            TextStyle(color: active ? const Color(0xFF16A34A) : null),
+        side: active ? const BorderSide(color: Color(0xFF16A34A)) : null,
+        visualDensity: VisualDensity.compact,
+      );
+    });
+  }
+
+  Widget _activeFilterChips(ColorScheme scheme) {
+    return Obx(() {
+      final chips = <Widget>[];
+      if (controller.fromDate.value != null ||
+          controller.toDate.value != null) {
+        final from = controller.fromDate.value;
+        final to = controller.toDate.value;
+        final l =
+            '${from != null ? _dayFmt.format(from) : 'শুরু'} → ${to != null ? _dayFmt.format(to) : 'শেষ'}';
+        chips.add(_chip(l, () {
+          controller.fromDate.value = null;
+          controller.toDate.value = null;
+        }));
+      }
+      if (controller.selectedProductId.value.isNotEmpty) {
+        chips.add(_chip(controller.selectedProductName.value, () {
+          controller.selectedProductId.value = '';
+          controller.selectedProductName.value = '';
+        }));
+      }
+      if (chips.isEmpty) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
+        child: Wrap(spacing: 8, runSpacing: 4, children: chips),
+      );
+    });
+  }
+
+  Widget _chip(String label, VoidCallback onRemove) {
+    return Chip(
+      label: Text(label, style: const TextStyle(fontSize: 11)),
+      deleteIcon: const Icon(Icons.close_rounded, size: 16),
+      onDeleted: onRemove,
+      backgroundColor: const Color(0xFF16A34A).withAlpha(20),
+      side: BorderSide(color: const Color(0xFF16A34A).withAlpha(60)),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  Widget _productSummary(ColorScheme scheme) {
+    return Obx(() {
+      final pid = controller.selectedProductId.value;
+      final pname = controller.selectedProductName.value;
+      if (pid.isEmpty) return const SizedBox.shrink();
+      final filtered = controller.filteredEntries;
+      final totalQty = filtered.fold(0, (s, e) => s + e.quantity);
+      return Container(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF16A34A).withAlpha(12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF16A34A).withAlpha(40)),
+        ),
+        child: Row(children: [
+          const Icon(Icons.inventory_2_rounded,
+              size: 16, color: Color(0xFF16A34A)),
+          const SizedBox(width: 6),
+          Expanded(
+              child: Text(pname,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w800))),
+          Text('$totalQty pcs • ${filtered.length} এন্ট্রি',
+              style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF16A34A),
+                  fontWeight: FontWeight.w600)),
+        ]),
+      );
+    });
+  }
+
+  void _showFilterSheet(ColorScheme scheme) {
+    final ctx = Get.context!;
+    DateTime? tempFrom = controller.fromDate.value;
+    DateTime? tempTo = controller.toDate.value;
+    String tempProductId = controller.selectedProductId.value;
+    String tempProductName = controller.selectedProductName.value;
+
+    showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setSt) {
+        final searchCtrl = TextEditingController();
+        final scrollCtrl = ScrollController();
+        List<dynamic> products = [];
+        try {
+          final pc = Get.find<ProductController>();
+          products = pc.products;
+        } catch (_) {}
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          maxChildSize: 0.9,
+          builder: (_, sc) => Container(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: SingleChildScrollView(
+              controller: sc,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                      child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                              color: scheme.outlineVariant,
+                              borderRadius: BorderRadius.circular(2)))),
+                  const SizedBox(height: 16),
+                  const Text('ফিল্টার',
+                      style: TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 16),
+                  const Text('তারিখ রেঞ্জ',
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(
+                        child: OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_today_rounded, size: 16),
+                      label: Text(tempFrom != null
+                          ? _dayFmt.format(tempFrom!)
+                          : 'শুরু'),
+                      onPressed: () async {
+                        final d = await showDatePicker(
+                          context: ctx,
+                          initialDate: tempFrom ?? DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                        );
+                        if (d != null) setSt(() => tempFrom = d);
+                      },
+                    )),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_today_rounded, size: 16),
+                      label: Text(
+                          tempTo != null ? _dayFmt.format(tempTo!) : 'শেষ'),
+                      onPressed: () async {
+                        final d = await showDatePicker(
+                          context: ctx,
+                          initialDate: tempTo ?? DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                        );
+                        if (d != null) setSt(() => tempTo = d);
+                      },
+                    )),
+                  ]),
+                  const SizedBox(height: 20),
+                  const Text('প্রডাক্ট',
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: searchCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'প্রডাক্ট খুঁজুন…',
+                      prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                    ),
+                    onChanged: (_) => setSt(() {}),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 180,
+                    child: ListView(controller: scrollCtrl, children: [
+                      ...products.where((p) {
+                        final q =
+                            searchCtrl.text.trim().toLowerCase();
+                        if (q.isEmpty) return true;
+                        final name = (p.name ?? '').toString();
+                        final code = (p.productCode ?? '').toString();
+                        return name.toLowerCase().contains(q) ||
+                            code.toLowerCase().contains(q);
+                      }).take(30).map((p) {
+                        final pid = (p.id ?? '').toString();
+                        final pname = (p.name ?? '').toString();
+                        return ListTile(
+                          dense: true,
+                          leading: Icon(
+                            tempProductId == pid
+                                ? Icons.radio_button_checked_rounded
+                                : Icons.radio_button_off_rounded,
+                            size: 18,
+                            color: tempProductId == pid
+                                ? const Color(0xFF16A34A)
+                                : Colors.grey,
+                          ),
+                          title: Text(pname, style: const TextStyle(fontSize: 13)),
+                          onTap: () => setSt(() {
+                            tempProductId = pid;
+                            tempProductName = pname;
+                          }),
+                        );
+                      }),
+                    ]),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    Expanded(
+                        child: OutlinedButton(
+                      onPressed: () {
+                        setSt(() {
+                          tempFrom = null;
+                          tempTo = null;
+                          tempProductId = '';
+                          tempProductName = '';
+                        });
+                      },
+                      child: const Text('ক্লিয়ার'),
+                    )),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: ElevatedButton(
+                      onPressed: () {
+                        controller.fromDate.value = tempFrom;
+                        controller.toDate.value = tempTo;
+                        controller.selectedProductId.value = tempProductId;
+                        controller.selectedProductName.value = tempProductName;
+                        Navigator.pop(ctx);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('প্রয়োগ'),
+                    )),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        );
+      }),
     );
   }
 
@@ -161,7 +498,6 @@ class StockInHistoryView extends GetView<StockInController> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Date strip
               Container(
                 width: 56,
                 color: const Color(0xFF16A34A).withAlpha(15),
@@ -181,14 +517,12 @@ class StockInHistoryView extends GetView<StockInController> {
                   ],
                 ),
               ),
-              // Content
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Row 1: source + date
                       Row(
                         children: [
                           if (group.source.isNotEmpty)
@@ -234,11 +568,11 @@ class StockInHistoryView extends GetView<StockInController> {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      // Row 2: product count + qty
                       Row(
                         children: [
                           Icon(Icons.inventory_2_rounded,
-                              size: 14, color: scheme.onSurface.withAlpha(120)),
+                              size: 14,
+                              color: scheme.onSurface.withAlpha(120)),
                           const SizedBox(width: 4),
                           Text(
                             '${group.entries.length} প্রডাক্ট • ${group.totalQty} pcs',
@@ -250,12 +584,11 @@ class StockInHistoryView extends GetView<StockInController> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      // Row 3: product names preview
                       Text(
                         group.entries
-                            .take(3)
-                            .map((e) => e.productName)
-                            .join(', ') +
+                                .take(3)
+                                .map((e) => e.productName)
+                                .join(', ') +
                             (group.entries.length > 3
                                 ? ' +${group.entries.length - 3} more'
                                 : ''),
@@ -270,7 +603,8 @@ class StockInHistoryView extends GetView<StockInController> {
                         Row(
                           children: [
                             Icon(Icons.note_rounded,
-                                size: 12, color: scheme.onSurface.withAlpha(100)),
+                                size: 12,
+                                color: scheme.onSurface.withAlpha(100)),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(group.note,
@@ -278,7 +612,8 @@ class StockInHistoryView extends GetView<StockInController> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                       fontSize: 11,
-                                      color: scheme.onSurface.withAlpha(120))),
+                                      color:
+                                          scheme.onSurface.withAlpha(120))),
                             ),
                           ],
                         ),
@@ -287,7 +622,6 @@ class StockInHistoryView extends GetView<StockInController> {
                   ),
                 ),
               ),
-              // Chevron
               const Padding(
                 padding: EdgeInsets.only(right: 4),
                 child: Icon(Icons.chevron_right_rounded, color: Colors.grey),
