@@ -260,19 +260,20 @@ class StockInHistoryView extends GetView<StockInController> {
     String tempProductId = controller.selectedProductId.value;
     String tempProductName = controller.selectedProductName.value;
 
+    final searchCtrl = TextEditingController();
+    final scrollCtrl = ScrollController();
+    List<dynamic> products = [];
+    try {
+      final pc = Get.find<ProductController>();
+      products = pc.products;
+    } catch (_) {}
+
     showModalBottomSheet(
       context: ctx,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setSt) {
-        final searchCtrl = TextEditingController();
-        final scrollCtrl = ScrollController();
-        List<dynamic> products = [];
-        try {
-          final pc = Get.find<ProductController>();
-          products = pc.products;
-        } catch (_) {}
 
         return DraggableScrollableSheet(
           initialChildSize: 0.55,

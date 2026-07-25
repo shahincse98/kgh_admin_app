@@ -1191,18 +1191,19 @@ class _StockInViewState extends State<StockInView> {
     String tempProductId = controller.selectedProductId.value;
     String tempProductName = controller.selectedProductName.value;
 
+    final searchCtrl = TextEditingController();
+    final scrollCtrl = ScrollController();
+    List<dynamic> products = [];
+    try {
+      products = pc.products;
+    } catch (_) {}
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setSt) {
-        final searchCtrl = TextEditingController();
-        final scrollCtrl = ScrollController();
-        List<dynamic> products = [];
-        try {
-          products = pc.products;
-        } catch (_) {}
 
         return DraggableScrollableSheet(
           initialChildSize: 0.55,
