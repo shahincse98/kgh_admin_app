@@ -407,7 +407,7 @@ class _ProductStep extends StatelessWidget {
                     Obx(() {
                       final cust = ctrl.selectedCustomer.value;
                       final due = cust?.totalDue ?? 0;
-                      final amount = num.tryParse(ctrl.dueCollectionAmountCtrl.text.trim()) ?? 0;
+                      final amount = num.tryParse(ctrl.dueCollectionAmountText.value.trim()) ?? 0;
                       final canSubmit = amount > 0 && amount <= due;
                       return Column(
                         children: [

@@ -37,8 +37,17 @@ class CreateOrderController extends GetxController {
   // ── Due collection mode ────────────────────────────────────────────────────
   final isDueCollection = false.obs;
   final dueCollectionAmountCtrl = TextEditingController();
+  final dueCollectionAmountText = ''.obs;
   final dueCollectionMethod = 'SR হাতে'.obs;
   final dueCollectionDate = DateTime.now().obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    dueCollectionAmountCtrl.addListener(() {
+      dueCollectionAmountText.value = dueCollectionAmountCtrl.text;
+    });
+  }
 
   // ── Submission state ────────────────────────────────────────────────────────
   final submitting = false.obs;
