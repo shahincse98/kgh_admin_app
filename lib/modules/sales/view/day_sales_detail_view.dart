@@ -593,16 +593,25 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
                 child: Text('+${items.length - 3}টি প্রডাক্ট', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(120))),
               ),
           ],
-          if (cashPaid > 0) ...[
+          if (cashPaid > 0 || payments.isNotEmpty) ...[
             const SizedBox(height: 4),
             Divider(height: 1, color: scheme.outlineVariant.withAlpha(40)),
             const SizedBox(height: 4),
-            if (payments.isNotEmpty)
-              Text(payments.map((p) => '${p['method']}: ৳${_fmtInt.format((p['amount'] as num?)?.toInt() ?? 0)}').join('  •  '),
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w600))
-            else
-              Text('${o['paymentMethod'] ?? ''}: ৳${_fmtInt.format(cashPaid.toInt())}',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED))),
+            if (payments.isNotEmpty) ...[
+              for (final p in payments)
+                if (((p['amount'] as num?)?.toDouble() ?? 0) > 0)
+                  Row(children: [
+                    const Icon(Icons.circle, size: 6, color: Color(0xFF7C3AED)),
+                    const SizedBox(width: 6),
+                    Text('${p['method'] ?? ''}: ৳${_fmtInt.format((p['amount'] as num?)?.toInt() ?? 0)}',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w600)),
+                  ]),
+              if (payments.every((p) => ((p['amount'] as num?)?.toDouble() ?? 0) <= 0) && cashPaid > 0)
+                Text('${o['paymentMethod'] ?? 'জমা'}: ৳${_fmtInt.format(cashPaid.toInt())}',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w600)),
+            ] else
+              Text('${o['paymentMethod'] ?? 'জমা'}: ৳${_fmtInt.format(cashPaid.toInt())}',
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w600)),
           ],
           if (deduction > 0 || returnAmt > 0 || discount > 0) ...[
             const SizedBox(height: 2),
