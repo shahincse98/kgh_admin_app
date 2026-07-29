@@ -593,26 +593,35 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
                 child: Text('+${items.length - 3}টি প্রডাক্ট', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(120))),
               ),
           ],
-          if (cashPaid > 0 || payments.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Divider(height: 1, color: scheme.outlineVariant.withAlpha(40)),
-            const SizedBox(height: 4),
-            if (payments.isNotEmpty) ...[
-              for (final p in payments)
-                if (((p['amount'] as num?)?.toDouble() ?? 0) > 0)
-                  Row(children: [
+          const SizedBox(height: 4),
+          Divider(height: 1, color: scheme.outlineVariant.withAlpha(40)),
+          const SizedBox(height: 4),
+          Builder(builder: (_) {
+            if (payments.isNotEmpty) {
+              final visiblePayments = payments.where((p) => ((p['amount'] as num?)?.toDouble() ?? 0) > 0).toList();
+              if (visiblePayments.isNotEmpty) {
+                return Column(
+                  children: visiblePayments.map((p) => Row(children: [
                     const Icon(Icons.circle, size: 6, color: Color(0xFF7C3AED)),
                     const SizedBox(width: 6),
-                    Text('${p['method'] ?? ''}: ৳${_fmtInt.format((p['amount'] as num?)?.toInt() ?? 0)}',
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w600)),
-                  ]),
-              if (payments.every((p) => ((p['amount'] as num?)?.toDouble() ?? 0) <= 0) && cashPaid > 0)
-                Text('${o['paymentMethod'] ?? 'জমা'}: ৳${_fmtInt.format(cashPaid.toInt())}',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w600)),
-            ] else
-              Text('${o['paymentMethod'] ?? 'জমা'}: ৳${_fmtInt.format(cashPaid.toInt())}',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w600)),
-          ],
+                    Expanded(child: Text('${p['method'] ?? 'জমা'}: ৳${_fmtInt.format((p['amount'] as num?)?.toInt() ?? 0)}',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w600))),
+                  ])).toList(),
+                );
+              }
+            }
+            final paidAmount = (o['paidAmount'] as num?)?.toDouble() ?? 0;
+            final method = (o['paymentMethod'] ?? '').toString();
+            if (paidAmount > 0 || method.isNotEmpty) {
+              return Row(children: [
+                const Icon(Icons.circle, size: 6, color: Color(0xFF7C3AED)),
+                const SizedBox(width: 6),
+                Expanded(child: Text('${method.isNotEmpty ? method : "জমা"}: ৳${_fmtInt.format(paidAmount.toInt())}',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w600))),
+              ]);
+            }
+            return const Text('কোনো পেমেন্ট নেই', style: TextStyle(fontSize: 11, color: Colors.grey));
+          }),
           if (deduction > 0 || returnAmt > 0 || discount > 0) ...[
             const SizedBox(height: 2),
             Row(children: [
