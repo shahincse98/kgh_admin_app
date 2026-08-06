@@ -337,6 +337,45 @@ class StockInController extends GetxController {
     toDate.value = null;
   }
 
+  Future<void> updateGroupDate({
+    required DateTime oldDate,
+    required String source,
+    required DateTime newDate,
+  }) async {
+    final groupEntries = entries
+        .where((e) => e.date == oldDate && e.source == source)
+        .toList();
+    if (groupEntries.isEmpty) return;
+
+    final batch = _db.batch();
+    for (final e in groupEntries) {
+      batch.update(_db.collection('stock_ins').doc(e.id), {
+        'date': Timestamp.fromDate(newDate),
+      });
+    }
+    await batch.commit();
+
+    for (final e in groupEntries) {
+      final idx = entries.indexWhere((x) => x.id == e.id);
+      if (idx != -1) {
+        entries[idx] = StockInModel(
+          id: e.id,
+          productId: e.productId,
+          productName: e.productName,
+          image: e.image,
+          quantity: e.quantity,
+          unitPrice: e.unitPrice,
+          totalPrice: e.totalPrice,
+          source: e.source,
+          note: e.note,
+          date: newDate,
+          createdAt: e.createdAt,
+          createdBy: e.createdBy,
+        );
+      }
+    }
+  }
+
   Future<String> _getCurrentUserId() async {
     try {
       final auth = Get.find<AuthController>();

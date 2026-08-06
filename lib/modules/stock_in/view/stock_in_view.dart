@@ -329,6 +329,48 @@ class _StockInViewState extends State<StockInView> {
                           ],
                         ),
                       ],
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: group.date,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now().add(const Duration(days: 1)),
+                          );
+                          if (picked != null && picked != group.date) {
+                            await controller.updateGroupDate(
+                              oldDate: group.date,
+                              source: group.source,
+                              newDate: picked,
+                            );
+                            controller.fetchEntries();
+                            Get.snackbar(
+                              'তারিখ আপডেট হয়েছে',
+                              _dayFmt.format(picked),
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: const Color(0xFF2563EB),
+                              colorText: Colors.white,
+                            );
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB).withAlpha(12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            const Icon(Icons.calendar_today_rounded, size: 13, color: Color(0xFF2563EB)),
+                            const SizedBox(width: 4),
+                            Text(_dayFmt.format(group.date),
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF2563EB))),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.edit_rounded, size: 11, color: Color(0xFF2563EB)),
+                          ]),
+                        ),
+                      ),
                     ],
                   ),
                 ),
