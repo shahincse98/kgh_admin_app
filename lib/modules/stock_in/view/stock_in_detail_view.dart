@@ -264,9 +264,11 @@ class _StockInDetailViewState extends State<StockInDetailView> {
     final qtyCtrl = TextEditingController(text: entry.quantity.toString());
     final priceCtrl = TextEditingController(text: entry.unitPrice.toStringAsFixed(0));
     final noteCtrl = TextEditingController(text: entry.note);
+    DateTime selectedDate = entry.date;
 
     final confirmed = await Get.dialog<bool>(
-      AlertDialog(
+      StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(children: [
           const Icon(Icons.edit_rounded, color: Color(0xFF2563EB), size: 20),
@@ -322,6 +324,37 @@ class _StockInDetailViewState extends State<StockInDetailView> {
               ),
             ),
             const SizedBox(height: 10),
+            const Text('তারিখ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey)),
+            const SizedBox(height: 4),
+            InkWell(
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: ctx,
+                  initialDate: selectedDate,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now().add(const Duration(days: 1)),
+                );
+                if (picked != null) {
+                  setDialogState(() => selectedDate = picked);
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.calendar_today_rounded, size: 16, color: Color(0xFF2563EB)),
+                  const SizedBox(width: 8),
+                  Text(DateFormat('dd MMMM yyyy').format(selectedDate),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 10),
             const Text('নোট', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey)),
             const SizedBox(height: 4),
             TextField(
@@ -355,7 +388,7 @@ class _StockInDetailViewState extends State<StockInDetailView> {
           ),
         ],
       ),
-    );
+    ));
 
     if (confirmed == true) {
       await controller.updateEntry(
@@ -366,7 +399,7 @@ class _StockInDetailViewState extends State<StockInDetailView> {
         unitPrice: num.tryParse(priceCtrl.text.trim()) ?? entry.unitPrice,
         source: entry.source,
         note: noteCtrl.text.trim(),
-        date: entry.date,
+        date: selectedDate,
       );
       if (mounted) {
         Get.snackbar('আপডেট হয়েছে', 'স্টক এডজাস্ট হয়েছে',
