@@ -77,7 +77,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
                 b.scheduledDeliveryDate!.year,
                 b.scheduledDeliveryDate!.month,
                 b.scheduledDeliveryDate!.day);
-            return da.compareTo(db);
+            return db.compareTo(da);
           });
         break;
       default:

@@ -1054,7 +1054,7 @@ class _ProductStepState extends State<_ProductStep> {
         Obx(() {
           final categories = ['all'] +
               pc.products
-                  .where((p) => p.isAvailable && p.stock > 0)
+                  .where((p) => (p.isAvailable && p.stock > 0) || p.isInternal)
                   .map((p) => p.productCategory)
                   .where((c) => c.isNotEmpty)
                   .toSet()
@@ -1108,7 +1108,7 @@ class _ProductStepState extends State<_ProductStep> {
         Expanded(
           child: Obx(() {
             final allProducts = pc.products
-                .where((p) => p.isAvailable && p.stock > 0)
+                .where((p) => (p.isAvailable && p.stock > 0) || p.isInternal)
                 .where((p) =>
                     _category == 'all' ||
                     p.productCategory == _category)
@@ -1246,6 +1246,24 @@ class _ProductCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text('Hot',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    if (product.isInternal)
+                      Positioned(
+                        top: product.isHot ? 24 : 6,
+                        left: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6366F1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text('ইন্টার্নাল',
                               style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 9,

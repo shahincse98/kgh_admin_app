@@ -71,23 +71,6 @@ class SrHomeView extends GetView<SrPanelController> {
               _kpiGrid(context, scheme),
               const SizedBox(height: 14),
 
-              // Frozen alert
-              Obx(() {
-                if (controller.frozenAmount.value <= 0) {
-                  return const SizedBox();
-                }
-                return Column(
-                  children: [
-                    _frozenAlert(scheme),
-                    const SizedBox(height: 14),
-                  ],
-                );
-              }),
-
-              // Balance card
-              _balanceCard(scheme),
-              const SizedBox(height: 20),
-
               // Quick actions
               Text('Quick Actions',
                   style: Theme.of(context)
@@ -182,22 +165,6 @@ class SrHomeView extends GetView<SrPanelController> {
                   '৳ ${_fmt.format(controller.totalRevenue.value.toInt())}',
                   Icons.payments_rounded,
                   const Color(0xFF10B981)),
-              _kpi('কমিশন',
-                  '৳ ${_fmt.format(controller.commissionDue.value.toInt())}',
-                  Icons.percent_rounded,
-                  const Color(0xFF6366F1)),
-              _kpi('বেতন',
-                  '৳ ${_fmt.format(controller.totalSalary.value.toInt())}',
-                  Icons.badge_rounded,
-                  const Color(0xFFF59E0B)),
-              _kpi('মোট প্রাপ্য',
-                  '৳ ${_fmt.format(controller.totalDue.value.toInt())}',
-                  Icons.account_balance_wallet_rounded,
-                  const Color(0xFF0891B2)),
-              _kpi('পরিশোধিত',
-                  '৳ ${_fmt.format(controller.totalPaid.value.toInt())}',
-                  Icons.check_circle_rounded,
-                  const Color(0xFF22C55E)),
             ],
           ));
     });
@@ -225,85 +192,6 @@ class SrHomeView extends GetView<SrPanelController> {
         ),
       ),
     );
-  }
-
-  Widget _frozenAlert(ColorScheme scheme) {
-    return Obx(() => Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.red.withAlpha(15),
-            borderRadius: BorderRadius.circular(14),
-            border:
-                Border.all(color: Colors.red.withAlpha(80), width: 1.5),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.lock_rounded, color: Colors.red, size: 26),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('বেতন ফ্রিজ সতর্কতা',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: Colors.red)),
-                    const SizedBox(height: 4),
-                    Text(
-                      '৳${_fmt.format(controller.frozenAmount.value.toInt())} ফ্রিজ হয়েছে। '
-                      'গ্রাহকের বাকি আদায় করলে ফ্রিজ মুক্ত হবে।',
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.red),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ));
-  }
-
-  Widget _balanceCard(ColorScheme scheme) {
-    return Obx(() {
-      final net = controller.netPayable.value;
-      final isPaid = net <= 0;
-      final color =
-          isPaid ? Colors.green.shade600 : Colors.orange.shade700;
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withAlpha(18),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withAlpha(80), width: 1.5),
-        ),
-        child: Row(
-          children: [
-            Icon(
-                isPaid
-                    ? Icons.check_circle_outline_rounded
-                    : Icons.account_balance_wallet_rounded,
-                color: color,
-                size: 30),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('নেট প্রদেয়',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600, color: color)),
-                Text(
-                  '৳ ${_fmt.format(net.abs().toInt())}${net < 0 ? ' (অতিরিক্ত)' : ''}',
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: color),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    });
   }
 
   Widget _quickActions(BuildContext context, ColorScheme scheme) {

@@ -51,9 +51,6 @@ class _SrDueViewState extends State<SrDueView> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final profile = ctrl.srProfile.value;
-        final dueLimit = (profile?.dueLimit ?? 0).toDouble();
-
         // All users with dues
         final allWithDue = _query.isEmpty
             ? userCtrl.users.where((u) => u.totalDue > 0).toList()
@@ -69,14 +66,6 @@ class _SrDueViewState extends State<SrDueView> {
 
         final totalDue =
             userCtrl.users.fold<num>(0, (s, u) => s + u.totalDue);
-        final overLimit =
-            (totalDue - dueLimit).clamp(0, double.infinity);
-        final isFrozen = dueLimit > 0 && overLimit > 0;
-
-        // Progress ratio (0–1) — how full the limit is
-        final ratio = dueLimit > 0
-            ? (totalDue / dueLimit).clamp(0.0, 1.0)
-            : 0.0;
 
         return Column(
           children: [
@@ -85,69 +74,20 @@ class _SrDueViewState extends State<SrDueView> {
               margin: const EdgeInsets.fromLTRB(14, 14, 14, 8),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isFrozen
-                    ? scheme.errorContainer
-                    : scheme.primaryContainer,
+                color: scheme.primaryContainer,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Column(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _summaryTile(
-                          'মোট বাকি',
-                          '৳ ${_fmt.format(totalDue)}',
-                          isFrozen
-                              ? scheme.onErrorContainer
-                              : scheme.onPrimaryContainer),
-                      _summaryTile(
-                          'বাকি সীমা',
-                          dueLimit > 0
-                              ? '৳ ${_fmt.format(dueLimit)}'
-                              : 'সীমা নেই',
-                          isFrozen
-                              ? scheme.onErrorContainer
-                              : scheme.onPrimaryContainer),
-                      _summaryTile(
-                          'গ্রাহক সংখ্যা',
-                          '${allWithDue.length} জন',
-                          isFrozen
-                              ? scheme.onErrorContainer
-                              : scheme.onPrimaryContainer),
-                    ],
-                  ),
-                  if (dueLimit > 0) ...[
-                    const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: LinearProgressIndicator(
-                        value: ratio,
-                        minHeight: 8,
-                        backgroundColor: isFrozen
-                            ? scheme.onErrorContainer.withAlpha(30)
-                            : scheme.onPrimaryContainer.withAlpha(30),
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          isFrozen
-                              ? scheme.error
-                              : scheme.onPrimaryContainer,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      isFrozen
-                          ? 'সীমা অতিক্রম! অতিরিক্ত: ৳ ${_fmt.format(overLimit)} — বেতন আটকে আছে'
-                          : 'সীমার ${(ratio * 100).toStringAsFixed(0)}% ব্যবহার হয়েছে',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isFrozen
-                            ? scheme.onErrorContainer
-                            : scheme.onPrimaryContainer.withAlpha(200),
-                      ),
-                    ),
-                  ],
+                  _summaryTile(
+                      'মোট বাকি',
+                      '৳ ${_fmt.format(totalDue)}',
+                      scheme.onPrimaryContainer),
+                  _summaryTile(
+                      'গ্রাহক সংখ্যা',
+                      '${allWithDue.length} জন',
+                      scheme.onPrimaryContainer),
                 ],
               ),
             ),
@@ -211,29 +151,19 @@ class _SrDueViewState extends State<SrDueView> {
                           const SizedBox(height: 8),
                       itemBuilder: (_, i) {
                         final u = allWithDue[i];
-                        final isHigh = dueLimit > 0 &&
-                            u.totalDue >
-                                (dueLimit /
-                                    allWithDue.length.clamp(1, 9999));
                         return Card(
                           margin: EdgeInsets.zero,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14)),
-                          color: isHigh
-                              ? scheme.errorContainer.withAlpha(60)
-                              : scheme.surfaceContainerHigh,
+                          color: scheme.surfaceContainerHigh,
                           child: ListTile(
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 8),
                             leading: CircleAvatar(
-                              backgroundColor: isHigh
-                                  ? scheme.errorContainer
-                                  : scheme.secondaryContainer,
+                              backgroundColor: scheme.secondaryContainer,
                               child: Icon(Icons.store_rounded,
-                                  color: isHigh
-                                      ? scheme.onErrorContainer
-                                      : scheme.onSecondaryContainer),
+                                  color: scheme.onSecondaryContainer),
                             ),
                             title: Text(
                               u.shopName.isNotEmpty
@@ -250,20 +180,12 @@ class _SrDueViewState extends State<SrDueView> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '৳ ${_fmt.format(u.totalDue)}',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 15,
-                                      color: isHigh
-                                          ? scheme.error
-                                          : scheme.primary),
-                                ),
-                              ],
+                            trailing: Text(
+                              '৳ ${_fmt.format(u.totalDue)}',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                  color: scheme.primary),
                             ),
                           ),
                         );

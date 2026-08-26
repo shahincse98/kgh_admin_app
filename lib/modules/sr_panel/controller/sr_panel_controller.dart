@@ -31,14 +31,7 @@ class SrPanelController extends GetxController {
   // ── Dashboard stats ────────────────────────────────────────────────────────
   final totalDeliveries = 0.obs;
   final totalRevenue = 0.0.obs;
-  final commissionDue = 0.0.obs;
-  final totalSalary = 0.0.obs;
-  final totalDue = 0.0.obs;
-  final totalPaid = 0.0.obs;
-  final balance = 0.0.obs;
   final totalCustomerDue = 0.0.obs;
-  final frozenAmount = 0.0.obs;
-  final netPayable = 0.0.obs;
 
   // ── My Orders ──────────────────────────────────────────────────────────────
   final myOrders = <OrderModel>[].obs;
@@ -131,30 +124,12 @@ class SrPanelController extends GetxController {
 
     totalDeliveries.value = count;
     totalRevenue.value = rev;
-    commissionDue.value = rev * (sr.commissionPercent / 100);
-    totalSalary.value = sr.monthlyFixedSalary;
-    totalDue.value = commissionDue.value + totalSalary.value;
 
-    final monthKey =
-        '${m.year}-${m.month.toString().padLeft(2, '0')}';
-    final paidSnap = await _db
-        .collection('sr_payments')
-        .where('srId', isEqualTo: srDocId)
-        .where('month', isEqualTo: monthKey)
-        .get();
-    totalPaid.value = paidSnap.docs
-        .fold(0.0, (s, d) => s + ((d.data()['amount'] as num?)?.toDouble() ?? 0));
-    balance.value = totalDue.value - totalPaid.value;
-
-    // Customer due sum
     double custDue = 0;
     for (final u in assignedShops) {
       custDue += u.totalDue;
     }
     totalCustomerDue.value = custDue;
-    final excess = (custDue - sr.dueLimit).clamp(0.0, double.infinity);
-    frozenAmount.value = excess.clamp(0.0, balance.value);
-    netPayable.value = balance.value - frozenAmount.value;
   }
 
   Future<void> loadOrders() => loadMyOrders();
