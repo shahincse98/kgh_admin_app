@@ -475,11 +475,11 @@ class _ProductStep extends StatelessWidget {
                     final q = ctrl.productSearch.value.trim().toLowerCase();
                     final products = q.isEmpty
                         ? pc.products
-                            .where((p) => p.isAvailable)
+                            .where((p) => p.isAvailable || p.isInternal)
                             .toList()
                         : pc.products
                             .where((p) =>
-                                p.isAvailable &&
+                                (p.isAvailable || p.isInternal) &&
                                 (p.name.toLowerCase().contains(q) ||
                                     p.productCode.toLowerCase().contains(q)))
                             .toList();
@@ -563,17 +563,40 @@ class _ProductTile extends StatelessWidget {
                   )
                 : _placeholderIcon(scheme),
           ),
-          title: Text(
-            product.name,
-            style: const TextStyle(fontWeight: FontWeight.w700),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          title: Row(
+            children: [
+              if (product.isInternal)
+                Container(
+                  margin: const EdgeInsets.only(right: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'ইন্টার্নাল',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700),
+                  ),
+                ),
+              Expanded(
+                child: Text(
+                  product.name,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '৳ ${fmt.format(product.wholesalePrice)}  •  Stock: ${product.stock}',
+                '৳ ${fmt.format(product.isInternal && product.wholesalePrice <= 0 ? product.purchasePrice : product.wholesalePrice)}  •  Stock: ${product.stock}',
                 style: TextStyle(
                     color: scheme.onSurface.withAlpha(160), fontSize: 12),
               ),

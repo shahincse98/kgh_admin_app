@@ -325,28 +325,53 @@ class _StockManagementViewState extends State<StockManagementView>
   void _addInternalProductDialog(ProductController ctrl) {
     final name = TextEditingController();
     final cat = TextEditingController(text: 'ইন্টার্নাল');
+    final brand = TextEditingController();
+    final code = TextEditingController();
+    final unit = TextEditingController();
     final stock = TextEditingController(text: '0');
-    final price = TextEditingController(text: '0');
-    final note = TextEditingController();
+    final purchasePrice = TextEditingController(text: '0');
+    final wholesalePrice = TextEditingController(text: '0');
+    final retailPrice = TextEditingController(text: '0');
 
     Get.dialog(
       AlertDialog(
-        title: const Text('ইন্টার্নাল পণ্য যোগ করুন'),
+        title: const Text('নতুন ইন্টার্নাল পণ্য'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _sectionTitle('পণ্যের তথ্য'),
               _tf(name, 'পণ্যের নাম *'),
+              _tf(brand, 'ব্র্যান্ড'),
+              _tf(code, 'প্রোডাক্ট কোড'),
+              _tf(unit, 'ইউনিট (pcs/box/set)'),
+              const SizedBox(height: 8),
+              _sectionTitle('ক্যাটাগরি ও স্টক'),
               _tf(cat, 'ক্যাটাগরি'),
               _tf(stock, 'স্টক', number: true),
-              _tf(price, 'মূল্য (ঐচ্ছিক)', number: true, decimal: true),
-              _tf(note, 'নোট (ঐচ্ছিক)'),
+              const SizedBox(height: 8),
+              _sectionTitle('মূল্য'),
+              _priceTf(purchasePrice, 'ক্রয়মূল্য'),
+              _priceTf(wholesalePrice, 'পাইকারি মূল্য'),
+              _priceTf(retailPrice, 'খুচরা মূল্য'),
             ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () {
+              name.dispose();
+              cat.dispose();
+              brand.dispose();
+              code.dispose();
+              unit.dispose();
+              stock.dispose();
+              purchasePrice.dispose();
+              wholesalePrice.dispose();
+              retailPrice.dispose();
+              Get.back();
+            },
             child: const Text('বাতিল'),
           ),
           ElevatedButton(
@@ -359,11 +384,13 @@ class _StockManagementViewState extends State<StockManagementView>
               await ctrl.addProduct({
                 'name': name.text.trim(),
                 'productCategory': cat.text.trim(),
-                'brandName': note.text.trim(),
+                'brandName': brand.text.trim(),
+                'productCode': code.text.trim(),
+                'unit': unit.text.trim(),
                 'stock': int.tryParse(stock.text) ?? 0,
-                'purchasePrice': double.tryParse(price.text.trim()) ?? 0,
-                'wholesalePrice': 0,
-                'retailPrice': 0,
+                'purchasePrice': double.tryParse(purchasePrice.text.trim()) ?? 0,
+                'wholesalePrice': double.tryParse(wholesalePrice.text.trim()) ?? 0,
+                'retailPrice': double.tryParse(retailPrice.text.trim()) ?? 0,
                 'isAvailable': false,
                 'isHot': false,
                 'isNew': false,
@@ -376,14 +403,12 @@ class _StockManagementViewState extends State<StockManagementView>
                 'totalOrders': 0,
                 'monthlySold': 0,
                 'replaceCount': 0,
-                'productCode': '',
                 'productModel': '',
                 'productVideo': '',
-                'unit': '',
                 'warranty': '',
               });
               Get.back();
-              _tabs.animateTo(1); // switch to internal tab
+              _tabs.animateTo(1);
               Get.snackbar('সফল', 'ইন্টার্নাল পণ্য যোগ হয়েছে',
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: Colors.green,
@@ -392,6 +417,119 @@ class _StockManagementViewState extends State<StockManagementView>
             child: const Text('যোগ করুন'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _editInternalProductDialog(ProductController ctrl, ProductModel product) {
+    final name = TextEditingController(text: product.name);
+    final cat = TextEditingController(text: product.productCategory);
+    final brand = TextEditingController(text: product.brandName);
+    final code = TextEditingController(text: product.productCode);
+    final unit = TextEditingController(text: product.unit);
+    final stock = TextEditingController(text: product.stock.toString());
+    final purchasePrice = TextEditingController(text: product.purchasePrice.toString());
+    final wholesalePrice = TextEditingController(text: product.wholesalePrice.toString());
+    final retailPrice = TextEditingController(text: product.retailPrice.toString());
+
+    Get.dialog(
+      AlertDialog(
+        title: Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionTitle('পণ্যের তথ্য'),
+              _tf(name, 'পণ্যের নাম *'),
+              _tf(brand, 'ব্র্যান্ড'),
+              _tf(code, 'প্রোডাক্ট কোড'),
+              _tf(unit, 'ইউনিট (pcs/box/set)'),
+              const SizedBox(height: 8),
+              _sectionTitle('ক্যাটাগরি ও স্টক'),
+              _tf(cat, 'ক্যাটাগরি'),
+              _tf(stock, 'স্টক', number: true),
+              const SizedBox(height: 8),
+              _sectionTitle('মূল্য'),
+              _priceTf(purchasePrice, 'ক্রয়মূল্য'),
+              _priceTf(wholesalePrice, 'পাইকারি মূল্য'),
+              _priceTf(retailPrice, 'খুচরা মূল্য'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              name.dispose();
+              cat.dispose();
+              brand.dispose();
+              code.dispose();
+              unit.dispose();
+              stock.dispose();
+              purchasePrice.dispose();
+              wholesalePrice.dispose();
+              retailPrice.dispose();
+              Get.back();
+            },
+            child: const Text('বাতিল'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (name.text.trim().isEmpty) {
+                Get.snackbar('ত্রুটি', 'নাম আবশ্যক',
+                    backgroundColor: Colors.red, colorText: Colors.white);
+                return;
+              }
+              await ctrl.updateProduct(product.id, {
+                'name': name.text.trim(),
+                'productCategory': cat.text.trim(),
+                'brandName': brand.text.trim(),
+                'productCode': code.text.trim(),
+                'unit': unit.text.trim(),
+                'stock': int.tryParse(stock.text) ?? 0,
+                'purchasePrice': double.tryParse(purchasePrice.text.trim()) ?? 0,
+                'wholesalePrice': double.tryParse(wholesalePrice.text.trim()) ?? 0,
+                'retailPrice': double.tryParse(retailPrice.text.trim()) ?? 0,
+              });
+              Get.back();
+              Get.snackbar('সফল', 'পণ্য আপডেট হয়েছে',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.green,
+                  colorText: Colors.white);
+            },
+            child: const Text('আপডেট করুন'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4, top: 4),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Colors.grey,
+        ),
+      ),
+    );
+  }
+
+  Widget _priceTf(TextEditingController c, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: TextField(
+        controller: c,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          labelText: label,
+          prefixText: '৳ ',
+          isDense: true,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       ),
     );
   }
@@ -432,13 +570,12 @@ class _StockTile extends StatelessWidget {
             ? Colors.orange
             : Colors.green.shade700;
 
-    return Card(
+    final card = Card(
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
-            // Product thumbnail
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: product.images.isNotEmpty
@@ -538,6 +675,14 @@ class _StockTile extends StatelessWidget {
             if (product.isInternal) ...[
               SizedBox(width: isCompact ? 2 : 4),
               _actionBtn(
+                icon: Icons.edit_outlined,
+                color: Colors.blue.shade700,
+                tooltip: 'পণ্য এডিট করুন',
+                compact: isCompact,
+                onTap: () => _editInternalProduct(context),
+              ),
+              SizedBox(width: isCompact ? 2 : 4),
+              _actionBtn(
                 icon: Icons.delete_outline_rounded,
                 color: Colors.red.shade700,
                 tooltip: 'পণ্য ডিলেট করুন',
@@ -549,6 +694,14 @@ class _StockTile extends StatelessWidget {
         ),
       ),
     );
+
+    if (product.isInternal) {
+      return GestureDetector(
+        onTap: () => _editInternalProduct(context),
+        child: card,
+      );
+    }
+    return card;
   }
 
   Widget _imagePlaceholder(ColorScheme cs) {
@@ -602,6 +755,114 @@ class _StockTile extends StatelessWidget {
             },
             child: const Text('ডিলেট করুন',
                 style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editInternalProduct(BuildContext context) {
+    final name = TextEditingController(text: product.name);
+    final cat = TextEditingController(text: product.productCategory);
+    final brand = TextEditingController(text: product.brandName);
+    final code = TextEditingController(text: product.productCode);
+    final unitCtrl = TextEditingController(text: product.unit);
+    final stockCtrl = TextEditingController(text: product.stock.toString());
+    final purchaseCtrl =
+        TextEditingController(text: product.purchasePrice.toString());
+    final wholesaleCtrl =
+        TextEditingController(text: product.wholesalePrice.toString());
+    final retailCtrl =
+        TextEditingController(text: product.retailPrice.toString());
+
+    Widget tf(TextEditingController c, String label,
+        {bool number = false, bool decimal = false, String? prefix}) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: TextField(
+          controller: c,
+          keyboardType: number
+              ? TextInputType.numberWithOptions(decimal: decimal)
+              : TextInputType.text,
+          decoration: InputDecoration(
+            labelText: label,
+            prefixText: prefix,
+            isDense: true,
+            border:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+      );
+    }
+
+    Widget section(String text) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 4, top: 4),
+        child: Text(text,
+            style: const TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey)),
+      );
+    }
+
+    Get.dialog(
+      AlertDialog(
+        title:
+            Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              section('পণ্যের তথ্য'),
+              tf(name, 'পণ্যের নাম *'),
+              tf(brand, 'ব্র্যান্ড'),
+              tf(code, 'প্রোডাক্ট কোড'),
+              tf(unitCtrl, 'ইউনিট (pcs/box/set)'),
+              const SizedBox(height: 8),
+              section('ক্যাটাগরি ও স্টক'),
+              tf(cat, 'ক্যাটাগরি'),
+              tf(stockCtrl, 'স্টক', number: true),
+              const SizedBox(height: 8),
+              section('মূল্য'),
+              tf(purchaseCtrl, 'ক্রয়মূল্য',
+                  number: true, decimal: true, prefix: '৳ '),
+              tf(wholesaleCtrl, 'পাইকারি মূল্য',
+                  number: true, decimal: true, prefix: '৳ '),
+              tf(retailCtrl, 'খুচরা মূল্য',
+                  number: true, decimal: true, prefix: '৳ '),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Get.back(), child: const Text('বাতিল')),
+          ElevatedButton(
+            onPressed: () async {
+              if (name.text.trim().isEmpty) {
+                Get.snackbar('ত্রুটি', 'নাম আবশ্যক',
+                    backgroundColor: Colors.red, colorText: Colors.white);
+                return;
+              }
+              await ctrl.updateProduct(product.id, {
+                'name': name.text.trim(),
+                'productCategory': cat.text.trim(),
+                'brandName': brand.text.trim(),
+                'productCode': code.text.trim(),
+                'unit': unitCtrl.text.trim(),
+                'stock': int.tryParse(stockCtrl.text) ?? 0,
+                'purchasePrice':
+                    double.tryParse(purchaseCtrl.text.trim()) ?? 0,
+                'wholesalePrice':
+                    double.tryParse(wholesaleCtrl.text.trim()) ?? 0,
+                'retailPrice': double.tryParse(retailCtrl.text.trim()) ?? 0,
+              });
+              Get.back();
+              Get.snackbar('সফল', 'পণ্য আপডেট হয়েছে',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.green,
+                  colorText: Colors.white);
+            },
+            child: const Text('আপডেট করুন'),
           ),
         ],
       ),

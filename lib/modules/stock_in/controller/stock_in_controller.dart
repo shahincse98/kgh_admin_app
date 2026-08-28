@@ -213,7 +213,6 @@ class StockInController extends GetxController {
 
     await batch.commit();
 
-    // Update product stock locally (no need to re-fetch all products)
     try {
       final pc = Get.find<ProductController>();
       final deltas = <String, int>{};
@@ -226,8 +225,30 @@ class StockInController extends GetxController {
       pc.updateStockLocallyBatch(deltas);
     } catch (_) {}
 
-    // Mark entries need refresh
-    _loadedOnce = false;
+    final newEntries = <StockInModel>[];
+    for (final item in items) {
+      final productId = item['productId'] as String? ?? '';
+      final productName = item['productName'] as String? ?? '';
+      final image = item['image'] as String? ?? '';
+      final quantity = (item['quantity'] as num?)?.toInt() ?? 0;
+      final unitPrice = (item['unitPrice'] as num?) ?? 0;
+      if (productId.isEmpty || quantity <= 0) continue;
+      newEntries.add(StockInModel(
+        id: '',
+        productId: productId,
+        productName: productName,
+        image: image,
+        quantity: quantity,
+        unitPrice: unitPrice,
+        totalPrice: unitPrice * quantity,
+        source: source,
+        note: note,
+        date: date,
+        createdAt: DateTime.now(),
+        createdBy: currentUser,
+      ));
+    }
+    entries.insertAll(0, newEntries);
   }
 
   Future<void> deleteEntry(String id) async {

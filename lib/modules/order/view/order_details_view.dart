@@ -870,6 +870,10 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   }
 
   Widget _viewItemRow(int index, OrderItem i, ColorScheme scheme) {
+    final pc = Get.find<ProductController>();
+    final product = pc.products.firstWhereOrNull((p) => p.id == i.productId);
+    final isInternal = product?.isInternal ?? false;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -895,9 +899,32 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(i.productName,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 13)),
+                Row(
+                  children: [
+                    if (isInternal)
+                      Container(
+                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'ইন্টার্নাল',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    Expanded(
+                      child: Text(i.productName,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 13)),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 3),
                 Text(
                   '${i.quantity} × ৳${_fmt.format(i.pricePerUnit.toInt())}',
@@ -911,7 +938,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'ক্রয়: ৳${_fmt.format(i.purchasePrice.toInt())}',
+                        'ক্রয়: ৳${_fmt.format(i.purchasePrice.toInt())}',
                         style: TextStyle(
                             fontSize: 11,
                             color: i.purchasePrice > 0
@@ -1893,12 +1920,76 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       if (paymentEntries.isNotEmpty) { try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'payments': paymentEntries, 'paymentMethod': primaryMethod}); } catch (_) {} }
       if (mounted) setState(() { _currentPayments = paymentEntries; _currentPaymentMethod = primaryMethod; });
       if (memo.isNotEmpty) { try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'localMemo': memo}); } catch (_) {} if (mounted) setState(() => _currentLocalMemo = memo); }
-      if (_currentUserId.isNotEmpty) { if (mounted) setState(() => _currentPreviousDue = _currentUserDue); await controller.updateUserDue(_currentUserId, newDue); if (mounted) setState(() => _currentUserDue = newDue); try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'previousDue': _currentPreviousDue}); } catch (_) {} }
-      if (!alreadyDelivered && _saleReturnItems.isNotEmpty) { try { final sc = Get.find<StockInController>(); await sc.addMultipleStockIn(date: deliveryDate, source: _currentShopName, note: 'অর্ডার #${widget.order.id} — ফেরত', updatePurchasePrice: false, items: _saleReturnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'image': i.product.images.isNotEmpty ? i.product.images.first : '', 'quantity': i.quantity, 'unitPrice': i.unitPrice}).toList()); for (final item in _saleReturnItems) { item.dispose(); } await controller.saveReturnAmount(widget.order.id, saleReturnTotal); } catch (e) { print('স্টক ইন error: $e'); Get.snackbar('ত্রুটি', 'স্টকে ফেরত প্রডাক্ট যোগ করা যায়নি', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white); } }
+      if (_currentUserId.isNotEmpty) {
+        final prevDue = _currentUserDue;
+        if (mounted) setState(() => _currentPreviousDue = prevDue);
+        try {
+          await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'previousDue': prevDue});
+        } catch (_) {}
+        await controller.updateUserDue(_currentUserId, newDue.toInt());
+        if (mounted) setState(() => _currentUserDue = newDue.toInt());
+      }
+      if (!alreadyDelivered && _saleReturnItems.isNotEmpty) {
+        try {
+          final sc = Get.find<StockInController>();
+          await sc.addMultipleStockIn(date: deliveryDate, source: _currentShopName, note: 'অর্ডার #${widget.order.id} — ফেরত', updatePurchasePrice: false, items: _saleReturnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'image': i.product.images.isNotEmpty ? i.product.images.first : '', 'quantity': i.quantity, 'unitPrice': i.unitPrice}).toList());
+          for (final item in _saleReturnItems) { item.dispose(); }
+          await controller.saveReturnAmount(widget.order.id, saleReturnTotal);
+        } catch (e) {
+          await controller.saveReturnAmount(widget.order.id, saleReturnTotal);
+          if (mounted) {
+            Get.snackbar('সতর্কতা', 'ফেরত প্রডাক্ট স্টকে যোগ করা যায়নি (৳${_fmt.format(saleReturnTotal)})। পরে আবার চেষ্টা করুন।', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 4), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
+          }
+        }
+      }
       if (totalDeduction > 0) await controller.saveDeductionAmount(widget.order.id, totalDeduction);
       if (mounted) setState(() { _currentDeductionAmount = totalDeduction; _currentReturnAmount = saleReturnTotal; _currentDiscountAmount = discountAmount; });
-      if (!alreadyDelivered && selectedPendingIds.isNotEmpty) { try { for (final r in pendingReplaces) { if (selectedPendingIds.contains(r.id)) await _rc!.deliverToCustomer(entry: r, note: 'অর্ডার #${widget.order.id} এর সাথে ডেলিভারি'); } await _rc!.fetchEntries(force: true); } catch (_) {} }
-      if (!alreadyDelivered && returnItems.isNotEmpty) { try { for (final item in returnItems.where((i) => i.resolutionType != 'replace_given')) { await _rc!.addCustomerIn(productId: item.product.id, productName: item.product.name, quantity: item.quantity, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: item.resolutionType, deductionAmount: item.deductionAmount, note: 'ডেলিভারি #${widget.order.id} এ ফেরত', date: DateTime.now()); } final stockBatch = FirebaseFirestore.instance.batch(); for (final item in returnItems.where((i) => i.resolutionType == 'product_replace' || i.resolutionType == 'replace_given')) { stockBatch.update(FirebaseFirestore.instance.collection('products').doc(item.product.id), {'stock': FieldValue.increment(-item.quantity)}); } await stockBatch.commit(); try { Get.find<ProductController>().fetchProducts(forceRefresh: true); } catch (_) {} final replaceItemsData = returnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'quantity': i.quantity, 'resolutionType': i.resolutionType, 'deductionAmount': i.deductionAmount}).toList(); await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'replaceItems': replaceItemsData}); setState(() => _currentReplaceItems = replaceItemsData); await _rc!.fetchEntries(force: true); } catch (_) {} }
+      if (!alreadyDelivered && selectedPendingIds.isNotEmpty) {
+        try {
+          for (final r in pendingReplaces) {
+            if (selectedPendingIds.contains(r.id)) {
+              await _rc!.deliverToCustomer(entry: r, note: 'অর্ডার #${widget.order.id} এর সাথে ডেলিভারি');
+            }
+          }
+          await _rc!.fetchEntries(force: true);
+        } catch (e) {
+          if (mounted) {
+            Get.snackbar('সতর্কতা', 'রিপ্লেস ডেলিভারি সম্পন্ন হয়নি। পরে আবার চেষ্টা করুন।', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 4), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
+          }
+        }
+      }
+      if (!alreadyDelivered && returnItems.isNotEmpty) {
+        bool replaceError = false;
+        try {
+          for (final item in returnItems.where((i) => i.resolutionType != 'replace_given')) {
+            await _rc!.addCustomerIn(productId: item.product.id, productName: item.product.name, quantity: item.quantity, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: item.resolutionType, deductionAmount: item.deductionAmount, note: 'ডেলিভারি #${widget.order.id} এ ফেরত', date: DateTime.now());
+          }
+          final stockBatch = FirebaseFirestore.instance.batch();
+          bool hasStockChanges = false;
+          for (final item in returnItems.where((i) => i.resolutionType == 'product_replace' || i.resolutionType == 'replace_given')) {
+            stockBatch.update(FirebaseFirestore.instance.collection('products').doc(item.product.id), {'stock': FieldValue.increment(-item.quantity)});
+            hasStockChanges = true;
+          }
+          if (hasStockChanges) {
+            await stockBatch.commit();
+            try {
+              final pc = Get.find<ProductController>();
+              for (final item in returnItems.where((i) => i.resolutionType == 'product_replace' || i.resolutionType == 'replace_given')) {
+                pc.updateStockLocally(item.product.id, -item.quantity);
+              }
+            } catch (_) {}
+          }
+          final replaceItemsData = returnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'quantity': i.quantity, 'resolutionType': i.resolutionType, 'deductionAmount': i.deductionAmount}).toList();
+          await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'replaceItems': replaceItemsData});
+          if (mounted) setState(() => _currentReplaceItems = replaceItemsData);
+          await _rc!.fetchEntries(force: true);
+        } catch (e) {
+          replaceError = true;
+          if (mounted) {
+            Get.snackbar('সতর্কতা', 'রিপ্লেস প্রসেসিং সম্পন্ন হয়নি। পরে আবার চেষ্টা করুন।', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 4), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
+          }
+        }
+      }
       final msgParts = <String>['ডেলিভারি সম্পন্ন ও পেমেন্ট আপডেট হয়েছে'];
       if (selectedPendingIds.isNotEmpty) msgParts.add('${selectedPendingIds.length} টি রিপ্লেস ডেলিভারি');
       if (returnItems.isNotEmpty) msgParts.add('${returnItems.length} টি ফেরত রিপ্লেস');

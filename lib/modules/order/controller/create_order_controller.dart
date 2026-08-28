@@ -14,7 +14,14 @@ class CartItem {
 
   CartItem({required this.product, required this.quantity});
 
-  num get total => product.wholesalePrice * quantity;
+  num get effectivePrice {
+    if (product.isInternal && product.wholesalePrice <= 0) {
+      return product.purchasePrice;
+    }
+    return product.wholesalePrice;
+  }
+
+  num get total => effectivePrice * quantity;
 }
 
 class CreateOrderController extends GetxController {
@@ -177,7 +184,7 @@ class CreateOrderController extends GetxController {
                     ? c.product.images.first
                     : '',
                 quantity: c.quantity,
-                pricePerUnit: c.product.wholesalePrice,
+                pricePerUnit: c.effectivePrice,
                 totalPrice: c.total,
                 purchasePrice: c.product.purchasePrice,
               ).toMap())

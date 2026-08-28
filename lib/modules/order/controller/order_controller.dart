@@ -555,7 +555,6 @@ class OrderController extends GetxController {
 
   Future<void> updateUserDue(String userId, int newDue) async {
     await _db.collection('users').doc(userId).update({'totalDue': newDue});
-    // Update local UserController cache
     try {
       final uc = Get.find<UserController>();
       final idx = uc.users.indexWhere((u) => u.id == userId);
@@ -574,8 +573,49 @@ class OrderController extends GetxController {
           isBlocked: u.isBlocked,
           createdAt: u.createdAt,
         );
+        uc.users.refresh();
       }
     } catch (_) {}
+    bool ordersChanged = false;
+    for (int i = 0; i < orders.length; i++) {
+      final o = orders[i];
+      if (o.userId == userId && o.userDue != newDue) {
+        orders[i] = OrderModel(
+          id: o.id,
+          createdAt: o.createdAt,
+          items: o.items,
+          status: o.status,
+          totalAmount: o.totalAmount,
+          paidAmount: o.paidAmount,
+          shopName: o.shopName,
+          shopAddress: o.shopAddress,
+          shopPhone: o.shopPhone,
+          userId: o.userId,
+          orderedBy: o.orderedBy,
+          orderedByEmail: o.orderedByEmail,
+          deliveredBySrId: o.deliveredBySrId,
+          commissionConfirmed: o.commissionConfirmed,
+          scheduledDeliveryDate: o.scheduledDeliveryDate,
+          deliveryAssignedSrId: o.deliveryAssignedSrId,
+          deliveryAssignedSrName: o.deliveryAssignedSrName,
+          memoNumber: o.memoNumber,
+          dispatchedAt: o.dispatchedAt,
+          dispatchedBy: o.dispatchedBy,
+          deliveredAt: o.deliveredAt,
+          localMemo: o.localMemo,
+          replaceItems: o.replaceItems,
+          isDueCollection: o.isDueCollection,
+          returnAmount: o.returnAmount,
+          deductionAmount: o.deductionAmount,
+          previousDue: o.previousDue,
+          discountAmount: o.discountAmount,
+          userPhone: o.userPhone,
+          userDue: newDue,
+        );
+        ordersChanged = true;
+      }
+    }
+    if (ordersChanged) orders.refresh();
   }
 
   Future<void> recordDuePayment({

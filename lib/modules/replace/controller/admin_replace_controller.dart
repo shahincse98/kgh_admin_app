@@ -448,10 +448,13 @@ class AdminReplaceController extends GetxController {
 
     await batch.commit();
 
-    // 3. Refresh products globally
-    try {
-      Get.find<ProductController>().fetchProducts(forceRefresh: true);
-    } catch (_) {}
+    // 3. Update product stock locally
+    if (entry.customerResolutionType == 'product_replace' &&
+        entry.replaceProductId.isNotEmpty) {
+      try {
+        Get.find<ProductController>().updateStockLocally(entry.replaceProductId, -entry.quantity);
+      } catch (_) {}
+    }
 
     final idx = entries.indexWhere((e) => e.id == entry.id);
     if (idx != -1) {
