@@ -23,8 +23,6 @@ class OrderProfitRow {
   final double revenue;
   final double cost;
   final double gross;
-  final double commission;
-  final double netBeforeSalary;
 
   OrderProfitRow({
     required this.id,
@@ -33,8 +31,6 @@ class OrderProfitRow {
     required this.revenue,
     required this.cost,
     required this.gross,
-    required this.commission,
-    required this.netBeforeSalary,
   });
 }
 
@@ -48,7 +44,6 @@ class FinanceController extends GetxController {
   final customStart = Rxn<DateTime>();
   final customEnd = Rxn<DateTime>();
 
-  final commissionPercent = 6.0.obs;
   final srMonthlyFixedSalary = 0.0.obs;
 
   // Stock valuation (always current, not period-filtered)
@@ -69,7 +64,6 @@ class FinanceController extends GetxController {
   final totalCost = 0.0.obs;
   final grossProfit = 0.0.obs;
   final grossMarginPct = 0.0.obs;
-  final srCommissionCost = 0.0.obs;
   final salaryAllocated = 0.0.obs;
   final netProfit = 0.0.obs;
   final deliveredOrders = 0.obs;
@@ -118,15 +112,12 @@ class FinanceController extends GetxController {
   }
 
   Future<void> saveSettings({
-    required double commission,
     required double salary,
   }) async {
     await _db.collection('admin_settings').doc('finance').set({
-      'srCommissionPercent': commission,
       'srMonthlyFixedSalary': salary,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
-    commissionPercent.value = commission;
     srMonthlyFixedSalary.value = salary;
     _calculate();
   }
@@ -135,8 +126,6 @@ class FinanceController extends GetxController {
     final doc =
         await _db.collection('admin_settings').doc('finance').get();
     final data = doc.data();
-    commissionPercent.value =
-        (data?['srCommissionPercent'] as num?)?.toDouble() ?? 6.0;
     srMonthlyFixedSalary.value =
         (data?['srMonthlyFixedSalary'] as num?)?.toDouble() ?? 0.0;
   }
@@ -277,7 +266,6 @@ class FinanceController extends GetxController {
     double sales = 0;
     double cost = 0;
     double gross = 0;
-    double commission = 0;
     int delivered = 0;
     final rows = <OrderProfitRow>[];
 
@@ -305,13 +293,10 @@ class FinanceController extends GetxController {
       }
 
       final orderGross = revenue - orderCost;
-      final orderCommission =
-          revenue * (commissionPercent.value / 100.0);
 
       sales += revenue;
       cost += orderCost;
       gross += orderGross;
-      commission += orderCommission;
       delivered += 1;
 
       rows.add(OrderProfitRow(
@@ -321,8 +306,6 @@ class FinanceController extends GetxController {
         revenue: revenue,
         cost: orderCost,
         gross: orderGross,
-        commission: orderCommission,
-        netBeforeSalary: orderGross - orderCommission,
       ));
     }
 
@@ -354,11 +337,10 @@ class FinanceController extends GetxController {
     totalCost.value = cost;
     grossProfit.value = gross;
     grossMarginPct.value = sales > 0 ? (gross / sales) * 100 : 0;
-    srCommissionCost.value = commission;
     salaryAllocated.value = salary;
-    netProfit.value = gross - commission - salary;
+    netProfit.value = gross - salary;
     totalExpenses.value = expenses;
-    finalNetProfit.value = gross - commission - salary - expenses;
+    finalNetProfit.value = gross - salary - expenses;
     deliveredOrders.value = delivered;
     totalPurchased.value = purchased;
 

@@ -275,6 +275,8 @@ class OrderController extends GetxController {
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
         discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -319,6 +321,8 @@ class OrderController extends GetxController {
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
         discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -360,6 +364,10 @@ class OrderController extends GetxController {
         replaceItems: o.replaceItems,
         isDueCollection: o.isDueCollection,
         returnAmount: o.returnAmount,
+        deductionAmount: o.deductionAmount,
+        discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -434,10 +442,14 @@ class OrderController extends GetxController {
         memoNumber: memoNumber,
         dispatchedAt: DateTime.now(),
         dispatchedBy: currentUser,
+        deliveredAt: o.deliveredAt,
         returnAmount: o.returnAmount,
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
         discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
+        isDueCollection: o.isDueCollection,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -495,6 +507,8 @@ class OrderController extends GetxController {
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
         discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -547,6 +561,8 @@ class OrderController extends GetxController {
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
         discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -605,14 +621,16 @@ class OrderController extends GetxController {
           localMemo: o.localMemo,
           replaceItems: o.replaceItems,
           isDueCollection: o.isDueCollection,
-          returnAmount: o.returnAmount,
-          deductionAmount: o.deductionAmount,
-          previousDue: o.previousDue,
-          discountAmount: o.discountAmount,
-          userPhone: o.userPhone,
-          userDue: newDue,
-        );
-        ordersChanged = true;
+        returnAmount: o.returnAmount,
+        deductionAmount: o.deductionAmount,
+        previousDue: o.previousDue,
+        discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
+        userPhone: o.userPhone,
+        userDue: newDue,
+      );
+      ordersChanged = true;
       }
     }
     if (ordersChanged) orders.refresh();
@@ -722,6 +740,8 @@ class OrderController extends GetxController {
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
         discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -769,12 +789,14 @@ class OrderController extends GetxController {
       dispatchedBy: o.dispatchedBy,
       deliveredAt: o.deliveredAt,
       localMemo: o.localMemo,
-        replaceItems: o.replaceItems,
-        isDueCollection: o.isDueCollection,
+      replaceItems: o.replaceItems,
+      isDueCollection: o.isDueCollection,
       returnAmount: o.returnAmount,
       deductionAmount: o.deductionAmount,
       previousDue: o.previousDue,
       discountAmount: o.discountAmount,
+      paymentMethod: o.paymentMethod,
+      payments: o.payments,
       userPhone: o.userPhone,
       userDue: o.userDue,
     );
@@ -830,6 +852,8 @@ class OrderController extends GetxController {
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
         discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
         userPhone: userPhone,
         userDue: userDue,
       );
@@ -872,6 +896,8 @@ class OrderController extends GetxController {
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
         discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -914,6 +940,8 @@ class OrderController extends GetxController {
         deductionAmount: amount,
         previousDue: o.previousDue,
         discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -956,6 +984,51 @@ class OrderController extends GetxController {
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
         discountAmount: amount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
+        userPhone: o.userPhone,
+        userDue: o.userDue,
+      );
+      orders.refresh();
+    }
+  }
+
+  Future<void> updateReplaceItemsLocally(String id, List<Map<String, dynamic>> replaceItems) async {
+    await _db.collection('orders').doc(id).update({'replaceItems': replaceItems});
+    final idx = orders.indexWhere((o) => o.id == id);
+    if (idx != -1) {
+      final o = orders[idx];
+      orders[idx] = OrderModel(
+        id: o.id,
+        createdAt: o.createdAt,
+        items: o.items,
+        status: o.status,
+        totalAmount: o.totalAmount,
+        paidAmount: o.paidAmount,
+        shopName: o.shopName,
+        shopAddress: o.shopAddress,
+        shopPhone: o.shopPhone,
+        userId: o.userId,
+        orderedBy: o.orderedBy,
+        orderedByEmail: o.orderedByEmail,
+        deliveredBySrId: o.deliveredBySrId,
+        commissionConfirmed: o.commissionConfirmed,
+        scheduledDeliveryDate: o.scheduledDeliveryDate,
+        deliveryAssignedSrId: o.deliveryAssignedSrId,
+        deliveryAssignedSrName: o.deliveryAssignedSrName,
+        memoNumber: o.memoNumber,
+        dispatchedAt: o.dispatchedAt,
+        dispatchedBy: o.dispatchedBy,
+        deliveredAt: o.deliveredAt,
+        localMemo: o.localMemo,
+        replaceItems: replaceItems,
+        isDueCollection: o.isDueCollection,
+        returnAmount: o.returnAmount,
+        deductionAmount: o.deductionAmount,
+        previousDue: o.previousDue,
+        discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );
@@ -1089,6 +1162,8 @@ class OrderController extends GetxController {
         deductionAmount: o.deductionAmount,
         previousDue: o.previousDue,
         discountAmount: o.discountAmount,
+        paymentMethod: o.paymentMethod,
+        payments: o.payments,
         userPhone: o.userPhone,
         userDue: o.userDue,
       );

@@ -78,9 +78,6 @@ class FinanceView extends GetView<FinanceController> {
                       _kpiCard('মোট লাভ (Gross)',
                           controller.grossProfit.value,
                           const Color(0xFF16A34A)),
-                      _kpiCard('SR কমিশন',
-                          controller.srCommissionCost.value,
-                          const Color(0xFF7C3AED)),
                       _kpiCard('বেতন বরাদ্দ',
                           controller.salaryAllocated.value,
                           const Color(0xFFDC2626)),
@@ -148,8 +145,7 @@ class FinanceView extends GetView<FinanceController> {
                   const SizedBox(height: 16),
                   Text(
                     'লাভ গণনা: শুধুমাত্র delivered orders | '
-                    'COGS = purchasePrice × qty | '
-                    'SR commission = sales × ${controller.commissionPercent.value.toStringAsFixed(1)}%',
+                    'COGS = purchasePrice × qty',
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
@@ -697,9 +693,6 @@ class FinanceView extends GetView<FinanceController> {
                 _pill('Sales', row.revenue, const Color(0xFF0284C7)),
                 _pill('Cost', row.cost, const Color(0xFFEA580C)),
                 _pill('Gross', row.gross, const Color(0xFF16A34A)),
-                _pill('Comm', row.commission, const Color(0xFF7C3AED)),
-                _pill('Net*', row.netBeforeSalary,
-                    const Color(0xFF15803D)),
               ],
             ),
           ],
@@ -727,8 +720,6 @@ class FinanceView extends GetView<FinanceController> {
   }
 
   Future<void> _openSettingsDialog(BuildContext context) async {
-    final commissionCtrl = TextEditingController(
-        text: controller.commissionPercent.value.toStringAsFixed(2));
     final salaryCtrl = TextEditingController(
         text:
             controller.srMonthlyFixedSalary.value.toStringAsFixed(2));
@@ -739,14 +730,6 @@ class FinanceView extends GetView<FinanceController> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: commissionCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration:
-                  const InputDecoration(labelText: 'SR কমিশন (%)'),
-            ),
-            const SizedBox(height: 10),
             TextField(
               controller: salaryCtrl,
               keyboardType:
@@ -761,11 +744,9 @@ class FinanceView extends GetView<FinanceController> {
               onPressed: () => Get.back(), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
-              final c = double.tryParse(commissionCtrl.text.trim()) ??
-                  controller.commissionPercent.value;
               final s = double.tryParse(salaryCtrl.text.trim()) ??
                   controller.srMonthlyFixedSalary.value;
-              await controller.saveSettings(commission: c, salary: s);
+              await controller.saveSettings(salary: s);
               Get.back();
             },
             child: const Text('Save'),

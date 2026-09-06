@@ -1,18 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/order_model.dart';
 import '../controller/order_controller.dart';
 import '../../product/model/product_model.dart';
 import '../../product/controller/product_controller.dart';
-import '../../user/model/user_model.dart';
-import '../../user/controller/user_controller.dart';
-import '../../replace/model/admin_replace_model.dart';
-import '../../replace/controller/admin_replace_controller.dart';
-import '../../stock_in/controller/stock_in_controller.dart';
 import '../../user/model/user_model.dart';
 import '../../user/controller/user_controller.dart';
 import '../../replace/model/admin_replace_model.dart';
@@ -1900,100 +1893,220 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     );
 
     if (confirmed == true) {
-      final paidNow = paymentRows.fold<num>(0, (s, r) => s + (num.tryParse(r.amountCtrl.text.trim()) ?? 0));
-      final paymentEntries = paymentRows.where((r) => (num.tryParse(r.amountCtrl.text.trim()) ?? 0) > 0).map((r) => {
-        'amount': num.tryParse(r.amountCtrl.text.trim()) ?? 0,
-        'method': r.method,
-      }).toList();
-      final primaryMethod = paymentEntries.isNotEmpty ? paymentEntries.first['method'] as String : _handLabel;
-      final totalDeduction = returnItems.where((r) => r.resolutionType == 'money_deduct').fold<int>(0, (s, r) => s + r.deductionAmount);
-      final saleReturnTotal = _saleReturnItems.fold<num>(0, (s, r) => s + r.totalPrice).toInt();
-      final discountAmount = num.tryParse(discountCtrl.text.trim()) ?? 0;
-      final memo = memoCtrl.text.trim();
-      final totalPaidNow = paidNow.toInt() + totalDeduction + saleReturnTotal;
-      final newDue = (grandTotal - totalPaidNow - discountAmount.toInt()).clamp(0, 9999999);
-      final totalPaid = _currentPaid.toInt() + totalPaidNow;
+      Navigator.of(context).pop();
+      if (!mounted) return;
+      
+      final overlay = OverlayEntry(
+        builder: (context) => Container(
+          color: Colors.black54,
+          child: const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: Colors.white),
+                SizedBox(height: 16),
+                Text('ডেলিভারি প্রসেসিং হচ্ছে...', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ),
+      );
+      Overlay.of(context).insert(overlay);
+      
+      bool stockOutDone = false;
+      
+      try {
+        final paidNow = paymentRows.fold<num>(0, (s, r) => s + (num.tryParse(r.amountCtrl.text.trim()) ?? 0));
+        final paymentEntries = paymentRows.where((r) => (num.tryParse(r.amountCtrl.text.trim()) ?? 0) > 0).map((r) => {
+          'amount': num.tryParse(r.amountCtrl.text.trim()) ?? 0,
+          'method': r.method,
+        }).toList();
+        final primaryMethod = paymentEntries.isNotEmpty ? (paymentEntries.first['method'] as String?) ?? _handLabel : _handLabel;
+        final totalDeduction = returnItems.where((r) => r.resolutionType == 'money_deduct').fold<int>(0, (s, r) => s + r.deductionAmount);
+        final saleReturnTotal = _saleReturnItems.fold<num>(0, (s, r) => s + r.totalPrice).toInt();
+        final discountAmount = num.tryParse(discountCtrl.text.trim()) ?? 0;
+        final memo = memoCtrl.text.trim();
+        final totalPaidNow = paidNow.toInt() + totalDeduction + saleReturnTotal;
+        final newDue = (grandTotal - totalPaidNow - discountAmount.toInt()).clamp(0, 9999999);
+        final totalPaid = _currentPaid.toInt() + totalPaidNow;
+        final warnings = <String>[];
+        final _to = const Duration(seconds: 30);
 
-      if (!alreadyDelivered) { setState(() { _currentStatus = 'delivered'; _deliveredAt = deliveryDate; }); await controller.updateOrderStatus(widget.order.id, 'delivered', previousStatus: previousStatus, deliveredBySrId: widget.srDocId, deliveryDate: deliveryDate, items: _savedItems.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList()); }
-      if (totalPaid != _currentPaid) { await controller.updatePaidAmount(widget.order.id, totalPaid); setState(() { _currentPaid = totalPaid; _paidCtrl.text = totalPaid.toStringAsFixed(0); }); }
-      if (discountAmount > 0) await controller.saveDiscountAmount(widget.order.id, discountAmount);
-      if (paymentEntries.isNotEmpty) { try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'payments': paymentEntries, 'paymentMethod': primaryMethod}); } catch (_) {} }
-      if (mounted) setState(() { _currentPayments = paymentEntries; _currentPaymentMethod = primaryMethod; });
-      if (memo.isNotEmpty) { try { await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'localMemo': memo}); } catch (_) {} if (mounted) setState(() => _currentLocalMemo = memo); }
-      if (_currentUserId.isNotEmpty) {
-        final prevDue = _currentUserDue;
-        if (mounted) setState(() => _currentPreviousDue = prevDue);
-        try {
-          await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'previousDue': prevDue});
-        } catch (_) {}
-        await controller.updateUserDue(_currentUserId, newDue.toInt());
-        if (mounted) setState(() => _currentUserDue = newDue.toInt());
-      }
-      if (!alreadyDelivered && _saleReturnItems.isNotEmpty) {
-        try {
-          final sc = Get.find<StockInController>();
-          await sc.addMultipleStockIn(date: deliveryDate, source: _currentShopName, note: 'অর্ডার #${widget.order.id} — ফেরত', updatePurchasePrice: false, items: _saleReturnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'image': i.product.images.isNotEmpty ? i.product.images.first : '', 'quantity': i.quantity, 'unitPrice': i.unitPrice}).toList());
-          for (final item in _saleReturnItems) { item.dispose(); }
-          await controller.saveReturnAmount(widget.order.id, saleReturnTotal);
-        } catch (e) {
-          await controller.saveReturnAmount(widget.order.id, saleReturnTotal);
-          if (mounted) {
-            Get.snackbar('সতর্কতা', 'ফেরত প্রডাক্ট স্টকে যোগ করা যায়নি (৳${_fmt.format(saleReturnTotal)})। পরে আবার চেষ্টা করুন।', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 4), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
+        if (!alreadyDelivered) {
+          try {
+            setState(() { _currentStatus = 'delivered'; _deliveredAt = deliveryDate; });
+          } catch (_) {}
+          try {
+            await controller.updateOrderStatus(widget.order.id, 'delivered', previousStatus: previousStatus, deliveredBySrId: widget.srDocId, deliveryDate: deliveryDate, items: _savedItems.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList()).timeout(_to);
+            stockOutDone = true;
+          } catch (e) {
+            warnings.add('স্টক আউট ব্যর্থ');
           }
+        } else {
+          stockOutDone = true;
         }
-      }
-      if (totalDeduction > 0) await controller.saveDeductionAmount(widget.order.id, totalDeduction);
-      if (mounted) setState(() { _currentDeductionAmount = totalDeduction; _currentReturnAmount = saleReturnTotal; _currentDiscountAmount = discountAmount; });
-      if (!alreadyDelivered && selectedPendingIds.isNotEmpty) {
+
         try {
-          for (final r in pendingReplaces) {
-            if (selectedPendingIds.contains(r.id)) {
-              await _rc!.deliverToCustomer(entry: r, note: 'অর্ডার #${widget.order.id} এর সাথে ডেলিভারি');
-            }
+          final orderUpdates = <String, dynamic>{};
+          if (totalPaid != _currentPaid) {
+            orderUpdates['paidAmount'] = totalPaid;
           }
-          await _rc!.fetchEntries(force: true);
+          if (discountAmount > 0) {
+            orderUpdates['discountAmount'] = discountAmount;
+          }
+          orderUpdates['payments'] = paymentEntries;
+          orderUpdates['paymentMethod'] = primaryMethod;
+          orderUpdates['localMemo'] = memo.isNotEmpty ? memo : FieldValue.delete();
+          if (_currentUserId.isNotEmpty) {
+            orderUpdates['previousDue'] = _currentUserDue;
+          }
+          if (saleReturnTotal > 0) {
+            orderUpdates['returnAmount'] = saleReturnTotal;
+          }
+          if (totalDeduction > 0) {
+            orderUpdates['deductionAmount'] = totalDeduction;
+          }
+          if (orderUpdates.isNotEmpty) {
+            await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update(orderUpdates).timeout(_to);
+          }
+          setState(() {
+            _currentPaid = totalPaid;
+            _paidCtrl.text = totalPaid.toStringAsFixed(0);
+            _currentPayments = paymentEntries;
+            _currentPaymentMethod = primaryMethod;
+            _currentLocalMemo = memo;
+            _currentDeductionAmount = totalDeduction;
+            _currentReturnAmount = saleReturnTotal;
+            _currentDiscountAmount = discountAmount;
+          });
         } catch (e) {
-          if (mounted) {
-            Get.snackbar('সতর্কতা', 'রিপ্লেস ডেলিভারি সম্পন্ন হয়নি। পরে আবার চেষ্টা করুন।', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 4), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
-          }
+          warnings.add('অর্ডার আপডেট ব্যর্থ');
         }
-      }
-      if (!alreadyDelivered && returnItems.isNotEmpty) {
-        bool replaceError = false;
+
         try {
-          for (final item in returnItems.where((i) => i.resolutionType != 'replace_given')) {
-            await _rc!.addCustomerIn(productId: item.product.id, productName: item.product.name, quantity: item.quantity, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: item.resolutionType, deductionAmount: item.deductionAmount, note: 'ডেলিভারি #${widget.order.id} এ ফেরত', date: DateTime.now());
+          if (_currentUserId.isNotEmpty) {
+            await controller.updateUserDue(_currentUserId, newDue.toInt()).timeout(_to);
+            setState(() => _currentUserDue = newDue.toInt());
           }
-          final stockBatch = FirebaseFirestore.instance.batch();
-          bool hasStockChanges = false;
-          for (final item in returnItems.where((i) => i.resolutionType == 'product_replace' || i.resolutionType == 'replace_given')) {
-            stockBatch.update(FirebaseFirestore.instance.collection('products').doc(item.product.id), {'stock': FieldValue.increment(-item.quantity)});
-            hasStockChanges = true;
+        } catch (e) {
+          warnings.add('বাকি আপডেট ব্যর্থ');
+        }
+        
+        try {
+          if (_saleReturnItems.isNotEmpty) {
+            final sc = Get.find<StockInController>();
+            await sc.addMultipleStockIn(date: deliveryDate, source: _currentShopName, note: 'অর্ডার #${widget.order.id} — ফেরত', updatePurchasePrice: false, items: _saleReturnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'image': i.product.images.isNotEmpty ? i.product.images.first : '', 'quantity': i.quantity, 'unitPrice': i.unitPrice}).toList()).timeout(_to);
+            for (final item in _saleReturnItems) { item.dispose(); }
           }
-          if (hasStockChanges) {
-            await stockBatch.commit();
-            try {
-              final pc = Get.find<ProductController>();
-              for (final item in returnItems.where((i) => i.resolutionType == 'product_replace' || i.resolutionType == 'replace_given')) {
-                pc.updateStockLocally(item.product.id, -item.quantity);
+        } catch (e) {
+          warnings.add('ফেরত প্রডাক্ট স্টকে যোগ করা যায়নি');
+        }
+        
+        try {
+          if (selectedPendingIds.isNotEmpty && _rc != null) {
+            for (final r in pendingReplaces) {
+              if (selectedPendingIds.contains(r.id)) {
+                await _rc!.deliverToCustomer(entry: r, note: 'অর্ডার #${widget.order.id} এর সাথে ডেলিভারি');
               }
-            } catch (_) {}
+            }
+            await _rc!.fetchEntries(force: true);
           }
-          final replaceItemsData = returnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'quantity': i.quantity, 'resolutionType': i.resolutionType, 'deductionAmount': i.deductionAmount}).toList();
-          await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'replaceItems': replaceItemsData});
-          if (mounted) setState(() => _currentReplaceItems = replaceItemsData);
-          await _rc!.fetchEntries(force: true);
         } catch (e) {
-          replaceError = true;
-          if (mounted) {
-            Get.snackbar('সতর্কতা', 'রিপ্লেস প্রসেসিং সম্পন্ন হয়নি। পরে আবার চেষ্টা করুন।', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 4), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
-          }
+          warnings.add('রিপ্লেস ডেলিভারি সম্পন্ন হয়নি');
         }
+        
+        try {
+          if (returnItems.isNotEmpty && _rc != null) {
+            for (final item in returnItems.where((i) => i.resolutionType != 'replace_given')) {
+              await _rc!.addCustomerIn(productId: item.product.id, productName: item.product.name, quantity: item.quantity, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: item.resolutionType, deductionAmount: item.deductionAmount, note: 'ডেলিভারি #${widget.order.id} এ ফেরত', date: DateTime.now());
+            }
+            final stockBatch = FirebaseFirestore.instance.batch();
+            bool hasStockChanges = false;
+            for (final item in returnItems.where((i) => i.resolutionType == 'product_replace')) {
+              stockBatch.update(FirebaseFirestore.instance.collection('products').doc(item.product.id), {'stock': FieldValue.increment(-item.quantity)});
+              hasStockChanges = true;
+            }
+            if (hasStockChanges) {
+              await stockBatch.commit();
+              try {
+                final pc = Get.find<ProductController>();
+                for (final item in returnItems.where((i) => i.resolutionType == 'product_replace')) {
+                  pc.updateStockLocally(item.product.id, -item.quantity);
+                }
+              } catch (_) {}
+            }
+            final replaceItemsData = returnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'quantity': i.quantity, 'resolutionType': i.resolutionType, 'deductionAmount': i.deductionAmount}).toList();
+            await controller.updateReplaceItemsLocally(widget.order.id, replaceItemsData);
+            setState(() => _currentReplaceItems = replaceItemsData);
+            if (_rc != null) await _rc!.fetchEntries(force: true);
+          }
+        } catch (e) {
+          warnings.add('রিপ্লেস প্রসেসিং সম্পন্ন হয়নি');
+        }
+        
+        try {
+          final idx = controller.orders.indexWhere((o) => o.id == widget.order.id);
+          if (idx != -1) {
+            final o = controller.orders[idx];
+            controller.orders[idx] = OrderModel(
+              id: o.id,
+              createdAt: o.createdAt,
+              items: o.items,
+              status: _currentStatus,
+              totalAmount: o.totalAmount,
+              paidAmount: totalPaid,
+              shopName: o.shopName,
+              shopAddress: o.shopAddress,
+              shopPhone: o.shopPhone,
+              userId: o.userId,
+              orderedBy: o.orderedBy,
+              orderedByEmail: o.orderedByEmail,
+              deliveredBySrId: widget.srDocId ?? o.deliveredBySrId,
+              commissionConfirmed: o.commissionConfirmed,
+              scheduledDeliveryDate: o.scheduledDeliveryDate,
+              deliveryAssignedSrId: o.deliveryAssignedSrId,
+              deliveryAssignedSrName: o.deliveryAssignedSrName,
+              memoNumber: o.memoNumber,
+              dispatchedAt: o.dispatchedAt,
+              dispatchedBy: o.dispatchedBy,
+              deliveredAt: _deliveredAt,
+              localMemo: memo,
+              replaceItems: _currentReplaceItems,
+              isDueCollection: o.isDueCollection,
+              returnAmount: saleReturnTotal,
+              deductionAmount: totalDeduction,
+              previousDue: _currentPreviousDue,
+              discountAmount: discountAmount,
+              paymentMethod: primaryMethod,
+              payments: paymentEntries,
+              userPhone: o.userPhone,
+              userDue: newDue.toInt(),
+            );
+            controller.orders.refresh();
+          }
+        } catch (_) {}
+        
+        final msgParts = <String>['ডেলিভারি সম্পন্ন হয়েছে'];
+        if (selectedPendingIds.isNotEmpty) msgParts.add('${selectedPendingIds.length} টি রিপ্লেস ডেলিভারি');
+        if (returnItems.isNotEmpty) msgParts.add('${returnItems.length} টি ফেরত রিপ্লেস');
+        if (_saleReturnItems.isNotEmpty) msgParts.add('${_saleReturnItems.length} টি ফেরত প্রডাক্ট স্টকে');
+        if (discountAmount.toInt() > 0) msgParts.add('ডিসকাউন্ট ৳${_fmt.format(discountAmount.toInt())}');
+        msgParts.add('নতুন বাকি ৳${_fmt.format(newDue.toInt())}');
+        
+        if (warnings.isEmpty) {
+          Get.snackbar('সফল', msgParts.join(' • '), snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 5), backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
+        } else {
+          Get.snackbar('সতর্কতা', '${msgParts.join(' • ')}\n${warnings.join(', ')}', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 6), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
+        }
+      } catch (e) {
+        if (stockOutDone) {
+          Get.snackbar('সতর্কতা', 'ডেলিভারি সম্পন্ন হয়েছে কিছু আপডেট ব্যর্থ হয়েছে', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 5), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
+        } else {
+          Get.snackbar('ত্রুটি', 'ডেলিভারি সম্পন্ন হয়নি: $e', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 4), backgroundColor: Colors.red, colorText: Colors.white);
+        }
+      } finally {
+        try { overlay.remove(); } catch (_) {}
       }
-      final msgParts = <String>['ডেলিভারি সম্পন্ন ও পেমেন্ট আপডেট হয়েছে'];
-      if (selectedPendingIds.isNotEmpty) msgParts.add('${selectedPendingIds.length} টি রিপ্লেস ডেলিভারি');
-      if (returnItems.isNotEmpty) msgParts.add('${returnItems.length} টি ফেরত রিপ্লেস');
-      Get.snackbar('সফল', msgParts.join(' • '), snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
     }
     payCtrl.dispose(); memoCtrl.dispose(); discountCtrl.dispose(); for (final r in paymentRows) { r.dispose(); }
   }
@@ -2967,11 +3080,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     final netSales = (tot - ded - ret - disc).clamp(0, 9999999).toInt();
     num cost = 0;
     try { final pc = Get.find<ProductController>(); for (final item in _savedItems) { num c = item.purchasePrice; if (c <= 0) { final p = pc.products.firstWhereOrNull((p) => p.id == item.productId); if (p != null) c = p.purchasePrice; } cost += c * item.quantity; } } catch (_) {}
-    final hasSr = _assignedSrId.isNotEmpty || widget.order.deliveredBySrId.isNotEmpty;
-    final comm = (netSales * 0.06).round();
-    final profitWithSr = (netSales - cost.toInt() - comm).clamp(0, 9999999);
-    final profitWithoutSr = (netSales - cost.toInt()).clamp(0, 9999999);
-    final profit = hasSr ? profitWithSr : profitWithoutSr;
+    final profit = (netSales - cost.toInt()).clamp(0, 9999999);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Text('লাভের হিসাব', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)), const SizedBox(height: 10),
       _payRow('মোট অর্ডার', '৳ ${_fmt.format(tot.toInt())}', const Color(0xFF0891B2)),
@@ -2981,10 +3090,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       const SizedBox(height: 6),
       _payRow('নেট বিক্রি', '৳ ${_fmt.format(netSales)}', netSales > 0 ? const Color(0xFF0891B2) : Colors.grey),
       if (cost > 0) ...[const SizedBox(height: 4), _payRow('ক্রয় মূল্য', '− ৳ ${_fmt.format(cost.toInt())}', const Color(0xFFDC2626))],
-      if (hasSr) ...[const SizedBox(height: 2), _payRow('SR কমিশন (৬%)', '− ৳ ${_fmt.format(comm)}', const Color(0xFF7C3AED))],
       const SizedBox(height: 6),
       _payRow('নিট লাভ', '৳ ${_fmt.format(profit)}', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
-      if (cost > 0 && hasSr) ...[const SizedBox(height: 4), Builder(builder: (_) { final gpct = cost > 0 ? (profitWithoutSr / cost * 100).toStringAsFixed(2) : '0.00'; final npct = cost > 0 ? (profitWithSr / cost * 100).toStringAsFixed(2) : '0.00'; return Column(children: [ _payRow('লাভের হার (SR বাদে)', '$gpct%', profitWithoutSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)), const SizedBox(height: 2), _payRow('লাভের হার (SR সহ)', '$npct%', profitWithSr > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)) ]); })],
+      if (cost > 0) ...[const SizedBox(height: 4), Builder(builder: (_) { final gpct = cost > 0 ? (profit / cost * 100).toStringAsFixed(2) : '0.00'; return _payRow('লাভের হার', '$gpct%', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)); })],
     ]);
   }
 
@@ -3278,13 +3386,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         } catch (_) {}
       }
 
-      // Update Firestore and local state
       final newList = List<Map<String, dynamic>>.from(_currentReplaceItems);
       newList.removeAt(index);
-      await FirebaseFirestore.instance
-          .collection('orders')
-          .doc(widget.order.id)
-          .update({'replaceItems': newList});
+      await controller.updateReplaceItemsLocally(widget.order.id, newList);
       setState(() => _currentReplaceItems = newList);
 
       Get.snackbar('সফল', 'রিপ্লেস আইটেম সরানো হয়েছে',
@@ -3402,7 +3506,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                           await rc.fetchEntries(force: true);
                         }
                         final newList = [..._currentReplaceItems, replaceItem];
-                        await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'replaceItems': newList});
+                        await controller.updateReplaceItemsLocally(widget.order.id, newList);
                         setState(() => _currentReplaceItems = newList);
                         Navigator.pop(ctx);
                         Get.snackbar('সফল', 'রিপ্লেস প্রডাক্ট যোগ হয়েছে', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
@@ -3469,17 +3573,19 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     final orderId = widget.order.id;
                     final newUserId = u['id'] as String;
                     final newShopName = u['shopName'] ?? '';
-                    final newShopPhone = u['phone'] ?? '';
+                      final newShopPhone = u['phone'] ?? '';
                       final newShopAddress = u['address'] ?? '';
-                      final newDue = (u['due'] as num?)?.toInt() ?? 0;
+                      final newDue = (u['totalDue'] as num?)?.toInt() ?? 0;
                       try {
-                        await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
-                          'userId': newUserId,
-                          'shopName': newShopName,
-                          'phone': newShopPhone,
-                          'shopAddress': newShopAddress,
-                          'previousDue': newDue,
-                        });
+                        await controller.changeCustomer(
+                          orderId: orderId,
+                          userId: newUserId,
+                          shopName: newShopName,
+                          shopPhone: newShopPhone,
+                          shopAddress: newShopAddress,
+                          userPhone: newShopPhone,
+                          userDue: newDue,
+                        );
                         setState(() {
                           _currentUserId = newUserId;
                           _currentShopName = newShopName;

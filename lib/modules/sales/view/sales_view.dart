@@ -146,18 +146,13 @@ class SalesView extends GetView<SalesController> {
     final purch =
         _fmtInt.format(controller.totalPurchaseCost.value.toInt());
     final exp = _fmtInt.format(controller.totalExpenses.value.toInt());
-    final rate = controller.srCommissionPercent.value / 100;
-    final commission =
-        _fmtInt.format((controller.monthNetSales.value * rate).toInt());
     final profit = _fmtInt.format(
         (controller.monthNetSales.value -
                 controller.totalPurchaseCost.value -
-                controller.monthNetSales.value * rate -
                 controller.totalExpenses.value)
             .toInt());
     final profitVal = controller.monthNetSales.value -
         controller.totalPurchaseCost.value -
-        controller.monthNetSales.value * rate -
         controller.totalExpenses.value;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -169,8 +164,6 @@ class SalesView extends GetView<SalesController> {
             Icons.receipt_long_rounded, const Color(0xFF7C3AED)),
         _summaryCard(context, 'ক্রয় মূল্য', '৳ $purch',
             Icons.shopping_cart_rounded, const Color(0xFFD97706)),
-        _summaryCard(context, 'SR কমিশন', '৳ $commission',
-            Icons.person_pin_rounded, const Color(0xFF8B5CF6)),
         _summaryCard(context, 'খরচ', '৳ $exp',
             Icons.money_off_rounded, const Color(0xFFDC2626)),
         _summaryCard(

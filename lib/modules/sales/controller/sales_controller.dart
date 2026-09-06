@@ -92,7 +92,6 @@ class SalesController extends GetxController {
   final totalDeduction = 0.0.obs;
   final totalReturn = 0.0.obs;
   final totalDiscount = 0.0.obs;
-  final srCommissionPercent = 6.0.obs;
 
   final topProducts = <MapEntry<String, int>>[].obs;
   final topShops = <MapEntry<String, double>>[].obs;
@@ -107,7 +106,6 @@ class SalesController extends GetxController {
     final today = DateTime.now();
     fromDate.value = DateTime(today.year, today.month, today.day);
     toDate.value = DateTime(today.year, today.month, today.day, 23, 59, 59);
-    _loadCommissionPercent();
     loadData();
   }
 
@@ -126,17 +124,6 @@ class SalesController extends GetxController {
         final data = doc.data();
         final cost = (data['purchasePrice'] as num?) ?? 0;
         _productCostById[doc.id] = cost;
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _loadCommissionPercent() async {
-    try {
-      final doc = await _db.collection('admin_settings').doc('finance').get();
-      if (doc.exists) {
-        final data = doc.data();
-        srCommissionPercent.value =
-            (data?['srCommissionPercent'] as num?)?.toDouble() ?? 6.0;
       }
     } catch (_) {}
   }

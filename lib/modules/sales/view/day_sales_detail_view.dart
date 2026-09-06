@@ -28,8 +28,6 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
   double _totalNetSales = 0;
   double _totalGross = 0;
   double _totalPurchaseCost = 0;
-  double _totalSrCommission = 0;
-  double _commissionPercent = 6.0;
   double _totalDeduction = 0;
   double _totalReturn = 0;
   double _totalDiscount = 0;
@@ -54,7 +52,6 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
       final dayEnd = DateTime(d.year, d.month, d.day, 23, 59, 59);
 
       await _loadProductCosts();
-      await _loadCommissionPercent();
 
       final queryStart = DateTime(d.year - 1, d.month, d.day);
       final queryEnd = DateTime(d.year + 1, d.month, d.day);
@@ -197,8 +194,6 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
       }
       _totalNewDue = distinctNewDue;
 
-      _totalSrCommission = _totalNetSales * (_commissionPercent / 100);
-
       final eSnap = await _db
           .collection('expenses')
           .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(dayStart))
@@ -246,16 +241,6 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
       for (final doc in snap.docs) {
         final data = doc.data();
         _productCostById[doc.id] = (data['purchasePrice'] as num?) ?? 0;
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _loadCommissionPercent() async {
-    try {
-      final doc = await _db.collection('admin_settings').doc('finance').get();
-      if (doc.exists) {
-        final data = doc.data();
-        _commissionPercent = (data?['srCommissionPercent'] as num?)?.toDouble() ?? 6.0;
       }
     } catch (_) {}
   }
@@ -467,9 +452,8 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
   Widget _summaryCards(ColorScheme scheme) {
     final totalDue = _totalPreviousDue + _totalNetSales;
     final totalCash = _srHand + _bkash + _others;
-    final netProfit = _totalNetSales - _totalPurchaseCost - _totalSrCommission - _totalExpenses;
-    final profitRateNoSr = _totalNetSales > 0 ? ((_totalNetSales - _totalPurchaseCost) / _totalNetSales * 100) : 0.0;
-    final profitRateWithSr = _totalNetSales > 0 ? (netProfit / _totalNetSales * 100) : 0.0;
+    final netProfit = _totalNetSales - _totalPurchaseCost - _totalExpenses;
+    final profitRate = _totalNetSales > 0 ? ((_totalNetSales - _totalPurchaseCost) / _totalNetSales * 100) : 0.0;
     return Wrap(spacing: 10, runSpacing: 10, children: [
       _card('মোট অর্ডার', '$_orderCount টি', Icons.receipt_long_rounded, const Color(0xFF0891B2)),
       _card('Gross বিক্রি', '৳ ${_fmtInt.format(_totalGross.toInt())}', Icons.shopping_cart_rounded, const Color(0xFF0891B2)),
@@ -485,10 +469,8 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
       if (_adjustments > 0) _card('অ্যাডজাস্টমেন্ট', '৳ ${_fmtInt.format(_adjustments.toInt())}', Icons.tune_rounded, const Color(0xFF8B5CF6)),
       _card('নতুন বাকি', '৳ ${_fmtInt.format(_totalNewDue.toInt())}', Icons.hourglass_bottom_rounded, _totalNewDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)),
       _card('ক্রয় মূল্য', '৳ ${_fmtInt.format(_totalPurchaseCost.toInt())}', Icons.shopping_bag_rounded, const Color(0xFFD97706)),
-      _card('SR কমিশন (${_commissionPercent.toStringAsFixed(0)}%)', '৳ ${_fmtInt.format(_totalSrCommission.toInt())}', Icons.person_pin_rounded, const Color(0xFF8B5CF6)),
       _card('নিট লাভ', '৳ ${_fmtInt.format(netProfit.toInt())}', Icons.savings_rounded, netProfit >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
-      _card('লাভের হার (SR বাদে)', '${profitRateNoSr.toStringAsFixed(2)}%', Icons.percent_rounded, const Color(0xFF10B981)),
-      _card('লাভের হার (SR সহ)', '${profitRateWithSr.toStringAsFixed(2)}%', Icons.percent_rounded, const Color(0xFF8B5CF6)),
+      _card('লাভের হার', '${profitRate.toStringAsFixed(2)}%', Icons.percent_rounded, const Color(0xFF10B981)),
       _card('খরচ', '৳ ${_fmtInt.format(_totalExpenses.toInt())}', Icons.money_off_rounded, const Color(0xFFDC2626)),
     ]);
   }
@@ -545,8 +527,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
     final cashPaid = (o['_cashPaid'] as num?)?.toDouble() ?? 0;
     final orderNet = (o['_orderNet'] as num?)?.toDouble() ?? 0;
     final purchaseCost = (o['_purchaseCost'] as num?)?.toDouble() ?? 0;
-    final commission = orderNet * (_commissionPercent / 100);
-    final profit = orderNet - purchaseCost - commission;
+    final profit = orderNet - purchaseCost;
 
     return Card(
       elevation: 0, margin: const EdgeInsets.only(bottom: 8),

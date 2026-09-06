@@ -553,9 +553,7 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
                           cost += c * item.quantity;
                         }
                       } catch (_) {}
-                      final hasSr = order.deliveryAssignedSrId.isNotEmpty || order.deliveredBySrId.isNotEmpty;
-                      final comm = (net * 0.06).round();
-                      final profit = (net - cost.toInt() - (hasSr ? comm : 0)).clamp(0, 9999999);
+                      final profit = (net - cost.toInt()).clamp(0, 9999999);
                       return Text('লাভ: ৳${_fmt.format(profit)}',
                           style: TextStyle(fontSize: 10, color: profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)));
                     }),
