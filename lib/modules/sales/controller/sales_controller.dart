@@ -307,7 +307,7 @@ class SalesController extends GetxController {
           }
         }
       } else if (r.netSales > 0) {
-        payMap['জমা'] = (payMap['জমা'] ?? 0) + r.netSales;
+        payMap['জমা'.tr] = (payMap['জমা'.tr] ?? 0) + r.netSales;
       }
     }
     final sortedPay = payMap.entries.toList()

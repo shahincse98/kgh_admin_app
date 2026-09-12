@@ -34,11 +34,11 @@ class _SrDueViewState extends State<SrDueView> {
       backgroundColor: scheme.surfaceContainerLowest,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('কাস্টমার বাকি',
+        title: Text('কাস্টমার বাকি'.tr,
             style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
           IconButton(
-            tooltip: 'রিফ্রেশ',
+            tooltip: 'রিফ্রেশ'.tr,
             onPressed: () {
               userCtrl.fetchUsers();
             },
@@ -81,12 +81,12 @@ class _SrDueViewState extends State<SrDueView> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _summaryTile(
-                      'মোট বাকি',
+                      'মোট বাকি'.tr,
                       '৳ ${_fmt.format(totalDue)}',
                       scheme.onPrimaryContainer),
                   _summaryTile(
-                      'গ্রাহক সংখ্যা',
-                      '${allWithDue.length} জন',
+                      'গ্রাহক সংখ্যা'.tr,
+                      '${allWithDue.length} ${'জন'.tr}',
                       scheme.onPrimaryContainer),
                 ],
               ),
@@ -100,7 +100,7 @@ class _SrDueViewState extends State<SrDueView> {
                 onChanged: (v) =>
                     setState(() => _query = v.trim().toLowerCase()),
                 decoration: InputDecoration(
-                  hintText: 'নাম / ফোন দিয়ে খুঁজুন…',
+                  hintText: 'নাম / ফোন দিয়ে খুঁজুন…'.tr,
                   prefixIcon: const Icon(Icons.search_rounded),
                   filled: true,
                   fillColor: scheme.surfaceContainerHigh,
@@ -134,8 +134,8 @@ class _SrDueViewState extends State<SrDueView> {
                           const SizedBox(height: 12),
                           Text(
                             _query.isEmpty
-                                ? 'কোনো বাকি নেই'
-                                : 'কোনো ফলাফল পাওয়া যায়নি',
+                                ? 'কোনো বাকি নেই'.tr
+                                : 'কোনো ফলাফল পাওয়া যায়নি'.tr,
                             style: TextStyle(
                                 fontSize: 16,
                                 color: scheme.onSurface.withAlpha(120)),

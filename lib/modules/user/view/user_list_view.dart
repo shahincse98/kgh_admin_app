@@ -4,6 +4,7 @@ import '../controller/user_controller.dart';
 import 'user_details_view.dart';
 import '../../../widgets/call_button.dart';
 import '../../../widgets/responsive.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class UserListView extends StatelessWidget {
   const UserListView({super.key});
@@ -15,7 +16,7 @@ class UserListView extends StatelessWidget {
 
     final ok = await Get.dialog<bool>(
       AlertDialog(
-        title: Text('${user.shopName}\nবাকি পাওনা সম্পাদনা'),
+        title: Text('${user.shopName}\n${'বাকি পাওনা সম্পাদনা'.tr}'),
         titleTextStyle: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -26,27 +27,27 @@ class UserListView extends StatelessWidget {
             controller: ctrl,
             keyboardType: TextInputType.number,
             autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'পরিমাণ',
+            decoration: InputDecoration(
+              labelText: 'পরিমাণ'.tr,
               prefixText: '৳ ',
               border: OutlineInputBorder(),
             ),
             validator: (v) =>
                 int.tryParse(v?.trim() ?? '') == null
-                    ? 'সঠিক সংখ্যা লিখুন'
+                    ? 'সঠিক সংখ্যা লিখুন'.tr
                     : null,
           ),
         ),
         actions: [
           TextButton(
               onPressed: () => Get.back(result: false),
-              child: const Text('বাতিল')),
+              child: Text('বাতিল'.tr)),
           ElevatedButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
               Get.back(result: true);
             },
-            child: const Text('সংরক্ষণ'),
+            child: Text('সংরক্ষণ'.tr),
           ),
         ],
       ),
@@ -63,8 +64,9 @@ class UserListView extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
-        title: const Text("Users"),
+        title: Text("Users".tr),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -78,8 +80,8 @@ class UserListView extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
             child: TextField(
               onChanged: (v) => controller.searchText.value = v,
-              decoration: const InputDecoration(
-                hintText: 'Shop নাম, মালিক বা ফোন দিয়ে খুঁজুন...',
+              decoration: InputDecoration(
+                hintText: 'Shop নাম, মালিক বা ফোন দিয়ে খুঁজুন...'.tr,
                 prefixIcon: Icon(Icons.search_rounded),
               ),
             ),
@@ -110,8 +112,8 @@ class UserListView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'মোট বাকি পাওনা',
+                        Text(
+                          'মোট বাকি পাওনা'.tr,
                           style: TextStyle(
                               color: Colors.white70, fontSize: 11),
                         ),
@@ -129,14 +131,14 @@ class UserListView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '$dueCount জন',
+                        '$dueCount ${'জন'.tr}',
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w700),
                       ),
-                      const Text(
-                        'বাকি আছে',
+                      Text(
+                        'বাকি আছে'.tr,
                         style: TextStyle(color: Colors.white70, fontSize: 11),
                       ),
                     ],
@@ -156,7 +158,7 @@ class UserListView extends StatelessWidget {
               if (list.isEmpty) {
                 return Center(
                   child: Text(
-                    'কোনো user পাওয়া যায়নি',
+                    'কোনো user পাওয়া যায়নি'.tr,
                     style: TextStyle(color: scheme.onSurfaceVariant),
                   ),
                 );
@@ -222,8 +224,8 @@ class UserListView extends StatelessWidget {
                                                   .withValues(alpha: 0.15),
                                               borderRadius: BorderRadius.circular(999),
                                             ),
-                                            child: const Text(
-                                              'Blocked',
+                                            child: Text(
+                                              'Blocked'.tr,
                                               style: TextStyle(
                                                 color: Color(0xFFDC2626),
                                                 fontSize: 12,
@@ -234,16 +236,16 @@ class UserListView extends StatelessWidget {
                                       ],
                                     ),
                                     const SizedBox(height: 6),
-                                    Text('মালিক: ${user.proprietorName}'),
+                                    Text('${'মালিক'.tr}: ${user.proprietorName}'),
                                     Row(
                                       children: [
-                                        Text('ফোন: ${user.phone}'),
+                                        Text('${'ফোন'.tr}: ${user.phone}'),
                                         CallButton(phone: user.phone),
                                       ],
                                     ),
                                     if (user.address.isNotEmpty)
                                       Text(
-                                        'ঠিকানা: ${user.address}',
+                                        '${'ঠিকানা'.tr}: ${user.address}',
                                         style: const TextStyle(
                                             fontSize: 12,
                                             color: Colors.grey),
@@ -254,7 +256,7 @@ class UserListView extends StatelessWidget {
                                     Row(
                                       children: [
                                         Text(
-                                          'বাকি: ৳${user.totalDue}',
+                                          '${'বাকি'.tr}: ৳${user.totalDue}',
                                           style: TextStyle(
                                               fontWeight: FontWeight.w700,
                                               color: user.totalDue > 0
@@ -279,7 +281,7 @@ class UserListView extends StatelessWidget {
                                                   color: Colors.red
                                                       .withAlpha(60)),
                                             ),
-                                            child: const Row(
+                                            child: Row(
                                               mainAxisSize:
                                                   MainAxisSize.min,
                                               children: [
@@ -287,7 +289,7 @@ class UserListView extends StatelessWidget {
                                                     size: 11,
                                                     color: Colors.red),
                                                 SizedBox(width: 3),
-                                                Text('এডিট',
+                                                Text('এডিট'.tr,
                                                     style: TextStyle(
                                                         fontSize: 10,
                                                         color: Colors.red,
@@ -307,15 +309,15 @@ class UserListView extends StatelessWidget {
                                   if (v == 'details') {
                                     Get.to(() => UserDetailsView(user: user));
                                   } else if (v == 'block') {
-                                    final action = user.isBlocked ? 'Unblock' : 'Block';
+                                    final action = user.isBlocked ? 'Unblock'.tr : 'Block'.tr;
                                     final confirmed = await Get.dialog<bool>(
                                       AlertDialog(
                                         title: Text('$action User'),
-                                        content: Text('${user.shopName} কে $action করতে চান?'),
+                                        content: Text('${user.shopName} কে $action ${'করতে চান'.tr}?'),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Get.back(result: false),
-                                            child: const Text('না'),
+                                            child: Text('না'.tr),
                                           ),
                                           TextButton(
                                             onPressed: () => Get.back(result: true),
@@ -330,13 +332,13 @@ class UserListView extends StatelessWidget {
                                   }
                                 },
                                 itemBuilder: (_) => [
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: 'details',
-                                    child: Text('Details'),
+                                    child: Text('Details'.tr),
                                   ),
                                   PopupMenuItem(
                                     value: 'block',
-                                    child: Text(user.isBlocked ? 'Unblock' : 'Block'),
+                                    child: Text(user.isBlocked ? 'Unblock'.tr : 'Block'.tr),
                                   ),
                                 ],
                               ),

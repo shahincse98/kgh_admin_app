@@ -7,16 +7,17 @@ import '../../user/model/user_model.dart';
 import '../../user/controller/user_controller.dart';
 import '../../product/controller/product_controller.dart';
 import '../../product/model/product_model.dart';
+import '../../../localization/domain_labels.dart';
 
 // ── Visit status helpers ─────────────────────────────────────────────────────
 
-const _poVisitStatuses = [
-  ('pending', 'অপেক্ষারত', Icons.hourglass_empty_rounded),
-  ('visited', 'ভিজিট সম্পন্ন', Icons.check_circle_rounded),
-  ('ordered', 'অর্ডার সম্পন্ন', Icons.shopping_bag_rounded),
-  ('order_later', 'অর্ডার পরে দিবে', Icons.schedule_rounded),
-  ('shop_closed', 'দোকান বন্ধ', Icons.store_mall_directory_outlined),
-  ('no_order', 'অর্ডার দিবেনা', Icons.remove_shopping_cart_rounded),
+List<(String, String, IconData)> get _poVisitStatuses => [
+  ('pending', 'অপেক্ষারত'.tr, Icons.hourglass_empty_rounded),
+  ('visited', 'ভিজিট সম্পন্ন'.tr, Icons.check_circle_rounded),
+  ('ordered', 'অর্ডার সম্পন্ন'.tr, Icons.shopping_bag_rounded),
+  ('order_later', 'অর্ডার পরে দিবে'.tr, Icons.schedule_rounded),
+  ('shop_closed', 'দোকান বন্ধ'.tr, Icons.store_mall_directory_outlined),
+  ('no_order', 'অর্ডার দিবেনা'.tr, Icons.remove_shopping_cart_rounded),
 ];
 
 Color _poVisitColor(String s) {
@@ -26,7 +27,7 @@ Color _poVisitColor(String s) {
     case 'order_later': return const Color(0xFFF59E0B);
     case 'shop_closed': return const Color(0xFF64748B);
     case 'no_order': return const Color(0xFFDC2626);
-    default: return const Color(0xFF0891B2);
+    default: return Color(0xFF0891B2);
   }
 }
 
@@ -51,10 +52,10 @@ class SrPlaceOrderView extends StatelessWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Obx(() {
-          const titles = [
-            'কাস্টমার নির্বাচন',
-            'পণ্য নির্বাচন',
-            'অর্ডার নিশ্চিত করুন',
+          final titles = [
+            'কাস্টমার নির্বাচন'.tr,
+            'পণ্য নির্বাচন'.tr,
+            'অর্ডার নিশ্চিত করুন'.tr,
           ];
           return Text(titles[ctrl.orderStep.value],
               style: const TextStyle(fontWeight: FontWeight.w800));
@@ -66,7 +67,7 @@ class SrPlaceOrderView extends StatelessWidget {
               return ctrl.orderStep.value > 0
                   ? TextButton(
                       onPressed: ctrl.resetOrder,
-                      child: const Text('বাতিল'),
+                      child: Text('বাতিল'.tr),
                     )
                   : const SizedBox();
             }
@@ -76,13 +77,13 @@ class SrPlaceOrderView extends StatelessWidget {
                 if (count > 0)
                   TextButton(
                     onPressed: ctrl.resetOrder,
-                    child: const Text('বাতিল'),
+                    child: Text('বাতিল'.tr),
                   ),
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
                     IconButton(
-                      tooltip: 'কার্ট',
+                      tooltip: 'কার্ট'.tr,
                       icon: const Icon(Icons.shopping_cart_rounded),
                       onPressed: () => _showCartSheet(context, ctrl, scheme),
                     ),
@@ -151,7 +152,7 @@ class SrPlaceOrderView extends StatelessWidget {
         onPressed: () => _showCartSheet(context, ctrl, scheme),
         icon: const Icon(Icons.shopping_cart_rounded),
         label: Text(
-          '৳ ${NumberFormat('#,##,##0').format(ctrl.cartTotal)} — কার্ট ($count)',
+          '৳ ${NumberFormat('#,##,##0').format(ctrl.cartTotal)} — ${'কার্ট'.tr} ($count)',
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         backgroundColor: scheme.primary,
@@ -211,12 +212,12 @@ class _CartSheet extends StatelessWidget {
               children: [
                 Icon(Icons.shopping_cart_rounded, color: scheme.primary),
                 const SizedBox(width: 10),
-                const Text('কার্ট',
+                Text('কার্ট'.tr,
                     style:
                         TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                 const Spacer(),
                 Obx(() => Text(
-                      '${ctrl.cartCount} টি পণ্য',
+                      '${ctrl.cartCount} ${'টি পণ্য'.tr}',
                       style: TextStyle(
                           color: scheme.onSurface.withAlpha(160),
                           fontSize: 13),
@@ -236,7 +237,7 @@ class _CartSheet extends StatelessWidget {
                       Icon(Icons.shopping_cart_outlined,
                           size: 56, color: scheme.onSurface.withAlpha(60)),
                       const SizedBox(height: 12),
-                      Text('কার্ট খালি',
+                      Text('কার্ট খালি'.tr,
                           style: TextStyle(color: scheme.onSurface.withAlpha(120))),
                     ],
                   ),
@@ -350,7 +351,7 @@ class _CartSheet extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('মোট (${ctrl.cartCount} পণ্য)',
+                      Text('${'মোট'.tr} (${ctrl.cartCount} পণ্য)',
                           style: const TextStyle(
                               fontSize: 14, fontWeight: FontWeight.w600)),
                       Text(
@@ -371,7 +372,7 @@ class _CartSheet extends StatelessWidget {
                         ctrl.orderStep.value = 2;
                       },
                       icon: const Icon(Icons.check_circle_rounded),
-                      label: const Text('অর্ডার কনফার্মে যান',
+                      label: Text('অর্ডার কনফার্মে যান'.tr,
                           style: TextStyle(
                               fontSize: 15, fontWeight: FontWeight.w700)),
                       style: ElevatedButton.styleFrom(
@@ -496,7 +497,7 @@ class _CustomerStepState extends State<_CustomerStep> {
         }
       }
       if (calls.isNotEmpty) {
-        items.add(_ShopListItem.header('কল পরিচিতি', calls.length));
+        items.add(_ShopListItem.header('কল পরিচিতি'.tr, calls.length));
         for (final u in calls) {
           items.add(_ShopListItem.shop(u, isAssigned: false));
         }
@@ -505,7 +506,7 @@ class _CustomerStepState extends State<_CustomerStep> {
       final hasGrouped = assigned.isNotEmpty || calls.isNotEmpty;
       if (others.isNotEmpty) {
         if (hasGrouped) {
-          items.add(_ShopListItem.header('অন্যান্য দোকান', others.length));
+          items.add(_ShopListItem.header('অন্যান্য দোকান'.tr, others.length));
         }
         for (final u in others) {
           items.add(_ShopListItem.shop(u, isAssigned: false));
@@ -522,7 +523,7 @@ class _CustomerStepState extends State<_CustomerStep> {
               onChanged: (v) =>
                   setState(() => _query = v.trim().toLowerCase()),
               decoration: InputDecoration(
-                hintText: 'নাম / ফোন দিয়ে খুঁজুন…',
+                hintText: 'নাম / ফোন দিয়ে খুঁজুন…'.tr,
                 prefixIcon: const Icon(Icons.search_rounded),
                 filled: true,
                 fillColor: scheme.surfaceContainerHigh,
@@ -554,7 +555,7 @@ class _CustomerStepState extends State<_CustomerStep> {
                     Icon(Icons.storefront_rounded,
                         size: 56, color: scheme.onSurface.withAlpha(60)),
                     const SizedBox(height: 12),
-                    Text('কোনো কাস্টমার পাওয়া যায়নি',
+                    Text('কোনো কাস্টমার পাওয়া যায়নি'.tr,
                         style: TextStyle(
                             color: scheme.onSurface.withAlpha(120))),
                   ],
@@ -585,7 +586,7 @@ class _CustomerStepState extends State<_CustomerStep> {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'এই SR-এর কোনো নির্ধারিত দোকান নেই। Admin থেকে দোকান নির্ধারিত করলে এখানে আলাদা সেকশনে দেখাবে।',
+                              'এই SR-এর কোনো নির্ধারিত দোকান নেই। Admin থেকে দোকান নির্ধারিত করলে এখানে আলাদা সেকশনে দেখাবে।'.tr,
                               style: TextStyle(
                                   fontSize: 12,
                                   color: scheme.onPrimaryContainer),
@@ -614,7 +615,7 @@ class _CustomerStepState extends State<_CustomerStep> {
                             ),
                             const SizedBox(width: 6),
                           ],
-                          Text(item.headerLabel!,
+                          Text(item.headerLabel!.tr,
                               style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800,
@@ -755,7 +756,7 @@ class _CustomerStepState extends State<_CustomerStep> {
                                     color: scheme.primary.withAlpha(18),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: Text(u.deliveryDay,
+                                  child: Text(DomainLabels.weekday(u.deliveryDay),
                                       style: TextStyle(
                                           fontSize: 10,
                                           color: scheme.primary,
@@ -843,7 +844,7 @@ class _ProductStepState extends State<_ProductStep> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('ভিজিট স্ট্যাটাস',
+              Text('ভিজিট স্ট্যাটাস'.tr,
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
               const SizedBox(height: 14),
               ..._poVisitStatuses.map((s) => ListTile(
@@ -957,7 +958,7 @@ class _ProductStepState extends State<_ProductStep> {
                     ),
                     TextButton(
                       onPressed: () => ctrl.orderStep.value = 0,
-                      child: const Text('পরিবর্তন'),
+                      child: Text('পরিবর্তন'.tr),
                     ),
                   ],
                 ),
@@ -1009,7 +1010,7 @@ class _ProductStepState extends State<_ProductStep> {
                                   color:
                                       scheme.primary.withAlpha(200)),
                               const SizedBox(width: 4),
-                              Text('ভিজিট স্ট্যাটাস দিন',
+                              Text('ভিজিট স্ট্যাটাস দিন'.tr,
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: scheme.primary,
@@ -1030,7 +1031,7 @@ class _ProductStepState extends State<_ProductStep> {
             onChanged: (v) =>
                 setState(() => _query = v.trim().toLowerCase()),
             decoration: InputDecoration(
-              hintText: 'পণ্যের নাম বা কোড দিয়ে খুঁজুন…',
+              hintText: 'পণ্যের নাম বা কোড দিয়ে খুঁজুন…'.tr,
               prefixIcon: const Icon(Icons.search_rounded),
               filled: true,
               fillColor: scheme.surfaceContainerHigh,
@@ -1088,7 +1089,7 @@ class _ProductStepState extends State<_ProductStep> {
                               color: scheme.outlineVariant, width: 1),
                     ),
                     child: Text(
-                      cat == 'all' ? 'সব পণ্য' : cat,
+                      cat == 'all' ? 'সব পণ্য'.tr : cat,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -1130,7 +1131,7 @@ class _ProductStepState extends State<_ProductStep> {
                         size: 56,
                         color: scheme.onSurface.withAlpha(60)),
                     const SizedBox(height: 12),
-                    Text('কোনো পণ্য পাওয়া যায়নি',
+                    Text('কোনো পণ্য পাওয়া যায়নি'.tr,
                         style: TextStyle(
                             color: scheme.onSurface.withAlpha(120))),
                   ],
@@ -1245,7 +1246,7 @@ class _ProductCard extends StatelessWidget {
                             color: const Color(0xFFEF4444),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text('Hot',
+                          child: Text('Hot'.tr,
                               style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 9,
@@ -1263,7 +1264,7 @@ class _ProductCard extends StatelessWidget {
                             color: const Color(0xFF6366F1),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text('ইন্টার্নাল',
+                          child: Text('ইন্টার্নাল'.tr,
                               style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 9,
@@ -1295,7 +1296,7 @@ class _ProductCard extends StatelessWidget {
                           fontSize: 14),
                     ),
                     Text(
-                      'স্টক: ${product.stock} ${product.unit}',
+                      '${'স্টক'.tr}: ${product.stock} ${product.unit}',
                       style: TextStyle(
                           fontSize: 11,
                           color: scheme.onSurface.withAlpha(140)),
@@ -1343,7 +1344,7 @@ class _ProductCard extends StatelessWidget {
                         child: ElevatedButton.icon(
                           onPressed: () => ctrl.addToCart(product),
                           icon: const Icon(Icons.add_rounded, size: 16),
-                          label: const Text('যোগ করুন',
+                          label: Text('যোগ করুন'.tr,
                               style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700)),
@@ -1384,20 +1385,20 @@ class _ProductCard extends StatelessWidget {
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           autofocus: true,
-          decoration: const InputDecoration(
-              labelText: 'পরিমাণ', border: OutlineInputBorder()),
+          decoration: InputDecoration(
+              labelText: 'পরিমাণ'.tr, border: OutlineInputBorder()),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('বাতিল')),
+              child: Text('বাতিল'.tr)),
           ElevatedButton(
             onPressed: () {
               final qty = int.tryParse(controller.text.trim()) ?? 0;
               ctrl.updateQty(product.id, qty);
               Navigator.pop(context);
             },
-            child: const Text('ঠিক আছে'),
+            child: Text('ঠিক আছে'.tr),
           ),
         ],
       ),
@@ -1477,7 +1478,7 @@ class _ReviewStepState extends State<_ReviewStep> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Customer
-            _sectionLabel('কাস্টমার', scheme),
+            _sectionLabel('কাস্টমার'.tr, scheme),
             const SizedBox(height: 8),
             Card(
               elevation: 0,
@@ -1501,7 +1502,7 @@ class _ReviewStepState extends State<_ReviewStep> {
                     '${cust?.proprietorName ?? ''}  •  ${cust?.phone ?? ''}'),
                 trailing: TextButton(
                   onPressed: () => ctrl.orderStep.value = 0,
-                  child: const Text('পরিবর্তন'),
+                  child: Text('পরিবর্তন'.tr),
                 ),
               ),
             ),
@@ -1511,11 +1512,11 @@ class _ReviewStepState extends State<_ReviewStep> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _sectionLabel('পণ্য তালিকা', scheme),
+                _sectionLabel('পণ্য তালিকা'.tr, scheme),
                 TextButton.icon(
                   onPressed: () => ctrl.orderStep.value = 1,
                   icon: const Icon(Icons.edit_rounded, size: 16),
-                  label: const Text('সম্পাদনা'),
+                  label: Text('সম্পাদনা'.tr),
                 ),
               ],
             ),
@@ -1579,7 +1580,7 @@ class _ReviewStepState extends State<_ReviewStep> {
             const SizedBox(height: 18),
 
             // Scheduled delivery date (optional)
-            _sectionLabel('নির্ধারিত ডেলিভারি তারিখ (ঐচ্ছিক)', scheme),
+            _sectionLabel('নির্ধারিত ডেলিভারি তারিখ (ঐচ্ছিক)'.tr, scheme),
             const SizedBox(height: 8),
             Card(
               elevation: 0,
@@ -1612,7 +1613,7 @@ class _ReviewStepState extends State<_ReviewStep> {
                           Text(
                             _scheduledDate != null
                                 ? _dateFmt.format(_scheduledDate!)
-                                : 'তারিখ নির্ধারিত নেই',
+                                : 'তারিখ নির্ধারিত নেই'.tr,
                             style: TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 13,
@@ -1627,7 +1628,7 @@ class _ReviewStepState extends State<_ReviewStep> {
                       IconButton(
                         icon: const Icon(Icons.clear_rounded, size: 18),
                         color: Colors.red.shade400,
-                        tooltip: 'তারিখ মুছুন',
+                        tooltip: 'তারিখ মুছুন'.tr,
                         onPressed: () =>
                             setState(() => _scheduledDate = null),
                       ),
@@ -1649,7 +1650,7 @@ class _ReviewStepState extends State<_ReviewStep> {
                       icon: const Icon(Icons.calendar_month_rounded,
                           size: 16),
                       label: Text(
-                          _scheduledDate != null ? 'পরিবর্তন' : 'তারিখ দিন'),
+                          _scheduledDate != null ? 'পরিবর্তন'.tr : 'তারিখ দিন'.tr),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 8),
@@ -1663,7 +1664,7 @@ class _ReviewStepState extends State<_ReviewStep> {
             const SizedBox(height: 18),
 
             // Payment
-            _sectionLabel('পেমেন্ট', scheme),
+            _sectionLabel('পেমেন্ট'.tr, scheme),
             const SizedBox(height: 8),
             Card(
               elevation: 0,
@@ -1677,7 +1678,7 @@ class _ReviewStepState extends State<_ReviewStep> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('মোট',
+                        Text('মোট'.tr,
                             style: TextStyle(fontSize: 15)),
                         Text('৳ ${fmt.format(ctrl.cartTotal)}',
                             style: TextStyle(
@@ -1696,7 +1697,7 @@ class _ReviewStepState extends State<_ReviewStep> {
                             RegExp(r'^\d*\.?\d*'))
                       ],
                       decoration: InputDecoration(
-                        labelText: 'নগদ প্রদান (ঐচ্ছিক)',
+                        labelText: 'নগদ প্রদান (ঐচ্ছিক)'.tr,
                         prefixText: '৳ ',
                         filled: true,
                         fillColor: scheme.surfaceContainerHighest,
@@ -1749,8 +1750,8 @@ class _ReviewStepState extends State<_ReviewStep> {
                             scheduledDate: _scheduledDate);
                         if (ok) {
                           Get.snackbar(
-                            'সফল!',
-                            'অর্ডার সফলভাবে তৈরি হয়েছে',
+                            'সফল!'.tr,
+                            'অর্ডার সফলভাবে তৈরি হয়েছে'.tr,
                             snackPosition: SnackPosition.BOTTOM,
                             backgroundColor: const Color(0xFF10B981),
                             colorText: Colors.white,
@@ -1765,8 +1766,8 @@ class _ReviewStepState extends State<_ReviewStep> {
                             strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.check_circle_rounded),
                 label: Text(ctrl.submitting.value
-                    ? 'সাবমিট হচ্ছে…'
-                    : 'অর্ডার কনফার্ম করুন'),
+                    ? 'সাবমিট হচ্ছে…'.tr
+                    : 'অর্ডার কনফার্ম করুন'.tr),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: scheme.primary,
                   foregroundColor: scheme.onPrimary,

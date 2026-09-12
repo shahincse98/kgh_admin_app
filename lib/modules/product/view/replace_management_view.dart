@@ -9,6 +9,7 @@ import '../model/product_model.dart';
 import '../../../widgets/responsive.dart';
 import '../../user/controller/user_controller.dart';
 import '../../user/model/user_model.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class ReplaceManagementView extends StatefulWidget {
   const ReplaceManagementView({super.key});
@@ -51,14 +52,15 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
-        title: const Text('Replace Management'),
+        title: Text('রিপ্লেস অনুরোধ'.tr),
         bottom: TabBar(
           controller: _tabs,
-          tabs: const [
+          tabs: [
             Tab(icon: Icon(Icons.pending_actions_rounded, size: 18), text: 'পেন্ডিং'),
             Tab(icon: Icon(Icons.check_circle_outline_rounded, size: 18), text: 'ডেলিভারি হয়েছে'),
-            Tab(icon: Icon(Icons.inventory_2_rounded, size: 18), text: 'প্রডাক্ট'),
+            Tab(icon: Icon(Icons.inventory_2_rounded, size: 18), text: 'প্রডাক্ট'.tr),
           ],
         ),
         actions: [
@@ -72,7 +74,7 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
                 )
               : IconButton(
                   icon: const Icon(Icons.refresh_rounded),
-                  tooltip: 'রিফ্রেশ',
+                  tooltip: 'রিফ্রেশ'.tr,
                   onPressed: rc.fetchAllReplaces,
                 )),
         ],
@@ -89,7 +91,7 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
           ? FloatingActionButton.extended(
               onPressed: () => _showAddReplaceDialog(),
               icon: const Icon(Icons.add_rounded),
-              label: const Text('Replace যোগ করুন'),
+              label: Text('Replace যোগ করুন'.tr),
             )
           : const SizedBox.shrink()),
     );
@@ -105,8 +107,8 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
           child: TextField(
             onChanged: (v) => _pendingSearch.value = v.toLowerCase(),
-            decoration: const InputDecoration(
-              hintText: 'শপ বা প্রডাক্ট নাম দিয়ে খুঁজুন...',
+            decoration: InputDecoration(
+              hintText: 'শপ বা প্রডাক্ট নাম দিয়ে খুঁজুন...'.tr,
               prefixIcon: Icon(Icons.search_rounded),
               isDense: true,
             ),
@@ -118,8 +120,8 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
           return _summaryStrip(
             icon: Icons.pending_actions_rounded,
             color: Colors.orange,
-            label: 'পেন্ডিং ${rc.allReplaces.length}টি এন্ট্রি',
-            right: 'পরিমাণ: ${total}টি',
+            label: 'পেন্ডিং ${rc.allReplaces.length}${'টি এন্ট্রি'.tr}',
+            right: '${'পরিমাণ'.tr}: ${total}${'টি'.tr}',
           );
         }),
         Expanded(
@@ -135,7 +137,7 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
             }).toList();
 
             if (filtered.isEmpty) {
-              return _emptyState(Icons.pending_actions_rounded, 'কোনো পেন্ডিং replace নেই');
+              return _emptyState(Icons.pending_actions_rounded, 'কোনো পেন্ডিং replace নেই'.tr);
             }
 
             final grouped = _groupByDate(filtered);
@@ -212,7 +214,7 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
                     color: Colors.orange.withAlpha(25),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('${r.quantity}টি',
+                  child: Text('${r.quantity}${'টি'.tr}',
                       style: const TextStyle(
                           fontWeight: FontWeight.w800, color: Colors.orange, fontSize: 14)),
                 ),
@@ -230,12 +232,12 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
                           borderRadius: BorderRadius.circular(6),
                           border: Border.all(color: Colors.green.withAlpha(80)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.check_circle_outline_rounded, size: 13, color: Colors.green),
                             SizedBox(width: 3),
-                            Text('দিয়েছি',
+                            Text('দিয়েছি'.tr,
                                 style: TextStyle(
                                     fontSize: 11, color: Colors.green, fontWeight: FontWeight.w600)),
                           ],
@@ -247,7 +249,7 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
                     IconButton(
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
-                      tooltip: 'বাতিল করুন',
+                      tooltip: 'বাতিল করুন'.tr,
                       icon: const Icon(Icons.cancel_outlined, size: 18, color: Colors.red),
                       onPressed: () => _confirmCancel(r),
                     ),
@@ -271,8 +273,8 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
           child: TextField(
             onChanged: (v) => _deliveredSearch.value = v.toLowerCase(),
-            decoration: const InputDecoration(
-              hintText: 'শপ বা প্রডাক্ট নাম দিয়ে খুঁজুন...',
+            decoration: InputDecoration(
+              hintText: 'শপ বা প্রডাক্ট নাম দিয়ে খুঁজুন...'.tr,
               prefixIcon: Icon(Icons.search_rounded),
               isDense: true,
             ),
@@ -284,8 +286,8 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
           return _summaryStrip(
             icon: Icons.check_circle_outline_rounded,
             color: Colors.green,
-            label: 'মোট ${rc.allDelivered.length}টি ডেলিভারি',
-            right: 'পরিমাণ: ${total}টি',
+            label: '${'মোট'.tr} ${rc.allDelivered.length}${'টি ডেলিভারি'.tr}',
+            right: '${'পরিমাণ'.tr}: ${total}${'টি'.tr}',
           );
         }),
         Expanded(
@@ -301,7 +303,7 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
             }).toList();
 
             if (filtered.isEmpty) {
-              return _emptyState(Icons.check_circle_outline_rounded, 'কোনো ডেলিভারি রেকর্ড নেই');
+              return _emptyState(Icons.check_circle_outline_rounded, 'কোনো ডেলিভারি রেকর্ড নেই'.tr);
             }
 
             final grouped = <String, List<DeliveredReplaceModel>>{};
@@ -378,7 +380,7 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
                   Row(children: [
                     const Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey),
                     const SizedBox(width: 3),
-                    Text('দেওয়া হয়েছে: ${_fmt(r.deliveredAt)}',
+                    Text('${'দেওয়া হয়েছে'.tr}: ${_fmt(r.deliveredAt)}',
                         style: const TextStyle(fontSize: 11, color: Colors.grey)),
                   ]),
                   if (r.note.isNotEmpty)
@@ -395,7 +397,7 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
                     color: Colors.green.withAlpha(25),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('${r.quantity}টি',
+                  child: Text('${r.quantity}${'টি'.tr}',
                       style: const TextStyle(
                           fontWeight: FontWeight.w800, color: Colors.green, fontSize: 14)),
                 ),
@@ -403,7 +405,7 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
                 IconButton(
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  tooltip: 'রেকর্ড মুছুন',
+                  tooltip: 'রেকর্ড মুছুন'.tr,
                   icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.grey),
                   onPressed: () => _confirmDeleteDelivered(r),
                 ),
@@ -425,7 +427,7 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
       }
       final list = rc.replaceProductSummary;
       if (list.isEmpty) {
-        return _emptyState(Icons.inventory_2_rounded, 'কোনো replace product নেই');
+        return _emptyState(Icons.inventory_2_rounded, 'কোনো replace product নেই'.tr);
       }
       final totalPcs = list.fold<int>(0, (s, p) => s + p.replaceCount);
 
@@ -434,8 +436,8 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
           _summaryStrip(
             icon: Icons.inventory_2_rounded,
             color: Colors.deepOrange,
-            label: '${list.length} প্রডাক্ট',
-            right: 'পেন্ডিং: ${totalPcs}টি',
+            label: '${list.length} ${'প্রডাক্ট'.tr}',
+            right: 'পেন্ডিং: ${totalPcs}${'টি'.tr}',
           ),
           Expanded(
             child: ListView.separated(
@@ -493,12 +495,12 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
                     color: Colors.deepOrange.withAlpha(25),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('${p.replaceCount}টি পেন্ডিং',
+                  child: Text('${p.replaceCount}${'টি পেন্ডিং'.tr}',
                       style: const TextStyle(
                           fontWeight: FontWeight.w800, color: Colors.deepOrange, fontSize: 14)),
                 ),
                 const SizedBox(height: 2),
-                Text('স্টক: ${p.stock}',
+                Text('${'স্টক'.tr}: ${p.stock}',
                     style: const TextStyle(fontSize: 11, color: Colors.grey)),
               ],
             ),
@@ -525,20 +527,20 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
 
     final ok = await Get.dialog<bool>(
       AlertDialog(
-        title: const Text('ডেলিভারি নিশ্চিত করুন'),
+        title: Text('ডেলিভারি নিশ্চিত করুন'.tr),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(r.productName,
                 style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-            Text('শপ: ${r.shopName}'),
-            Text('পরিমাণ: ${r.quantity}টি'),
+            Text('${'শপ'.tr}: ${r.shopName}'),
+            Text('${'পরিমাণ'.tr}: ${r.quantity}${'টি'.tr}'),
             const SizedBox(height: 12),
             TextFormField(
               controller: noteCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'মন্তব্য (ঐচ্ছিক)',
+              decoration: InputDecoration(
+                  labelText: 'মন্তব্য (ঐচ্ছিক)'.tr,
                   border: OutlineInputBorder(),
                   isDense: true),
             ),
@@ -547,7 +549,7 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.calendar_today_rounded),
                   title: Text(_fmt(dateObs.value)),
-                  subtitle: const Text('ডেলিভারির তারিখ'),
+                  subtitle: Text('ডেলিভারির তারিখ'.tr),
                   onTap: () async {
                     final picked = await showDatePicker(
                       context: context,
@@ -563,11 +565,11 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
         actions: [
           TextButton(
               onPressed: () => Get.back(result: false),
-              child: const Text('বাতিল')),
+              child: Text('বাতিল'.tr)),
           ElevatedButton.icon(
             onPressed: () => Get.back(result: true),
             icon: const Icon(Icons.check_circle_rounded, size: 16),
-            label: const Text('ডেলিভারি দিয়েছি'),
+            label: Text('ডেলিভারি দিয়েছি'.tr),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
           ),
         ],
@@ -588,8 +590,8 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
     );
 
     Get.snackbar(
-      '✓ ডেলিভারি সম্পন্ন',
-      '${r.productName} (${r.quantity}টি) — ${r.shopName}\nস্টক থেকে মাইনাস হয়েছে',
+      '✓ ডেলিভারি সম্পন্ন'.tr,
+      '${r.productName} (${r.quantity}${'টি'.tr}) — ${r.shopName}\n${'স্টক থেকে মাইনাস হয়েছে'.tr}',
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.green.shade600,
       colorText: Colors.white,
@@ -600,19 +602,19 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
   Future<void> _confirmCancel(GlobalReplaceModel r) async {
     final ok = await Get.dialog<bool>(
       AlertDialog(
-        title: const Text('Replace বাতিল করবেন?'),
+        title: Text('Replace বাতিল করবেন?'.tr),
         content: Text(
-          '${r.productName} — ${r.quantity}টি\nশপ: ${r.shopName}\n\n⚠ স্টক অপরিবর্তিত থাকবে',
+          '${r.productName} — ${r.quantity}${'টি'.tr}\n${'শপ'.tr}: ${r.shopName}\n\n⚠ ${'স্টক অপরিবর্তিত থাকবে'.tr}',
           style: const TextStyle(fontSize: 13),
         ),
         actions: [
           TextButton(
               onPressed: () => Get.back(result: false),
-              child: const Text('না')),
+              child: Text('না'.tr)),
           TextButton(
             onPressed: () => Get.back(result: true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('বাতিল করুন'),
+            child: Text('বাতিল করুন'.tr),
           ),
         ],
       ),
@@ -624,24 +626,24 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
       productId: r.productId,
       quantity: r.quantity,
     );
-    Get.snackbar('বাতিল হয়েছে', 'Replace অনুরোধ বাতিল করা হয়েছে',
+    Get.snackbar('বাতিল হয়েছে'.tr, 'Replace অনুরোধ বাতিল করা হয়েছে'.tr,
         snackPosition: SnackPosition.BOTTOM);
   }
 
   Future<void> _confirmDeleteDelivered(DeliveredReplaceModel r) async {
     final ok = await Get.dialog<bool>(
       AlertDialog(
-        title: const Text('ডেলিভারি রেকর্ড মুছবেন?'),
-        content: Text('${r.productName}\nশপ: ${r.shopName}',
+        title: Text('ডেলিভারি রেকর্ড মুছবেন?'.tr),
+        content: Text('${r.productName}\n${'শপ'.tr}: ${r.shopName}',
             style: const TextStyle(fontSize: 13)),
         actions: [
           TextButton(
               onPressed: () => Get.back(result: false),
-              child: const Text('না')),
+              child: Text('না'.tr)),
           TextButton(
             onPressed: () => Get.back(result: true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('মুছুন'),
+            child: Text('মুছুন'.tr),
           ),
         ],
       ),
@@ -697,7 +699,7 @@ class _ReplaceManagementViewState extends State<ReplaceManagementView>
                     fontWeight: FontWeight.w700, fontSize: 13, color: Colors.grey)),
           ),
           const SizedBox(width: 8),
-          Text('$count টি', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text('$count ${'টি'.tr}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
           Expanded(child: Divider(indent: 8, color: Colors.grey.shade200)),
         ],
       ),
@@ -786,8 +788,8 @@ class _AddReplaceDialogState extends State<_AddReplaceDialog> {
                 children: [
                   const Icon(Icons.swap_horiz_rounded, color: Colors.orange),
                   const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text('নতুন Replace যোগ করুন',
+                  Expanded(
+                    child: Text('নতুন Replace যোগ করুন'.tr,
                         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                   ),
                   IconButton(
@@ -804,7 +806,7 @@ class _AddReplaceDialogState extends State<_AddReplaceDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // ── User/Shop selection ──────────────────────────────
-                    _sectionLabel('কাস্টমার / শপ *'),
+                    _sectionLabel('কাস্টমার / শপ *'.tr),
                     if (_selectedUser != null)
                       _selectedChip(
                         label: _selectedUser!.shopName,
@@ -815,8 +817,8 @@ class _AddReplaceDialogState extends State<_AddReplaceDialog> {
                     else ...[
                       TextField(
                         controller: _userSearch,
-                        decoration: const InputDecoration(
-                          hintText: 'শপের নাম লিখুন...',
+                        decoration: InputDecoration(
+                          hintText: 'শপের নাম লিখুন...'.tr,
                           prefixIcon: Icon(Icons.search_rounded),
                           isDense: true,
                           border: OutlineInputBorder(),
@@ -829,19 +831,19 @@ class _AddReplaceDialogState extends State<_AddReplaceDialog> {
                     const SizedBox(height: 14),
 
                     // ── Product selection ────────────────────────────────
-                    _sectionLabel('পণ্য *'),
+                    _sectionLabel('পণ্য *'.tr),
                     if (_selectedProduct != null)
                       _selectedChip(
                         label: _selectedProduct!.name,
-                        sublabel: 'স্টক: ${_selectedProduct!.stock}',
+                        sublabel: '${'স্টক'.tr}: ${_selectedProduct!.stock}',
                         onRemove: () => setState(() => _selectedProduct = null),
                         color: Colors.deepOrange,
                       )
                     else ...[
                       TextField(
                         controller: _productSearch,
-                        decoration: const InputDecoration(
-                          hintText: 'পণ্যের নাম লিখুন...',
+                        decoration: InputDecoration(
+                          hintText: 'পণ্যের নাম লিখুন...'.tr,
                           prefixIcon: Icon(Icons.search_rounded),
                           isDense: true,
                           border: OutlineInputBorder(),
@@ -854,21 +856,21 @@ class _AddReplaceDialogState extends State<_AddReplaceDialog> {
                     const SizedBox(height: 14),
 
                     // ── Quantity ─────────────────────────────────────────
-                    _sectionLabel('পরিমাণ *'),
+                    _sectionLabel('পরিমাণ *'.tr),
                     TextField(
                       controller: _qtyCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: '1',
                         isDense: true,
                         border: OutlineInputBorder(),
-                        suffixText: 'টি',
+                        suffixText: 'টি'.tr,
                       ),
                     ),
                     const SizedBox(height: 14),
 
                     // ── Date ─────────────────────────────────────────────
-                    _sectionLabel('তারিখ'),
+                    _sectionLabel('তারিখ'.tr),
                     InkWell(
                       onTap: () async {
                         final picked = await showDatePicker(
@@ -901,12 +903,12 @@ class _AddReplaceDialogState extends State<_AddReplaceDialog> {
                     const SizedBox(height: 14),
 
                     // ── Note ─────────────────────────────────────────────
-                    _sectionLabel('মন্তব্য (ঐচ্ছিক)'),
+                    _sectionLabel('মন্তব্য (ঐচ্ছিক)'.tr),
                     TextField(
                       controller: _noteCtrl,
                       maxLines: 2,
-                      decoration: const InputDecoration(
-                        hintText: 'সমস্যার বিবরণ...',
+                      decoration: InputDecoration(
+                        hintText: 'সমস্যার বিবরণ...'.tr,
                         isDense: true,
                         border: OutlineInputBorder(),
                       ),
@@ -923,7 +925,7 @@ class _AddReplaceDialogState extends State<_AddReplaceDialog> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Get.back(),
-                      child: const Text('বাতিল'),
+                      child: Text('বাতিল'.tr),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -936,7 +938,7 @@ class _AddReplaceDialogState extends State<_AddReplaceDialog> {
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.check_rounded, size: 18),
-                      label: const Text('যোগ করুন'),
+                      label: Text('যোগ করুন'.tr),
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           foregroundColor: Colors.white),
@@ -1027,7 +1029,7 @@ class _AddReplaceDialogState extends State<_AddReplaceDialog> {
                 : const Icon(Icons.inventory_2_rounded, size: 20),
             title: Text(p.name,
                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-            subtitle: Text('স্টক: ${p.stock} • ${p.productCategory}',
+            subtitle: Text('${'স্টক'.tr}: ${p.stock} • ${p.productCategory}',
                 style: const TextStyle(fontSize: 11)),
             onTap: () {
               setState(() {
@@ -1094,20 +1096,20 @@ class _AddReplaceDialogState extends State<_AddReplaceDialog> {
 
   Future<void> _submit() async {
     if (_selectedUser == null) {
-      Get.snackbar('ত্রুটি', 'কাস্টমার/শপ সিলেক্ট করুন',
+      Get.snackbar('ত্রুটি'.tr, 'কাস্টমার/শপ সিলেক্ট করুন'.tr,
           backgroundColor: Colors.red, colorText: Colors.white,
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
     if (_selectedProduct == null) {
-      Get.snackbar('ত্রুটি', 'পণ্য সিলেক্ট করুন',
+      Get.snackbar('ত্রুটি'.tr, 'পণ্য সিলেক্ট করুন'.tr,
           backgroundColor: Colors.red, colorText: Colors.white,
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
     final qty = int.tryParse(_qtyCtrl.text);
     if (qty == null || qty <= 0) {
-      Get.snackbar('ত্রুটি', 'সঠিক পরিমাণ দিন',
+      Get.snackbar('ত্রুটি'.tr, 'সঠিক পরিমাণ দিন'.tr,
           backgroundColor: Colors.red, colorText: Colors.white,
           snackPosition: SnackPosition.BOTTOM);
       return;
@@ -1126,8 +1128,8 @@ class _AddReplaceDialogState extends State<_AddReplaceDialog> {
       );
       Get.back();
       Get.snackbar(
-        '✓ যোগ হয়েছে',
-        '${_selectedProduct!.name} (${qty}টি) — ${_selectedUser!.shopName}',
+        '✓ যোগ হয়েছে'.tr,
+        '${_selectedProduct!.name} (${qty}${'টি'.tr}) — ${_selectedUser!.shopName}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.orange.shade700,
         colorText: Colors.white,

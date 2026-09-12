@@ -6,6 +6,8 @@ import '../controller/stock_snapshot_controller.dart';
 import '../controller/product_controller.dart';
 import '../model/stock_snapshot_model.dart';
 import '../../replace/controller/admin_replace_controller.dart';
+import '../../../localization/domain_labels.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 enum _SnapshotAction { restore, copy, delete }
 
@@ -41,11 +43,12 @@ class _StockSnapshotViewState extends State<StockSnapshotView> {
     final isCompact = MediaQuery.sizeOf(context).width < 600;
 
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
-        title: const Text('স্টক স্ন্যাপশট ইতিহাস'),
+        title: Text('স্টক স্ন্যাপশট ইতিহাস'.tr),
         actions: [
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: 'Refresh'.tr,
             icon: const Icon(Icons.refresh_rounded),
             onPressed: ctrl.fetchSnapshots,
           ),
@@ -53,13 +56,13 @@ class _StockSnapshotViewState extends State<StockSnapshotView> {
       ),
       floatingActionButton: isCompact
           ? FloatingActionButton(
-              tooltip: 'নতুন স্ন্যাপশট',
+              tooltip: 'নতুন স্ন্যাপশট'.tr,
               onPressed: () => _saveDialog(context),
               child: const Icon(Icons.camera_alt_rounded),
             )
           : FloatingActionButton.extended(
               icon: const Icon(Icons.camera_alt_rounded),
-              label: const Text('নতুন স্ন্যাপশট'),
+              label: Text('নতুন স্ন্যাপশট'.tr),
               onPressed: () => _saveDialog(context),
             ),
       body: Obx(() {
@@ -75,7 +78,7 @@ class _StockSnapshotViewState extends State<StockSnapshotView> {
                     size: 64, color: cs.onSurface.withAlpha(60)),
                 const SizedBox(height: 12),
                 Text(
-                  'কোনো স্ন্যাপশট নেই\nনিচের বাটনে চেপে স্টক সেভ করুন',
+                  'কোনো স্ন্যাপশট নেই\nনিচের বাটনে চেপে স্টক সেভ করুন'.tr,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: cs.onSurface.withAlpha(100)),
                 ),
@@ -111,7 +114,7 @@ class _StockSnapshotViewState extends State<StockSnapshotView> {
         now.subtract(Duration(days: now.weekday - 1));
     final weekEnd = weekStart.add(const Duration(days: 6));
     final defaultLabel =
-        'সপ্তাহ ${DateFormat('dd MMM').format(weekStart)}–${DateFormat('dd MMM yyyy').format(weekEnd)}';
+        '${'সপ্তাহ'.tr} ${DateFormat('dd MMM').format(weekStart)}–${DateFormat('dd MMM yyyy').format(weekEnd)}';
     final labelCtrl = TextEditingController(text: defaultLabel);
 
     // Build replace map from at-shop entries (only positive qty)
@@ -130,28 +133,28 @@ class _StockSnapshotViewState extends State<StockSnapshotView> {
 
     Get.dialog(
       AlertDialog(
-        title: const Text('স্ন্যাপশট সেভ করুন'),
+        title: Text('স্ন্যাপশট সেভ করুন'.tr),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextField(
               controller: labelCtrl,
-              decoration: const InputDecoration(
-                labelText: 'লেবেল / নাম',
+              decoration: InputDecoration(
+                labelText: 'লেবেল / নাম'.tr,
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'মোট ${snapshotProducts.length} টি পণ্য + ${replaceMap.length}টি রিপ্লেস পণ্যের বর্তমান স্টক সেভ হবে',
+              '${'মোট'.tr} ${snapshotProducts.length} ${'টি পণ্য'.tr} + ${replaceMap.length}${'টি রিপ্লেস পণ্যের বর্তমান স্টক সেভ হবে'.tr}',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
           ],
         ),
         actions: [
           TextButton(
-              onPressed: () => Get.back(), child: const Text('বাতিল')),
+              onPressed: () => Get.back(), child: Text('বাতিল'.tr)),
           ElevatedButton(
             onPressed: () async {
               if (labelCtrl.text.trim().isEmpty) return;
@@ -159,14 +162,14 @@ class _StockSnapshotViewState extends State<StockSnapshotView> {
                   replaceMap: replaceMap.isEmpty ? null : replaceMap);
               Get.back();
               Get.snackbar(
-                'সেভ হয়েছে!',
-                '"${labelCtrl.text.trim()}" স্ন্যাপশট সংরক্ষিত',
+                'সেভ হয়েছে!'.tr,
+                '"${labelCtrl.text.trim()}" ${'স্ন্যাপশট সংরক্ষিত'.tr}',
                 snackPosition: SnackPosition.BOTTOM,
                 backgroundColor: Colors.green,
                 colorText: Colors.white,
               );
             },
-            child: const Text('সেভ করুন'),
+            child: Text('সেভ করুন'.tr),
           ),
         ],
       ),
@@ -206,17 +209,17 @@ class _SnapshotCard extends StatelessWidget {
     // Build copy text (same format as AppBar copy button)
     final buf = StringBuffer();
     if (regular.isNotEmpty) {
-      buf.writeln('── সকল পণ্য ──');
+      buf.writeln('── সকল পণ্য ──'.tr);
       for (final p in regular) buf.writeln('${p.name}: ${p.stock}');
     }
     if (internal.isNotEmpty) {
       if (buf.isNotEmpty) buf.writeln();
-      buf.writeln('── ইন্টার্নাল পণ্য ──');
+      buf.writeln('── ইন্টার্নাল পণ্য ──'.tr);
       for (final p in internal) buf.writeln('${p.name}: ${p.stock}');
     }
     if (replaceItems.isNotEmpty) {
       if (buf.isNotEmpty) buf.writeln();
-      buf.writeln('── রিপ্লেস পণ্য ──');
+      buf.writeln('── রিপ্লেস পণ্য ──'.tr);
       for (final r in replaceItems) buf.writeln('${r.productName}: ${r.quantity}');
     }
     final copyText = buf.toString().trimRight();
@@ -247,12 +250,12 @@ class _SnapshotCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${DateFormat('dd MMM yyyy, hh:mm a').format(snapshot.savedAt)}  •  ${snapshot.totalProducts} পণ্য',
+                '${DateFormat('dd MMM yyyy, hh:mm a').format(snapshot.savedAt)}  •  ${DomainLabels.productCount(snapshot.totalProducts)}',
                 style: TextStyle(
                     fontSize: 11.5,
                     color: scheme.onSurface.withAlpha(120)),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Wrap(
                 spacing: 4,
                 runSpacing: 4,
@@ -270,34 +273,34 @@ class _SnapshotCard extends StatelessWidget {
           ),
           trailing: isCompact
               ? PopupMenuButton<_SnapshotAction>(
-                  tooltip: 'Actions',
+                  tooltip: 'Actions'.tr,
                   onSelected: (value) {
                     if (value == _SnapshotAction.restore) {
                       _confirmRestore(context);
                     } else if (value == _SnapshotAction.copy) {
                       Clipboard.setData(ClipboardData(text: copyText));
                       Get.snackbar(
-                        'কপি হয়েছে!',
-                        '"${snapshot.label}" স্ন্যাপশট কপি হয়েছে',
+                        'কপি হয়েছে!'.tr,
+                        '"${snapshot.label}" ${'স্ন্যাপশট কপি হয়েছে'.tr}',
                         snackPosition: SnackPosition.BOTTOM,
-                        duration: const Duration(seconds: 2),
+                        duration: Duration(seconds: 2),
                       );
                     } else {
                       _confirmDelete(context);
                     }
                   },
-                  itemBuilder: (_) => const [
+                  itemBuilder: (_) => [
                     PopupMenuItem(
                       value: _SnapshotAction.restore,
-                      child: Text('এই স্ন্যাপশটে ফিরুন'),
+                      child: Text('এই স্ন্যাপশটে ফিরুন'.tr),
                     ),
                     PopupMenuItem(
                       value: _SnapshotAction.copy,
-                      child: Text('কপি করুন'),
+                      child: Text('কপি করুন'.tr),
                     ),
                     PopupMenuItem(
                       value: _SnapshotAction.delete,
-                      child: Text('ডিলেট'),
+                      child: Text('ডিলেট'.tr),
                     ),
                   ],
                 )
@@ -307,18 +310,18 @@ class _SnapshotCard extends StatelessWidget {
                     IconButton(
                       icon: Icon(Icons.restore_rounded,
                           color: Colors.indigo.shade400, size: 20),
-                      tooltip: 'এই স্ন্যাপশটে ফিরুন',
+                      tooltip: 'এই স্ন্যাপশটে ফিরুন'.tr,
                       onPressed: () => _confirmRestore(context),
                     ),
                     IconButton(
                       icon: Icon(Icons.copy_rounded,
                           color: scheme.primary, size: 20),
-                      tooltip: 'কপি করুন',
+                      tooltip: 'কপি করুন'.tr,
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: copyText));
                         Get.snackbar(
-                          'কপি হয়েছে!',
-                          '"${snapshot.label}" স্ন্যাপশট কপি হয়েছে',
+                          'কপি হয়েছে!'.tr,
+                          '"${snapshot.label}" ${'স্ন্যাপশট কপি হয়েছে'.tr}',
                           snackPosition: SnackPosition.BOTTOM,
                           duration: const Duration(seconds: 2),
                         );
@@ -327,7 +330,7 @@ class _SnapshotCard extends StatelessWidget {
                     IconButton(
                       icon: Icon(Icons.delete_outline_rounded,
                           color: Colors.red.shade400, size: 20),
-                      tooltip: 'ডিলেট',
+                      tooltip: 'ডিলেট'.tr,
                       onPressed: () => _confirmDelete(context),
                     ),
                   ],
@@ -335,16 +338,16 @@ class _SnapshotCard extends StatelessWidget {
           children: [
             const Divider(height: 1, thickness: 1),
             if (regular.isNotEmpty) ...[
-              _sectionBar('সকল পণ্য (${regular.length})', scheme),
+              _sectionBar('${'সকল পণ্য'.tr} (${regular.length})', scheme),
               ...regular.map((item) => _itemRow(item, scheme)),
             ],
             if (internal.isNotEmpty) ...[
-              _sectionBar('ইন্টার্নাল পণ্য (${internal.length})',
+              _sectionBar('${'ইন্টার্নাল পণ্য'.tr} (${internal.length})',
                   scheme),
               ...internal.map((item) => _itemRow(item, scheme)),
             ],
             if (replaceItems.isNotEmpty) ...[
-              _sectionBar('রিপ্লেস পণ্য (${replaceItems.length})', scheme),
+              _sectionBar('${'রিপ্লেস পণ্য'.tr} (${replaceItems.length})', scheme),
               ...replaceItems.map((r) => _replaceItemRow(r, scheme)),
             ],
             const SizedBox(height: 8),
@@ -476,11 +479,11 @@ class _SnapshotCard extends StatelessWidget {
   void _confirmDelete(BuildContext context) {
     Get.dialog(
       AlertDialog(
-        title: const Text('স্ন্যাপশট ডিলেট করবেন?'),
-        content: Text('"${snapshot.label}" স্থায়ীভাবে মুছে যাবে।'),
+        title: Text('স্ন্যাপশট ডিলেট করবেন?'.tr),
+        content: Text('"${snapshot.label}" ${'স্থায়ীভাবে মুছে যাবে'.tr}।'),
         actions: [
           TextButton(
-              onPressed: () => Get.back(), child: const Text('বাতিল')),
+              onPressed: () => Get.back(), child: Text('বাতিল'.tr)),
           ElevatedButton(
             style:
                 ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -488,7 +491,7 @@ class _SnapshotCard extends StatelessWidget {
               Get.back();
               await ctrl.deleteSnapshot(snapshot.id);
             },
-            child: const Text('ডিলেট',
+            child: Text('ডিলেট'.tr,
                 style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -499,14 +502,14 @@ class _SnapshotCard extends StatelessWidget {
   void _confirmRestore(BuildContext context) {
     Get.dialog(
           AlertDialog(
-        title: const Text('এই স্ন্যাপশটে ফিরবেন?'),
+        title: Text('এই স্ন্যাপশটে ফিরবেন?'.tr),
         content: Text(
-          '"${snapshot.label}" অনুযায়ী সকল পণ্য, ইন্টার্নাল পণ্য এবং দোকানের রিপ্লেস স্টক রিস্টোর হবে। বর্তমান স্টক অবস্থা ওভাররাইট হবে।\n\nস্ন্যাপশটের পরবর্তী সকল ম্যানুয়াল স্টক আউট ও ডিসপ্যাচ রিভার্ট হবে।',
+          '"${snapshot.label}" ${'অনুযায়ী সকল পণ্য'.tr}, ${'ইন্টার্নাল পণ্য এবং দোকানের রিপ্লেস স্টক রিস্টোর হবে'.tr}। ${'বর্তমান স্টক অবস্থা ওভাররাইট হবে'.tr}।\n\n${'স্ন্যাপশটের পরবর্তী সকল ম্যানুয়াল স্টক আউট ও ডিসপ্যাচ রিভার্ট হবে'.tr}।',
         ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('বাতিল'),
+            child: Text('বাতিল'.tr),
           ),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
@@ -516,19 +519,19 @@ class _SnapshotCard extends StatelessWidget {
               final msg = StringBuffer();
               msg.writeln('পণ্য ${result['products']}টি রিস্টোর হয়েছে');
               if (((result['replace'] as int?) ?? 0) > 0) {
-                msg.writeln('রিপ্লেস ${result['replace']}টি রিস্টোর হয়েছে');
+                msg.writeln('${'রিপ্লেস'.tr} ${result['replace']}টি রিস্টোর হয়েছে');
               }
               if (((result['deletedStockOuts'] as int?) ?? 0) > 0) {
-                msg.writeln('ম্যানুয়াল স্টক আউট ${result['deletedStockOuts']}টি রিমুভ হয়েছে');
+                msg.writeln('${'ম্যানুয়াল স্টক আউট'.tr} ${result['deletedStockOuts']}টি রিমুভ হয়েছে');
               }
               if (((result['revertedOrders'] as int?) ?? 0) > 0) {
-                msg.writeln('ডিসপ্যাচ ${result['revertedOrders']}টি রিভার্ট হয়েছে');
+                msg.writeln('${'ডিসপ্যাচ'.tr} ${result['revertedOrders']}টি রিভার্ট হয়েছে');
               }
               if (((result['deletedStockIns'] as int?) ?? 0) > 0) {
-                msg.writeln('স্টক ইন ${result['deletedStockIns']}টি রিমুভ হয়েছে');
+                msg.writeln('${'স্টক ইন'.tr} ${result['deletedStockIns']}টি রিমুভ হয়েছে');
               }
               Get.snackbar(
-                'রিস্টোর সম্পন্ন',
+                'রিস্টোর সম্পন্ন'.tr,
                 msg.toString(),
                 snackPosition: SnackPosition.BOTTOM,
                 backgroundColor: Colors.indigo,
@@ -537,7 +540,7 @@ class _SnapshotCard extends StatelessWidget {
               );
             },
             icon: const Icon(Icons.restore_rounded, color: Colors.white),
-            label: const Text('রিস্টোর করুন',
+            label: Text('রিস্টোর করুন'.tr,
                 style: TextStyle(color: Colors.white)),
           ),
         ],

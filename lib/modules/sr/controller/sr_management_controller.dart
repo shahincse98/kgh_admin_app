@@ -126,7 +126,7 @@ class SrManagementController extends GetxController {
       {required String password}) async {
     final email = (data['email'] as String? ?? '').trim();
     if (email.isEmpty) {
-      Get.snackbar('ত্রুটি', 'SR এর ইমেইল আবশ্যক',
+      Get.snackbar('ত্রুটি'.tr, 'SR এর ইমেইল আবশ্যক'.tr,
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
@@ -137,9 +137,9 @@ class SrManagementController extends GetxController {
       uid = await _createAuthAccount(email, password);
     } on FirebaseAuthException catch (e) {
       final msg = e.code == 'email-already-in-use'
-          ? 'এই ইমেইল ইতিমধ্যে ব্যবহৃত হচ্ছে'
-          : 'অ্যাকাউন্ট তৈরি ব্যর্থ: ${e.message}';
-      Get.snackbar('ত্রুটি', msg,
+          ? 'এই ইমেইল ইতিমধ্যে ব্যবহৃত হচ্ছে'.tr
+          : '${'অ্যাকাউন্ট তৈরি ব্যর্থ'.tr}: ${e.message}';
+      Get.snackbar('ত্রুটি'.tr, msg,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Color(0xFFDC2626),
           colorText: Colors.white);
@@ -155,7 +155,7 @@ class SrManagementController extends GetxController {
     final doc = await ref.get();
     srList.add(SrModel.fromFirestore(doc));
     srList.refresh();
-    Get.snackbar('সফল', '${data['name']} এর অ্যাকাউন্ট তৈরি হয়েছে',
+    Get.snackbar('সফল'.tr, '${data['name']} এর অ্যাকাউন্ট তৈরি হয়েছে',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Color(0xFF10B981),
         colorText: Colors.white);
@@ -263,12 +263,12 @@ class SrManagementController extends GetxController {
     required String newPassword,
   }) async {
     if (sr.uid.isEmpty) {
-      Get.snackbar('ত্রুটি', 'SR এর অ্যাকাউন্ট এখনো তৈরি হয়নি',
+      Get.snackbar('ত্রুটি'.tr, 'SR এর অ্যাকাউন্ট এখনো তৈরি হয়নি'.tr,
           snackPosition: SnackPosition.BOTTOM);
       return false;
     }
     if (sr.email.isEmpty) {
-      Get.snackbar('ত্রুটি', 'SR এর ইমেইল নেই',
+      Get.snackbar('ত্রুটি'.tr, 'SR এর ইমেইল নেই'.tr,
           snackPosition: SnackPosition.BOTTOM);
       return false;
     }
@@ -288,15 +288,15 @@ class SrManagementController extends GetxController {
       // Use sendPasswordResetEmail — works without knowing current password
       await FirebaseAuth.instance.sendPasswordResetEmail(email: sr.email);
       Get.snackbar(
-          'পাসওয়ার্ড রিসেট লিংক পাঠানো হয়েছে',
-          '${sr.email} এ একটি রিসেট লিংক পাঠানো হয়েছে',
+          'পাসওয়ার্ড রিসেট লিংক পাঠানো হয়েছে'.tr,
+          '${sr.email} ${'এ একটি রিসেট লিংক পাঠানো হয়েছে'.tr}',
           snackPosition: SnackPosition.BOTTOM,
           duration: const Duration(seconds: 5),
           backgroundColor: Color(0xFF0891B2),
           colorText: Colors.white);
       return true;
     } on FirebaseAuthException catch (e) {
-      Get.snackbar('ত্রুটি', e.message ?? 'ব্যর্থ হয়েছে',
+      Get.snackbar('ত্রুটি'.tr, e.message ?? 'ব্যর্থ হয়েছে'.tr,
           snackPosition: SnackPosition.BOTTOM);
       return false;
     }

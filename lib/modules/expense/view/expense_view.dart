@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../controller/expense_controller.dart';
 import '../model/expense_model.dart';
 import '../../../widgets/responsive.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class ExpenseView extends GetView<ExpenseController> {
   const ExpenseView({super.key});
@@ -16,12 +17,13 @@ class ExpenseView extends GetView<ExpenseController> {
     'salary',
     'misc'
   ];
-  static const _typeLabels = {
-    'rent': 'ভাড়া',
-    'electricity': 'বিদ্যুৎ',
-    'transport': 'পরিবহন',
-    'salary': 'বেতন',
-    'misc': 'অন্যান্য',
+  // getter — ভাষা বদলালে লেবেলও বদলাবে (static field হলে একবারই বসত)
+  static Map<String, String> get _typeLabels => {
+    'rent': 'ভাড়া'.tr,
+    'electricity': 'বিদ্যুৎ'.tr,
+    'transport': 'পরিবহন'.tr,
+    'salary': 'বেতন'.tr,
+    'misc': 'অন্যান্য'.tr,
   };
   static final _typeIcons = {
     'rent': Icons.home_rounded,
@@ -42,12 +44,13 @@ class ExpenseView extends GetView<ExpenseController> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
-        title: const Text('Expense Ledger'),
+        title: Text('Expense Ledger'.tr),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: 'Refresh'.tr,
             onPressed: controller.loadExpenses,
           ),
         ],
@@ -60,7 +63,7 @@ class ExpenseView extends GetView<ExpenseController> {
               const Expanded(
                   child: Center(child: CircularProgressIndicator()))
             else if (controller.expenses.isEmpty)
-              const Expanded(
+              Expanded(
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -68,7 +71,7 @@ class ExpenseView extends GetView<ExpenseController> {
                       Icon(Icons.receipt_long_rounded,
                           size: 56, color: Colors.grey),
                       SizedBox(height: 12),
-                      Text('এই মাসে কোনো খরচ নেই',
+                      Text('এই মাসে কোনো খরচ নেই'.tr,
                           style: TextStyle(color: Colors.grey)),
                     ],
                   ),
@@ -95,7 +98,7 @@ class ExpenseView extends GetView<ExpenseController> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context),
         icon: const Icon(Icons.add),
-        label: const Text('খরচ যোগ করুন'),
+        label: Text('খরচ যোগ করুন'.tr),
       ),
     );
   }
@@ -152,7 +155,7 @@ class ExpenseView extends GetView<ExpenseController> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('মোট খরচ',
+                Text('মোট খরচ'.tr,
                     style: Theme.of(context).textTheme.titleMedium),
                 Text(
                   '৳ ${NumberFormat('#,##,##0').format(controller.totalExpenses)}',
@@ -252,7 +255,7 @@ class ExpenseView extends GetView<ExpenseController> {
                   size: 18, color: Colors.red),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
-              tooltip: 'মুছুন',
+              tooltip: 'মুছুন'.tr,
               onPressed: () => _confirmDelete(context, e),
             ),
           ],
@@ -265,17 +268,17 @@ class ExpenseView extends GetView<ExpenseController> {
       BuildContext context, ExpenseModel e) async {
     final ok = await Get.dialog<bool>(
       AlertDialog(
-        title: const Text('খরচ মুছবেন?'),
+        title: Text('খরচ মুছবেন?'.tr),
         content: Text(
             '${_typeLabels[e.type] ?? e.type}: ৳${e.amount.toInt()} — ${e.note.isNotEmpty ? e.note : 'কোনো note নেই'}'),
         actions: [
           TextButton(
               onPressed: () => Get.back(result: false),
-              child: const Text('না')),
+              child: Text('না'.tr)),
           TextButton(
               onPressed: () => Get.back(result: true),
               child:
-                  const Text('হ্যাঁ', style: TextStyle(color: Colors.red))),
+                  Text('হ্যাঁ'.tr, style: TextStyle(color: Colors.red))),
         ],
       ),
     );
@@ -291,7 +294,7 @@ class ExpenseView extends GetView<ExpenseController> {
 
     await Get.dialog(
       AlertDialog(
-        title: const Text('নতুন খরচ যোগ করুন'),
+        title: Text('নতুন খরচ যোগ করুন'.tr),
         content: SingleChildScrollView(
           child: Form(
             key: formKey,
@@ -301,7 +304,7 @@ class ExpenseView extends GetView<ExpenseController> {
                 Obx(() => DropdownButtonFormField<String>(
                       initialValue: typeObs.value,
                       decoration:
-                          const InputDecoration(labelText: 'ধরন'),
+                          InputDecoration(labelText: 'ধরন'.tr),
                       items: _types
                           .map((t) => DropdownMenuItem(
                               value: t,
@@ -317,17 +320,17 @@ class ExpenseView extends GetView<ExpenseController> {
                     FilteringTextInputFormatter.digitsOnly
                   ],
                   decoration:
-                      const InputDecoration(labelText: 'পরিমাণ (৳)'),
+                      InputDecoration(labelText: 'পরিমাণ (৳)'.tr),
                   validator: (v) =>
                       (v == null || v.isEmpty || int.tryParse(v) == null)
-                          ? 'পরিমাণ লিখুন'
+                          ? 'পরিমাণ লিখুন'.tr
                           : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: noteCtrl,
                   decoration:
-                      const InputDecoration(labelText: 'বিবরণ (ঐচ্ছিক)'),
+                      InputDecoration(labelText: 'বিবরণ (ঐচ্ছিক)'.tr),
                 ),
                 const SizedBox(height: 12),
                 Obx(() => ListTile(
@@ -335,7 +338,7 @@ class ExpenseView extends GetView<ExpenseController> {
                       leading: const Icon(Icons.calendar_today_rounded),
                       title: Text(DateFormat('dd MMM yyyy')
                           .format(dateObs.value)),
-                      subtitle: const Text('তারিখ'),
+                      subtitle: Text('তারিখ'.tr),
                       onTap: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -353,7 +356,7 @@ class ExpenseView extends GetView<ExpenseController> {
         actions: [
           TextButton(
               onPressed: () => Get.back(),
-              child: const Text('বাতিল')),
+              child: Text('বাতিল'.tr)),
           ElevatedButton(
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
@@ -365,7 +368,7 @@ class ExpenseView extends GetView<ExpenseController> {
                 date: dateObs.value,
               );
             },
-            child: const Text('সংরক্ষণ'),
+            child: Text('সংরক্ষণ'.tr),
           ),
         ],
       ),

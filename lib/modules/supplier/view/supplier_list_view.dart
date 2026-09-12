@@ -4,6 +4,7 @@ import '../controller/supplier_controller.dart';
 import '../model/supplier_model.dart';
 import '../../purchase/model/purchase_entry_model.dart';
 import 'package:intl/intl.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 // ─── List View ───────────────────────────────────────────────────────────────
 
@@ -17,19 +18,20 @@ class SupplierListView extends GetView<SupplierController> {
     final searchText = ''.obs;
 
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
-        title: const Text('সাপ্লাইয়ার'),
+        title: Text('সাপ্লাইয়ার'.tr),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'রিফ্রেশ',
+            tooltip: 'রিফ্রেশ'.tr,
             onPressed: () => controller.fetchSuppliers(force: true),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.add_business_rounded),
-        label: const Text('সাপ্লাইয়ার যোগ করুন'),
+        label: Text('সাপ্লাইয়ার যোগ করুন'.tr),
         onPressed: () => _showSupplierForm(context),
       ),
       body: Column(
@@ -41,7 +43,7 @@ class SupplierListView extends GetView<SupplierController> {
               controller: searchCtrl,
               onChanged: (v) => searchText.value = v.toLowerCase(),
               decoration: InputDecoration(
-                hintText: 'সাপ্লাইয়ার সার্চ করুন...',
+                hintText: 'সাপ্লাইয়ার সার্চ করুন...'.tr,
                 prefixIcon: const Icon(Icons.search_rounded),
                 suffixIcon: Obx(() => searchText.value.isNotEmpty
                     ? IconButton(
@@ -86,14 +88,14 @@ class SupplierListView extends GetView<SupplierController> {
                       const SizedBox(height: 12),
                       Text(
                         query.isEmpty
-                            ? 'কোনো সাপ্লাইয়ার নেই'
-                            : '"$query" পাওয়া যায়নি',
+                            ? 'কোনো সাপ্লাইয়ার নেই'.tr
+                            : '"$query" ${'পাওয়া যায়নি'.tr}',
                         style: TextStyle(color: cs.onSurfaceVariant),
                       ),
                       if (query.isEmpty) ...[
                         const SizedBox(height: 6),
-                        const Text(
-                          'নিচের + বোতাম চাপুন সাপ্লাইয়ার যোগ করতে',
+                        Text(
+                          'নিচের + বোতাম চাপুন সাপ্লাইয়ার যোগ করতে'.tr,
                           style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ],
@@ -262,36 +264,36 @@ class _SupplierCard extends StatelessWidget {
                     }
                   } else if (v == 'delete') {
                     final ok = await Get.dialog<bool>(AlertDialog(
-                      title: const Text('সাপ্লাইয়ার মুছবেন?'),
+                      title: Text('সাপ্লাইয়ার মুছবেন?'.tr),
                       content: Text(
                           '"${supplier.shopName}" কে স্থায়ীভাবে মুছে ফেলা হবে।'),
                       actions: [
                         TextButton(
                             onPressed: () => Get.back(result: false),
-                            child: const Text('না')),
+                            child: Text('না'.tr)),
                         TextButton(
                             onPressed: () => Get.back(result: true),
-                            child: const Text('হ্যাঁ, মুছুন',
+                            child: Text('হ্যাঁ, মুছুন'.tr,
                                 style: TextStyle(color: Colors.red))),
                       ],
                     ));
                     if (ok == true) {
                       await ctrl.deleteSupplier(supplier);
                       Get.snackbar(
-                        'মুছে ফেলা হয়েছে',
-                        '"${supplier.shopName}" সরিয়ে দেওয়া হয়েছে',
+                        'মুছে ফেলা হয়েছে'.tr,
+                        '"${supplier.shopName}" ${'সরিয়ে দেওয়া হয়েছে'.tr}',
                         snackPosition: SnackPosition.BOTTOM,
                       );
                     }
                   }
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'edit',
                     child: Row(children: [
                       Icon(Icons.edit_rounded, size: 17),
                       SizedBox(width: 10),
-                      Text('সম্পাদনা'),
+                      Text('সম্পাদনা'.tr),
                     ]),
                   ),
                   PopupMenuItem(
@@ -300,7 +302,7 @@ class _SupplierCard extends StatelessWidget {
                       Icon(Icons.delete_outline_rounded,
                           size: 17, color: Colors.red.shade400),
                       const SizedBox(width: 10),
-                      Text('মুছে ফেলুন',
+                      Text('মুছে ফেলুন'.tr,
                           style:
                               TextStyle(color: Colors.red.shade400)),
                     ]),
@@ -358,7 +360,7 @@ class _SupplierFormState extends State<_SupplierForm> {
     final shopName = _shopCtrl.text.trim();
     if (shopName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('দোকানের নাম আবশ্যিক')));
+          SnackBar(content: Text('দোকানের নাম আবশ্যিক'.tr)));
       return;
     }
     setState(() => _saving = true);
@@ -373,8 +375,8 @@ class _SupplierFormState extends State<_SupplierForm> {
           address: _addressCtrl.text.trim(),
         );
         Get.snackbar(
-          'আপডেট হয়েছে',
-          '"$shopName" সফলভাবে আপডেট করা হয়েছে',
+          'আপডেট হয়েছে'.tr,
+          '"$shopName" ${'সফলভাবে আপডেট করা হয়েছে'.tr}',
           snackPosition: SnackPosition.BOTTOM,
         );
       } else {
@@ -385,8 +387,8 @@ class _SupplierFormState extends State<_SupplierForm> {
           address: _addressCtrl.text.trim(),
         );
         Get.snackbar(
-          'যোগ হয়েছে',
-          '"$shopName" সফলভাবে যোগ করা হয়েছে',
+          'যোগ হয়েছে'.tr,
+          '"$shopName" ${'সফলভাবে যোগ করা হয়েছে'.tr}',
           snackPosition: SnackPosition.BOTTOM,
         );
       }
@@ -395,7 +397,7 @@ class _SupplierFormState extends State<_SupplierForm> {
       setState(() => _saving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('সংরক্ষণ করতে সমস্যা হয়েছে')));
+            SnackBar(content: Text('সংরক্ষণ করতে সমস্যা হয়েছে'.tr)));
       }
     }
   }
@@ -428,7 +430,7 @@ class _SupplierFormState extends State<_SupplierForm> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _isEdit ? 'সাপ্লাইয়ার সম্পাদনা' : 'নতুন সাপ্লাইয়ার',
+                    _isEdit ? 'সাপ্লাইয়ার সম্পাদনা'.tr : 'নতুন সাপ্লাইয়ার'.tr,
                     style: Theme.of(context)
                         .textTheme
                         .titleMedium
@@ -451,27 +453,27 @@ class _SupplierFormState extends State<_SupplierForm> {
                 children: [
                   _field(
                     controller: _shopCtrl,
-                    label: 'দোকানের নাম *',
+                    label: 'দোকানের নাম *'.tr,
                     icon: Icons.storefront_rounded,
                     autofocus: !_isEdit,
                   ),
                   const SizedBox(height: 12),
                   _field(
                     controller: _ownerCtrl,
-                    label: 'মালিকের নাম',
+                    label: 'মালিকের নাম'.tr,
                     icon: Icons.person_rounded,
                   ),
                   const SizedBox(height: 12),
                   _field(
                     controller: _phoneCtrl,
-                    label: 'ফোন নম্বর',
+                    label: 'ফোন নম্বর'.tr,
                     icon: Icons.phone_rounded,
                     keyboardType: TextInputType.phone,
                   ),
                   const SizedBox(height: 12),
                   _field(
                     controller: _addressCtrl,
-                    label: 'ঠিকানা',
+                    label: 'ঠিকানা'.tr,
                     icon: Icons.location_on_rounded,
                     maxLines: 2,
                   ),
@@ -493,7 +495,7 @@ class _SupplierFormState extends State<_SupplierForm> {
                                   ? Icons.save_rounded
                                   : Icons.add_business_rounded,
                             ),
-                      label: Text(_isEdit ? 'আপডেট করুন' : 'সংরক্ষণ করুন'),
+                      label: Text(_isEdit ? 'আপডেট করুন'.tr : 'সংরক্ষণ করুন'.tr),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -572,7 +574,7 @@ class _SupplierPickerSheetState extends State<SupplierPickerSheet> {
               Icon(Icons.store_rounded, color: cs.primary),
               const SizedBox(width: 10),
               Expanded(
-                child: Text('সাপ্লাইয়ার বেছে নিন',
+                child: Text('সাপ্লাইয়ার বেছে নিন'.tr,
                     style: Theme.of(context)
                         .textTheme
                         .titleMedium
@@ -593,7 +595,7 @@ class _SupplierPickerSheetState extends State<SupplierPickerSheet> {
             onChanged: (v) => setState(() => _query = v.toLowerCase()),
             autofocus: true,
             decoration: InputDecoration(
-              hintText: 'সার্চ করুন...',
+              hintText: 'সার্চ করুন...'.tr,
               prefixIcon: const Icon(Icons.search_rounded),
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -617,8 +619,8 @@ class _SupplierPickerSheetState extends State<SupplierPickerSheet> {
                 padding: const EdgeInsets.all(24),
                 child: Text(
                   all.isEmpty
-                      ? 'কোনো সাপ্লাইয়ার নেই। আগে সাপ্লাইয়ার যোগ করুন।'
-                      : '"$_query" পাওয়া যায়নি',
+                      ? 'কোনো সাপ্লাইয়ার নেই। আগে সাপ্লাইয়ার যোগ করুন।'.tr
+                      : '"$_query" ${'পাওয়া যায়নি'.tr}',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: cs.onSurfaceVariant),
                 ),

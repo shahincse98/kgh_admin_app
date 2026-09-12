@@ -80,21 +80,21 @@ class _SrDetailViewState extends State<SrDetailView>
       backgroundColor: scheme.surfaceContainerLowest,
       appBar: AppBar(
         title: Text(sr.name,
-            style: const TextStyle(fontWeight: FontWeight.w800)),
+            style: TextStyle(fontWeight: FontWeight.w800)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
             onPressed: _loadMonth,
           ),
         ],
         bottom: TabBar(
           controller: _tabs,
-          tabs: const [
-            Tab(text: 'পারফরম্যান্স'),
-            Tab(text: 'ভিজিট তালিকা'),
-            Tab(text: 'কল তালিকা'),
-            Tab(text: 'ডেলিভারি তালিকা'),
-            Tab(text: 'ডেলিভারি অ্যাসাইন'),
+          tabs: [
+            Tab(text: 'পারফরম্যান্স'.tr),
+            Tab(text: 'ভিজিট তালিকা'.tr),
+            Tab(text: 'কল তালিকা'.tr),
+            Tab(text: 'ডেলিভারি তালিকা'.tr),
+            Tab(text: 'ডেলিভারি অ্যাসাইন'.tr),
           ],
         ),
       ),
@@ -148,7 +148,7 @@ class _SrDetailViewState extends State<SrDetailView>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('পেমেন্ট ইতিহাস',
+                  Text('পেমেন্ট ইতিহাস'.tr,
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
@@ -157,17 +157,17 @@ class _SrDetailViewState extends State<SrDetailView>
                     onPressed: () =>
                         _showPaymentDialog(context, s),
                     icon: const Icon(Icons.add_rounded, size: 16),
-                    label: const Text('পেমেন্ট'),
+                    label: Text('পেমেন্ট'.tr),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
 
               if (payments.isEmpty)
-                const SizedBox(
+                SizedBox(
                   height: 60,
                   child: Center(
-                      child: Text('কোনো পেমেন্ট নেই',
+                      child: Text('কোনো পেমেন্ট নেই'.tr,
                           style: TextStyle(color: Colors.grey))),
                 )
               else
@@ -238,22 +238,22 @@ class _SrDetailViewState extends State<SrDetailView>
         mainAxisSpacing: 10,
         childAspectRatio: 1.4,
         children: [
-          _kpiCard('ডেলিভারি', '${s.totalDeliveries}',
+          _kpiCard('ডেলিভারি'.tr, '${s.totalDeliveries}',
               Icons.local_shipping_rounded, const Color(0xFF0EA5E9)),
-          _kpiCard('বিক্রয়',
+          _kpiCard('বিক্রয়'.tr,
               '৳ ${_fmt.format(s.totalRevenue.toInt())}',
               Icons.payments_rounded, const Color(0xFF10B981)),
-          _kpiCard('কমিশন (${sr.commissionPercent}%)',
+          _kpiCard('${'কমিশন'.tr} (${sr.commissionPercent}%)',
               '৳ ${_fmt.format(s.commissionDue.toInt())}',
               Icons.percent_rounded, const Color(0xFF6366F1)),
-          _kpiCard('বেতন',
+          _kpiCard('বেতন'.tr,
               '৳ ${_fmt.format(sr.monthlyFixedSalary.toInt())}',
               Icons.badge_rounded, const Color(0xFFF59E0B)),
-          _kpiCard('মোট প্রাপ্য',
+          _kpiCard('মোট প্রাপ্য'.tr,
               '৳ ${_fmt.format(s.totalDue.toInt())}',
               Icons.account_balance_wallet_rounded,
               const Color(0xFF0891B2)),
-          _kpiCard('পরিশোধিত',
+          _kpiCard('পরিশোধিত'.tr,
               '৳ ${_fmt.format(s.totalPaid.toInt())}',
               Icons.check_circle_rounded, const Color(0xFF22C55E)),
         ],
@@ -309,20 +309,20 @@ class _SrDetailViewState extends State<SrDetailView>
                   color: color,
                   size: 20),
               const SizedBox(width: 8),
-              Text('গ্রাহক বাকি ট্র্যাকার',
+              Text('গ্রাহক বাকি ট্র্যাকার'.tr,
                   style: TextStyle(
                       fontWeight: FontWeight.w700, color: color)),
             ],
           ),
           const SizedBox(height: 8),
-          _dueRow('মোট গ্রাহক বাকি',
+          _dueRow('মোট গ্রাহক বাকি'.tr,
               '৳ ${_fmt.format(s.totalDueFromCustomers.toInt())}', scheme),
-          _dueRow('বাকি লিমিট',
+          _dueRow('বাকি লিমিট'.tr,
               '৳ ${_fmt.format(sr.dueLimit.toInt())}', scheme),
           if (overLimit) ...[
             const Divider(height: 16),
             _dueRow(
-              'অতিরিক্ত (ফ্রিজড)',
+              'অতিরিক্ত (ফ্রিজড)'.tr,
               '৳ ${_fmt.format(s.frozenAmount.toInt())}',
               scheme,
               valueColor: Colors.red,
@@ -335,8 +335,8 @@ class _SrDetailViewState extends State<SrDetailView>
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '⚠️ বাকি লিমিট ছাড়িয়ে গেছে। ৳${_fmt.format(s.frozenAmount.toInt())} বেতন ফ্রিজ। '
-                'অতিরিক্ত বাকি আদায় করলে ফ্রিজ মুক্ত হবে।',
+                '⚠️ ${'বাকি লিমিট ছাড়িয়ে গেছে'.tr}। ৳${_fmt.format(s.frozenAmount.toInt())} ${'বেতন ফ্রিজ'.tr}। '
+                'অতিরিক্ত বাকি আদায় করলে ফ্রিজ মুক্ত হবে।'.tr,
                 style: const TextStyle(
                     fontSize: 12, color: Colors.red),
               ),
@@ -390,25 +390,25 @@ class _SrDetailViewState extends State<SrDetailView>
                   color: color,
                   size: 28),
               const SizedBox(width: 10),
-              Text('এই মাসের সারসংক্ষেপ',
+              Text('এই মাসের সারসংক্ষেপ'.tr,
                   style: TextStyle(
                       fontWeight: FontWeight.w700, color: color)),
             ],
           ),
           const SizedBox(height: 12),
-          _dueRow('মোট প্রাপ্য',
+          _dueRow('মোট প্রাপ্য'.tr,
               '৳ ${_fmt.format(s.totalDue.toInt())}', scheme),
-          _dueRow('পরিশোধিত',
+          _dueRow('পরিশোধিত'.tr,
               '৳ ${_fmt.format(s.totalPaid.toInt())}', scheme),
           if (s.frozenAmount > 0)
-            _dueRow('ফ্রিজড',
+            _dueRow('ফ্রিজড'.tr,
                 '৳ ${_fmt.format(s.frozenAmount.toInt())}', scheme,
                 valueColor: Colors.red),
           const Divider(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('নেট প্রদেয়',
+              Text('নেট প্রদেয়'.tr,
                   style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
@@ -463,7 +463,7 @@ class _SrDetailViewState extends State<SrDetailView>
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline_rounded,
               size: 20, color: Colors.red),
-          tooltip: 'মুছুন',
+          tooltip: 'মুছুন'.tr,
           onPressed: () => _confirmDeletePayment(context, p),
         ),
       ),
@@ -473,16 +473,16 @@ class _SrDetailViewState extends State<SrDetailView>
   Future<void> _confirmDeletePayment(
       BuildContext context, SrPaymentModel p) async {
     final ok = await Get.dialog<bool>(AlertDialog(
-      title: const Text('পেমেন্ট মুছবেন?'),
+      title: Text('পেমেন্ট মুছবেন?'.tr),
       content: Text(
           '৳${p.amount.toInt()} — ${p.note.isNotEmpty ? p.note : 'কোনো বিবরণ নেই'}'),
       actions: [
         TextButton(
             onPressed: () => Get.back(result: false),
-            child: const Text('না')),
+            child: Text('না'.tr)),
         TextButton(
             onPressed: () => Get.back(result: true),
-            child: const Text('হ্যাঁ',
+            child: Text('হ্যাঁ'.tr,
                 style: TextStyle(color: Colors.red))),
       ],
     ));
@@ -502,7 +502,7 @@ class _SrDetailViewState extends State<SrDetailView>
         '${m.year}-${m.month.toString().padLeft(2, '0')}';
 
     await Get.dialog(AlertDialog(
-      title: const Text('পেমেন্ট রেকর্ড'),
+      title: Text('পেমেন্ট রেকর্ড'.tr),
       content: Form(
         key: formKey,
         child: Column(
@@ -519,15 +519,15 @@ class _SrDetailViewState extends State<SrDetailView>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('বাকি: ৳${_fmt.format(s.balance.toInt())}',
+                  Text('${'বাকি'.tr}: ৳${_fmt.format(s.balance.toInt())}',
                       style: const TextStyle(
                           fontSize: 13, color: Colors.orange)),
                   if (s.frozenAmount > 0)
                     Text(
-                        'ফ্রিজড: ৳${_fmt.format(s.frozenAmount.toInt())}',
+                        '${'ফ্রিজড'.tr}: ৳${_fmt.format(s.frozenAmount.toInt())}',
                         style: const TextStyle(
                             fontSize: 12, color: Colors.red)),
-                  Text('নেট প্রদেয়: ৳${_fmt.format(s.netPayable.toInt())}',
+                  Text('${'নেট প্রদেয়'.tr}: ৳${_fmt.format(s.netPayable.toInt())}',
                       style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -539,24 +539,24 @@ class _SrDetailViewState extends State<SrDetailView>
               controller: amountCtrl,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(labelText: 'পরিমাণ (৳)'),
+              decoration: InputDecoration(labelText: 'পরিমাণ (৳)'.tr),
               validator: (v) =>
                   (v == null || v.isEmpty || int.tryParse(v) == null)
-                      ? 'পরিমাণ লিখুন'
+                      ? 'পরিমাণ লিখুন'.tr
                       : null,
             ),
             const SizedBox(height: 10),
             TextFormField(
               controller: noteCtrl,
               decoration:
-                  const InputDecoration(labelText: 'বিবরণ (ঐচ্ছিক)'),
+                  InputDecoration(labelText: 'বিবরণ (ঐচ্ছিক)'.tr),
             ),
           ],
         ),
       ),
       actions: [
         TextButton(
-            onPressed: () => Get.back(), child: const Text('বাতিল')),
+            onPressed: () => Get.back(), child: Text('বাতিল'.tr)),
         ElevatedButton(
           onPressed: () async {
             if (!formKey.currentState!.validate()) return;
@@ -569,7 +569,7 @@ class _SrDetailViewState extends State<SrDetailView>
             );
             await _loadMonth();
           },
-          child: const Text('সংরক্ষণ'),
+          child: Text('সংরক্ষণ'.tr),
         ),
       ],
     ));
@@ -609,8 +609,8 @@ class _SrDetailViewState extends State<SrDetailView>
                     const SizedBox(height: 12),
                     Text(
                         isCall
-                            ? 'কোনো কল তালিকা নেই'
-                            : 'কোনো দোকান নির্ধারিত নেই',
+                            ? 'কোনো কল তালিকা নেই'.tr
+                            : 'কোনো দোকান নির্ধারিত নেই'.tr,
                         style: TextStyle(
                             color: scheme.onSurface.withAlpha(120))),
                   ],
@@ -629,7 +629,7 @@ class _SrDetailViewState extends State<SrDetailView>
           onPressed: () =>
               _showAssignDialog(context, scheme, uc, isCall: isCall),
           icon: const Icon(Icons.add_rounded),
-          label: Text(isCall ? 'কল তালিকায় যোগ করুন' : 'দোকান যোগ করুন'),
+          label: Text(isCall ? 'কল তালিকায় যোগ করুন'.tr : 'দোকান যোগ করুন'.tr),
         ),
       );
     });
@@ -699,7 +699,7 @@ class _SrDetailViewState extends State<SrDetailView>
                             Icon(Icons.calendar_today_rounded, size: 11,
                                 color: scheme.primary.withAlpha(160)),
                             const SizedBox(width: 4),
-                            Text('ডেলিভারি দিন নির্ধারণ করুন',
+                            Text('ডেলিভারি দিন নির্ধারণ করুন'.tr,
                                 style: TextStyle(
                                     fontSize: 11,
                                     color: scheme.primary.withAlpha(180),
@@ -715,7 +715,7 @@ class _SrDetailViewState extends State<SrDetailView>
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              padding: EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                               decoration: BoxDecoration(
                                 color: scheme.secondary.withAlpha(22),
                                 borderRadius: BorderRadius.circular(6),
@@ -725,19 +725,19 @@ class _SrDetailViewState extends State<SrDetailView>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.local_shipping_rounded, size: 11, color: scheme.secondary),
-                                  const SizedBox(width: 4),
+                                  SizedBox(width: 4),
                                   Text(day, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: scheme.secondary)),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 4),
+                            SizedBox(width: 4),
                             Icon(Icons.edit_rounded, size: 11, color: scheme.onSurface.withAlpha(120)),
                           ],
                         ),
                       ),
                     ];
                   }(),                  if (visitStatus != null) ...[
-                    const SizedBox(height: 5),
+                    SizedBox(height: 5),
                     _visitBadge(visitStatus),
                   ],
                 ],
@@ -745,9 +745,9 @@ class _SrDetailViewState extends State<SrDetailView>
             ),
             if (isAssigned)
               IconButton(
-                icon: const Icon(Icons.remove_circle_outline_rounded,
+                icon: Icon(Icons.remove_circle_outline_rounded,
                     color: Colors.red),
-                tooltip: 'সরিয়ে দিন',
+                tooltip: 'সরিয়ে দিন'.tr,
                 onPressed: () => _removeAssignment(u, isCall: isCall),
               ),
           ],
@@ -757,13 +757,13 @@ class _SrDetailViewState extends State<SrDetailView>
   }
 
   // Visit status badge helpers
-  static const _visitStatuses = [
-    ('pending', 'অপেক্ষারত'),
-    ('visited', 'ভিজিট সম্পন্ন'),
-    ('ordered', 'অর্ডার সম্পন্ন'),
-    ('order_later', 'অর্ডার পরে দিবে'),
-    ('shop_closed', 'দোকান বন্ধ'),
-    ('no_order', 'অর্ডার দিবেনা'),
+  static List<(String, String)> get _visitStatuses => [
+    ('pending', 'অপেক্ষারত'.tr),
+    ('visited', 'ভিজিট সম্পন্ন'.tr),
+    ('ordered', 'অর্ডার সম্পন্ন'.tr),
+    ('order_later', 'অর্ডার পরে দিবে'.tr),
+    ('shop_closed', 'দোকান বন্ধ'.tr),
+    ('no_order', 'অর্ডার দিবেনা'.tr),
   ];
 
   Color _visitColor(String status) {
@@ -819,7 +819,7 @@ class _SrDetailViewState extends State<SrDetailView>
       'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার',
     ];
     await Get.dialog(AlertDialog(
-      title: Text('$shopName — ডেলিভারি দিন নির্বাচন'),
+      title: Text('$shopName — ${'ডেলিভারি দিন নির্বাচন'.tr}'),
       contentPadding: const EdgeInsets.fromLTRB(10, 16, 10, 0),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -838,7 +838,7 @@ class _SrDetailViewState extends State<SrDetailView>
           ListTile(
             dense: true,
             leading: const Icon(Icons.skip_next_rounded, size: 18),
-            title: const Text('এখন না'),
+            title: Text('এখন না'.tr),
             onTap: () => Get.back(),
           ),
         ],
@@ -853,7 +853,7 @@ class _SrDetailViewState extends State<SrDetailView>
       'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার',
     ];
     await Get.dialog(AlertDialog(
-      title: Text('$shopName — ডেলিভারি দিন'),
+      title: Text('$shopName — ${'ডেলিভারি দিন'.tr}'),
       contentPadding: const EdgeInsets.fromLTRB(10, 16, 10, 0),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -873,7 +873,7 @@ class _SrDetailViewState extends State<SrDetailView>
             dense: true,
             leading: Icon(Icons.clear_rounded,
                 size: 18, color: scheme.error),
-            title: Text('ডেলিভারি দিন সরান',
+            title: Text('ডেলিভারি দিন সরান'.tr,
                 style: TextStyle(color: scheme.error)),
             onTap: () async {
               Get.back();
@@ -884,7 +884,7 @@ class _SrDetailViewState extends State<SrDetailView>
       ),
       actions: [
         TextButton(
-            onPressed: () => Get.back(), child: const Text('বাতিল')),
+            onPressed: () => Get.back(), child: Text('বাতিল'.tr)),
       ],
     ));
   }
@@ -914,7 +914,7 @@ class _SrDetailViewState extends State<SrDetailView>
     await Get.dialog(
       StatefulBuilder(builder: (ctx, _) {
         return AlertDialog(
-          title: Text(isCall ? 'কল তালিকায় যোগ' : 'দোকান নির্ধারণ'),
+          title: Text(isCall ? 'কল তালিকায় যোগ'.tr : 'দোকান নির্ধারণ'.tr),
           content: SizedBox(
             width: double.maxFinite,
             child: Column(
@@ -924,7 +924,7 @@ class _SrDetailViewState extends State<SrDetailView>
                   controller: searchCtrl,
                   onChanged: (v) => searchObs.value = v,
                   decoration: InputDecoration(
-                    hintText: 'খুঁজুন…',
+                    hintText: 'খুঁজুন…'.tr,
                     prefixIcon: const Icon(Icons.search_rounded),
                     filled: true,
                     fillColor: scheme.surfaceContainerHigh,
@@ -951,7 +951,7 @@ class _SrDetailViewState extends State<SrDetailView>
                               Icon(Icons.check_circle_rounded,
                                   size: 14, color: scheme.primary),
                               const SizedBox(width: 6),
-                              Text('${selected.length}টি দোকান নির্বাচিত',
+                              Text('${selected.length}${'টি দোকান নির্বাচিত'.tr}',
                                   style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
@@ -977,8 +977,8 @@ class _SrDetailViewState extends State<SrDetailView>
                                 u.phone.contains(q)))
                         .toList();
                     if (list.isEmpty) {
-                      return const Center(
-                          child: Text('কোনো কাস্টমার পাওয়া যায়নি'));
+                      return Center(
+                          child: Text('কোনো কাস্টমার পাওয়া যায়নি'.tr));
                     }
                     return ListView.builder(
                       itemCount: list.length,
@@ -1073,7 +1073,7 @@ class _SrDetailViewState extends State<SrDetailView>
           actions: [
             TextButton(
                 onPressed: () => Get.back(),
-                child: const Text('বাতিল')),
+                child: Text('বাতিল'.tr)),
             if (!isCall)
               Obx(() => ElevatedButton.icon(
                     onPressed: selected.isEmpty
@@ -1103,14 +1103,14 @@ class _SrDetailViewState extends State<SrDetailView>
                     icon: const Icon(Icons.add_rounded, size: 18),
                     label: Obx(() => Text(
                           selected.isEmpty
-                              ? 'যোগ করুন'
+                              ? 'যোগ করুন'.tr
                               : '${selected.length}টি যোগ করুন',
                         )),
                   )),
             if (isCall)
               TextButton(
                   onPressed: () => Get.back(),
-                  child: const Text('বন্ধ করুন')),
+                  child: Text('বন্ধ করুন'.tr)),
           ],
         );
       }),
@@ -1181,12 +1181,12 @@ class _SrDetailViewState extends State<SrDetailView>
                               size: 56,
                               color: scheme.onSurface.withAlpha(60)),
                           const SizedBox(height: 12),
-                          Text('$day — কোনো ডেলিভারি নেই',
+                          Text('$day — ${'কোনো ডেলিভারি নেই'.tr}',
                               style: TextStyle(
                                   color: scheme.onSurface.withAlpha(120))),
                           const SizedBox(height: 6),
                           Text(
-                            'ভিজিট তালিকায় দোকানের ডেলিভারি দিন নির্ধারণ করুন',
+                            'ভিজিট তালিকায় দোকানের ডেলিভারি দিন নির্ধারণ করুন'.tr,
                             style: TextStyle(
                                 fontSize: 12,
                                 color: scheme.onSurface.withAlpha(80)),
@@ -1318,7 +1318,7 @@ class _SrDetailViewState extends State<SrDetailView>
                         borderRadius: BorderRadius.circular(5),
                       ),
                       child: Text(
-                        'বাকি: ৳${u.totalDue}',
+                        '${'বাকি'.tr}: ৳${u.totalDue}',
                         style: const TextStyle(
                             fontSize: 11,
                             color: Colors.red,
@@ -1354,7 +1354,7 @@ class _SrDetailViewState extends State<SrDetailView>
               Icon(Icons.assignment_outlined,
                   size: 56, color: scheme.onSurface.withAlpha(60)),
               const SizedBox(height: 12),
-              Text('কোনো অর্ডার নেই',
+              Text('কোনো অর্ডার নেই'.tr,
                   style: TextStyle(color: scheme.onSurface.withAlpha(120))),
             ],
           ),
@@ -1442,7 +1442,7 @@ class _SrDetailViewState extends State<SrDetailView>
                           const Icon(Icons.check_circle_rounded,
                               size: 11, color: Color(0xFF7C3AED)),
                           const SizedBox(width: 4),
-                          Text('অ্যাসাইন — $assignedDate',
+                          Text('${'অ্যাসাইন'.tr} — $assignedDate',
                               style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -1459,7 +1459,7 @@ class _SrDetailViewState extends State<SrDetailView>
               IconButton(
                 icon: const Icon(Icons.remove_circle_outline_rounded,
                     color: Colors.red, size: 20),
-                tooltip: 'অ্যাসাইন সরান',
+                tooltip: 'অ্যাসাইন সরান'.tr,
                 onPressed: () async {
                   await orderCtrl.assignDelivery(order.id, '', '', null);
                 },
@@ -1480,7 +1480,7 @@ class _SrDetailViewState extends State<SrDetailView>
                       order.id, sr.id, sr.name, picked);
                 },
                 icon: const Icon(Icons.add_task_rounded, size: 16),
-                label: const Text('অ্যাসাইন', style: TextStyle(fontSize: 12)),
+                label: Text('অ্যাসাইন'.tr, style: TextStyle(fontSize: 12)),
               ),
           ],
         ),
@@ -1491,13 +1491,13 @@ class _SrDetailViewState extends State<SrDetailView>
   String _statusLabel(String status) {
     switch (status) {
       case 'pending':
-        return 'অপেক্ষারত';
+        return 'অপেক্ষারত'.tr;
       case 'approved':
-        return 'অনুমোদিত';
+        return 'অনুমোদিত'.tr;
       case 'delivered':
         return 'ডেলিভারি হয়েছে';
       case 'cancelled':
-        return 'বাতিল';
+        return 'বাতিল'.tr;
       default:
         return status;
     }

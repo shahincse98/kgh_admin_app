@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controller/sales_controller.dart';
 import 'day_sales_detail_view.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class SalesView extends GetView<SalesController> {
   const SalesView({super.key});
@@ -15,8 +16,9 @@ class SalesView extends GetView<SalesController> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
-        title: const Text('Daily Sales'),
+        title: Text('Daily Sales'.tr),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -36,7 +38,7 @@ class SalesView extends GetView<SalesController> {
                 child: RefreshIndicator(
                   onRefresh: controller.loadData,
                   child: controller.allOrders.isEmpty
-                      ? ListView(children: const [
+                      ? ListView(children: [
                           SizedBox(height: 80),
                           Center(
                               child: Column(
@@ -45,7 +47,7 @@ class SalesView extends GetView<SalesController> {
                                 Icon(Icons.bar_chart_rounded,
                                     size: 56, color: Colors.grey),
                                 SizedBox(height: 12),
-                                Text('এই সময়ের মধ্যে কোনো ডাটা নেই',
+                                Text('এই সময়ের মধ্যে কোনো ডাটা নেই'.tr,
                                     style: TextStyle(color: Colors.grey)),
                               ])),
                         ])
@@ -56,7 +58,7 @@ class SalesView extends GetView<SalesController> {
                             const SizedBox(height: 14),
                             _paymentBreakdownCard(scheme),
                             const SizedBox(height: 16),
-                            const Text('দিনওয়ারি বিবরণ',
+                            Text('দিনওয়ারি বিবরণ'.tr,
                                 style: TextStyle(
                                     fontSize: 15, fontWeight: FontWeight.w800)),
                             const SizedBox(height: 8),
@@ -82,23 +84,23 @@ class SalesView extends GetView<SalesController> {
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
-              _dateChip('আজ', todayDate, todayDate),
+              _dateChip('আজ'.tr, todayDate, todayDate),
               const SizedBox(width: 6),
               _dateChip(
-                  'গতকাল',
+                  'গতকাল'.tr,
                   todayDate.subtract(const Duration(days: 1)),
                   todayDate.subtract(const Duration(days: 1))),
               const SizedBox(width: 6),
               _dateChip(
-                  'সপ্তাহ', todayDate.subtract(const Duration(days: 7)), todayDate),
+                  'সপ্তাহ'.tr, todayDate.subtract(const Duration(days: 7)), todayDate),
               const SizedBox(width: 6),
-              _dateChip('মাস', DateTime(today.year, today.month, 1), todayDate),
+              _dateChip('মাস'.tr, DateTime(today.year, today.month, 1), todayDate),
               const SizedBox(width: 6),
-              _dateChip('সব', null, null),
+              _dateChip('সব'.tr, null, null),
               const SizedBox(width: 6),
               ActionChip(
                 avatar: const Icon(Icons.calendar_today_rounded, size: 16),
-                label: const Text('কাস্টম', style: TextStyle(fontSize: 11)),
+                label: Text('কাস্টম'.tr, style: TextStyle(fontSize: 11)),
                 onPressed: () async {
                   final from = await showDatePicker(
                     context: context,
@@ -158,17 +160,17 @@ class SalesView extends GetView<SalesController> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const SizedBox(height: 4),
       Wrap(spacing: 10, runSpacing: 10, children: [
-        _summaryCard(context, 'মোট বিক্রি', '৳ $netSales',
+        _summaryCard(context, 'মোট বিক্রি'.tr, '৳ $netSales',
             Icons.trending_up_rounded, const Color(0xFF0891B2)),
-        _summaryCard(context, 'মোট অর্ডার', '$orders টি',
+        _summaryCard(context, 'মোট অর্ডার'.tr, '$orders ${'টি'.tr}',
             Icons.receipt_long_rounded, const Color(0xFF7C3AED)),
-        _summaryCard(context, 'ক্রয় মূল্য', '৳ $purch',
+        _summaryCard(context, 'ক্রয় মূল্য'.tr, '৳ $purch',
             Icons.shopping_cart_rounded, const Color(0xFFD97706)),
-        _summaryCard(context, 'খরচ', '৳ $exp',
+        _summaryCard(context, 'খরচ'.tr, '৳ $exp',
             Icons.money_off_rounded, const Color(0xFFDC2626)),
         _summaryCard(
             context,
-            'নিট লাভ',
+            'নিট লাভ'.tr,
             '৳ $profit',
             Icons.savings_rounded,
             profitVal >= 0
@@ -214,7 +216,7 @@ class SalesView extends GetView<SalesController> {
         padding: const EdgeInsets.all(14),
         child:
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('পেমেন্ট মাধ্যম ভিত্তিক জমা',
+          Text('পেমেন্ট মাধ্যম ভিত্তিক জমা'.tr,
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
           const SizedBox(height: 10),
           ...items.map((e) {
@@ -298,7 +300,7 @@ class SalesView extends GetView<SalesController> {
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
-                Text('মোট: ৳ $netSales',
+                Text('${'মোট'.tr}: ৳ $netSales',
                     style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -320,7 +322,7 @@ class SalesView extends GetView<SalesController> {
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF16A34A))),
                   const SizedBox(width: 2),
-                  const Text('অর্ডার',
+                  Text('অর্ডার'.tr,
                       style: TextStyle(
                           fontSize: 10, color: Color(0xFF16A34A))),
                 ]),

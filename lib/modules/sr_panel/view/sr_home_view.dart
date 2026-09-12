@@ -5,6 +5,8 @@ import '../controller/sr_panel_controller.dart';
 import '../../auth/controller/auth_controller.dart';
 import '../../../theme/app_theme.dart';
 import 'sr_panel_shell.dart';
+import '../../../routes/app_routes.dart';
+import '../../../localization/domain_labels.dart';
 
 class SrHomeView extends GetView<SrPanelController> {
   const SrHomeView({super.key});
@@ -21,8 +23,8 @@ class SrHomeView extends GetView<SrPanelController> {
         automaticallyImplyLeading: false,
         title: Obx(() => Text(
               controller.srProfile.value != null
-                  ? 'হ্যালো, ${controller.srProfile.value!.name}'
-                  : 'SR প্যানেল',
+                  ? '${'হ্যালো'.tr}, ${controller.srProfile.value!.name}'
+                  : 'SR প্যানেল'.tr,
               style: const TextStyle(fontWeight: FontWeight.w800),
             )),
         actions: [
@@ -31,19 +33,24 @@ class SrHomeView extends GetView<SrPanelController> {
             onPressed: AppTheme.toggleTheme,
           ),
           IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings'.tr,
+            onPressed: () => Get.toNamed(AppRoutes.settings),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Logout',
+            tooltip: 'Logout'.tr,
             onPressed: () async {
               final ok = await Get.dialog<bool>(AlertDialog(
-                title: const Text('Logout'),
-                content: const Text('আপনি কি Logout করতে চান?'),
+                title: Text('Logout'.tr),
+                content: Text('আপনি কি Logout করতে চান?'.tr),
                 actions: [
                   TextButton(
                       onPressed: () => Get.back(result: false),
-                      child: const Text('না')),
+                      child: Text('না'.tr)),
                   TextButton(
                       onPressed: () => Get.back(result: true),
-                      child: const Text('হ্যাঁ')),
+                      child: Text('হ্যাঁ'.tr)),
                 ],
               ));
               if (ok == true) Get.find<AuthController>().logout();
@@ -72,7 +79,7 @@ class SrHomeView extends GetView<SrPanelController> {
               const SizedBox(height: 14),
 
               // Quick actions
-              Text('Quick Actions',
+              Text('Quick Actions'.tr,
                   style: Theme.of(context)
                       .textTheme
                       .titleLarge
@@ -88,7 +95,7 @@ class SrHomeView extends GetView<SrPanelController> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('সাম্প্রতিক অর্ডার',
+                  Text('সাম্প্রতিক অর্ডার'.tr,
                       style: Theme.of(context)
                           .textTheme
                           .titleMedium
@@ -96,7 +103,7 @@ class SrHomeView extends GetView<SrPanelController> {
                   TextButton(
                     onPressed: () =>
                         Get.find<SrNavController>(tag: 'sr_nav').tabIndex.value = 2,
-                    child: const Text('সব দেখুন'),
+                    child: Text('সব দেখুন'.tr),
                   ),
                 ],
               ),
@@ -157,11 +164,11 @@ class SrHomeView extends GetView<SrPanelController> {
             mainAxisSpacing: 10,
             childAspectRatio: 1.4,
             children: [
-              _kpi('ডেলিভারি',
+              _kpi('ডেলিভারি'.tr,
                   '${controller.totalDeliveries.value}',
                   Icons.local_shipping_rounded,
                   const Color(0xFF0EA5E9)),
-              _kpi('বিক্রয়',
+              _kpi('বিক্রয়'.tr,
                   '৳ ${_fmt.format(controller.totalRevenue.value.toInt())}',
                   Icons.payments_rounded,
                   const Color(0xFF10B981)),
@@ -200,19 +207,19 @@ class SrHomeView extends GetView<SrPanelController> {
       runSpacing: 10,
       children: [
         _actionBtn(
-          'নতুন অর্ডার',
+          'নতুন অর্ডার'.tr,
           Icons.add_shopping_cart_rounded,
           const Color(0xFF0EA5E9),
           () => Get.find<SrNavController>(tag: 'sr_nav').tabIndex.value = 1,
         ),
         _actionBtn(
-          'আমার দোকান',
+          'আমার দোকান'.tr,
           Icons.store_rounded,
           const Color(0xFF6366F1),
           () => Get.find<SrNavController>(tag: 'sr_nav').tabIndex.value = 3,
         ),
         _actionBtn(
-          'বাকি তালিকা',
+          'বাকি তালিকা'.tr,
           Icons.receipt_long_rounded,
           const Color(0xFFDC2626),
           () => Get.find<SrNavController>(tag: 'sr_nav').tabIndex.value = 4,
@@ -246,7 +253,7 @@ class SrHomeView extends GetView<SrPanelController> {
       }
       if (orders.isEmpty) {
         return Center(
-          child: Text('কোনো অর্ডার নেই',
+          child: Text('কোনো অর্ডার নেই'.tr,
               style: TextStyle(
                   color: scheme.onSurface.withAlpha(120))),
         );
@@ -269,11 +276,11 @@ class SrHomeView extends GetView<SrPanelController> {
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
-              title: Text(o.shopName.isEmpty ? 'Unknown' : o.shopName,
+              title: Text(o.shopName.isEmpty ? 'Unknown'.tr : o.shopName,
                   style:
                       const TextStyle(fontWeight: FontWeight.w700)),
               subtitle: Text(
-                '${o.items.length} পণ্য  •  ${DateFormat('dd MMM').format(o.createdAt)}',
+                '${DomainLabels.productCount(o.items.length)}  •  ${DateFormat('dd MMM').format(o.createdAt)}',
                 style: const TextStyle(fontSize: 12),
               ),
               trailing: Text(
@@ -319,7 +326,7 @@ class SrHomeView extends GetView<SrPanelController> {
               ),
               const SizedBox(width: 10),
               Text(
-                'আজকের ডেলিভারি',
+                'আজকের ডেলিভারি'.tr,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -346,7 +353,7 @@ class SrHomeView extends GetView<SrPanelController> {
                 onPressed: () =>
                     Get.find<SrNavController>(tag: 'sr_nav').tabIndex.value =
                         2,
-                child: const Text('সব দেখুন'),
+                child: Text('সব দেখুন'.tr),
               ),
             ],
           ),
@@ -366,12 +373,12 @@ class SrHomeView extends GetView<SrPanelController> {
                   leading: const Icon(Icons.storefront_rounded,
                       color: Color(0xFF0891B2), size: 20),
                   title: Text(
-                    o.shopName.isEmpty ? 'Unknown' : o.shopName,
+                    o.shopName.isEmpty ? 'Unknown'.tr : o.shopName,
                     style: const TextStyle(
                         fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                   subtitle: Text(
-                    '${o.items.length} পণ্য  •  ৳ ${_fmt.format(o.totalAmount.toInt())}',
+                    '${DomainLabels.productCount(o.items.length)}  •  ৳ ${_fmt.format(o.totalAmount.toInt())}',
                     style: const TextStyle(fontSize: 11),
                   ),
                   trailing: Container(
@@ -383,8 +390,8 @@ class SrHomeView extends GetView<SrPanelController> {
                     ),
                     child: Text(
                       {
-                            'pending': 'Pending',
-                            'approved': 'Approved',
+                            'pending': 'Pending'.tr,
+                            'approved': 'Approved'.tr,
                           }[o.status] ??
                           o.status,
                       style: TextStyle(

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:kgh_admin_app/modules/auth/controller/auth_controller.dart';
-import 'package:kgh_admin_app/modules/order/controller/order_controller.dart';
 import 'package:kgh_admin_app/routes/app_routes.dart';
 import 'package:kgh_admin_app/theme/app_theme.dart';
 import '../controller/home_controller.dart';
@@ -14,30 +14,36 @@ class HomeView extends GetView<HomeController> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
+        title: Text('Admin Dashboard'.tr),
         actions: [
           IconButton(
             icon: Icon(Get.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-            tooltip: 'Theme পরিবর্তন করুন',
+            tooltip: 'Theme পরিবর্তন করুন'.tr,
             onPressed: () => AppTheme.toggleTheme(),
           ),
           IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings'.tr,
+            onPressed: () => Get.toNamed(AppRoutes.settings),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
+            tooltip: 'Logout'.tr,
             onPressed: () async {
               final confirmed = await Get.dialog<bool>(
                 AlertDialog(
-                  title: const Text('Logout'),
-                  content: const Text('আপনি কি Logout করতে চান?'),
+                  title: Text('Logout'.tr),
+                  content: Text('আপনি কি Logout করতে চান?'.tr),
                   actions: [
                     TextButton(
                       onPressed: () => Get.back(result: false),
-                      child: const Text('না'),
+                      child: Text('না'.tr),
                     ),
                     TextButton(
                       onPressed: () => Get.back(result: true),
-                      child: const Text('হ্যাঁ'),
+                      child: Text('হ্যাঁ'.tr),
                     ),
                   ],
                 ),
@@ -49,7 +55,6 @@ class HomeView extends GetView<HomeController> {
           ),
         ],
       ),
-      drawer: _drawer(),
       body: Obx(() {
         if (controller.loading.value) {
           return const Center(child: CircularProgressIndicator());
@@ -63,10 +68,10 @@ class HomeView extends GetView<HomeController> {
               final columns = width >= 1200
                   ? 5
                   : width >= 900
-                      ? 4
-                      : width >= 650
-                          ? 3
-                          : 2;
+                  ? 4
+                  : width >= 650
+                  ? 3
+                  : 2;
 
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -95,8 +100,8 @@ class HomeView extends GetView<HomeController> {
                             color: Colors.white,
                             size: 34,
                           ),
-                          const Text(
-                            'Welcome to KGH Control Hub',
+                          Text(
+                            'Welcome to KGH Control Hub'.tr,
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 23,
@@ -108,11 +113,10 @@ class HomeView extends GetView<HomeController> {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      'Overview',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w800),
+                      'Overview'.tr,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     GridView.count(
@@ -123,16 +127,32 @@ class HomeView extends GetView<HomeController> {
                       mainAxisSpacing: 10,
                       childAspectRatio: 1.35,
                       children: [
-                        _infoCard('Orders', data.totalOrders.toString(),
-                            Icons.shopping_bag_rounded, const Color(0xFF0EA5E9)),
-                        _infoCard('Pending', data.pendingOrders.toString(),
-                            Icons.pending_actions_rounded, const Color(0xFFF59E0B)),
-                        _infoCard('Products', data.totalProducts.toString(),
-                            Icons.inventory_2_rounded, const Color(0xFF10B981)),
-                        _infoCard('Users', data.totalUsers.toString(),
-                            Icons.groups_rounded, const Color(0xFF6366F1)),
                         _infoCard(
-                          'Revenue',
+                          'Orders'.tr,
+                          data.totalOrders.toString(),
+                          Icons.shopping_bag_rounded,
+                          const Color(0xFF0EA5E9),
+                        ),
+                        _infoCard(
+                          'Pending'.tr,
+                          data.pendingOrders.toString(),
+                          Icons.pending_actions_rounded,
+                          const Color(0xFFF59E0B),
+                        ),
+                        _infoCard(
+                          'Products'.tr,
+                          data.totalProducts.toString(),
+                          Icons.inventory_2_rounded,
+                          const Color(0xFF10B981),
+                        ),
+                        _infoCard(
+                          'Users'.tr,
+                          data.totalUsers.toString(),
+                          Icons.groups_rounded,
+                          const Color(0xFF6366F1),
+                        ),
+                        _infoCard(
+                          'Revenue'.tr,
                           '৳ ${_formatNumber(data.totalRevenue)}',
                           Icons.payments_rounded,
                           const Color(0xFF0891B2),
@@ -141,56 +161,110 @@ class HomeView extends GetView<HomeController> {
                     ),
                     const SizedBox(height: 22),
                     Text(
-                      'Quick Actions',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w800),
+                      'Quick Actions'.tr,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 10,
                       runSpacing: 10,
                       children: [
-                        _actionButton('Orders', Icons.receipt_long_rounded,
-                            const Color(0xFF0EA5E9), () => Get.toNamed(AppRoutes.orders)),
-                        _actionButton('নতুন অর্ডার', Icons.add_shopping_cart_rounded,
-                            const Color(0xFF7C3AED), () => Get.toNamed(AppRoutes.createOrder)),
-                        _actionButton('Products', Icons.inventory_2_rounded,
-                            const Color(0xFF10B981), () => Get.toNamed(AppRoutes.products)),
-                        _actionButton('Users', Icons.people_alt_rounded,
-                            const Color(0xFF6366F1), () => Get.toNamed(AppRoutes.users)),
-                        _actionButton('Finance', Icons.query_stats_rounded,
-                            const Color(0xFF7C3AED), () => Get.toNamed(AppRoutes.finance)),
-                        _actionButton('Expenses', Icons.receipt_long_rounded,
-                            const Color(0xFFD97706), () => Get.toNamed(AppRoutes.expenses)),
-                        _actionButton('SR', Icons.person_pin_circle_rounded,
-                            const Color(0xFF0891B2), () => Get.toNamed(AppRoutes.srManagement)),
-                        _actionButton('Purchase', Icons.shopping_cart_rounded,
-                            const Color(0xFF6366F1), () => Get.toNamed(AppRoutes.purchases)),
-                        _actionButton('Sales', Icons.bar_chart_rounded,
-                            const Color(0xFF16A34A), () => Get.toNamed(AppRoutes.sales)),
-                        _actionButton('বিক্রয় পরিকল্পনা', Icons.assignment_turned_in_rounded,
-                            const Color(0xFFD97706), () => Get.toNamed(AppRoutes.salesPlan)),
-                        _actionButton('সাপ্লাইয়ার', Icons.store_mall_directory_rounded,
-                            const Color(0xFF0891B2), () => Get.toNamed(AppRoutes.suppliers)),
-                        _actionButton('রিপ্লেস', Icons.swap_horiz_rounded,
-                            const Color(0xFF7C3AED), () => Get.toNamed(AppRoutes.replaceManagement)),
-                        _actionButton('স্টক আউট / Dispatch', Icons.receipt_long_rounded,
-                            const Color(0xFFD97706), () => Get.toNamed(AppRoutes.dispatchHistory)),
-                        _actionButton('স্টক ইন', Icons.add_shopping_cart_rounded,
-                            const Color(0xFF16A34A), () => Get.toNamed(AppRoutes.stockIn)),
+                        _actionButton(
+                          'Orders'.tr,
+                          Icons.receipt_long_rounded,
+                          const Color(0xFF0EA5E9),
+                          () => Get.toNamed(AppRoutes.orders),
+                        ),
+                        _actionButton(
+                          'নতুন অর্ডার'.tr,
+                          Icons.add_shopping_cart_rounded,
+                          const Color(0xFF7C3AED),
+                          () => Get.toNamed(AppRoutes.createOrder),
+                        ),
+                        _actionButton(
+                          'Products'.tr,
+                          Icons.inventory_2_rounded,
+                          const Color(0xFF10B981),
+                          () => Get.toNamed(AppRoutes.products),
+                        ),
+                        _actionButton(
+                          'Users'.tr,
+                          Icons.people_alt_rounded,
+                          const Color(0xFF6366F1),
+                          () => Get.toNamed(AppRoutes.users),
+                        ),
+                        _actionButton(
+                          'Finance'.tr,
+                          Icons.query_stats_rounded,
+                          const Color(0xFF7C3AED),
+                          () => Get.toNamed(AppRoutes.finance),
+                        ),
+                        _actionButton(
+                          'Expenses'.tr,
+                          Icons.receipt_long_rounded,
+                          const Color(0xFFD97706),
+                          () => Get.toNamed(AppRoutes.expenses),
+                        ),
+                        _actionButton(
+                          'SR'.tr,
+                          Icons.person_pin_circle_rounded,
+                          const Color(0xFF0891B2),
+                          () => Get.toNamed(AppRoutes.srManagement),
+                        ),
+                        _actionButton(
+                          'Purchase'.tr,
+                          Icons.shopping_cart_rounded,
+                          const Color(0xFF6366F1),
+                          () => Get.toNamed(AppRoutes.purchases),
+                        ),
+                        _actionButton(
+                          'Sales'.tr,
+                          Icons.bar_chart_rounded,
+                          const Color(0xFF16A34A),
+                          () => Get.toNamed(AppRoutes.sales),
+                        ),
+                        _actionButton(
+                          'বিক্রয় পরিকল্পনা'.tr,
+                          Icons.assignment_turned_in_rounded,
+                          const Color(0xFFD97706),
+                          () => Get.toNamed(AppRoutes.salesPlan),
+                        ),
+                        _actionButton(
+                          'সাপ্লাইয়ার'.tr,
+                          Icons.store_mall_directory_rounded,
+                          const Color(0xFF0891B2),
+                          () => Get.toNamed(AppRoutes.suppliers),
+                        ),
+                        _actionButton(
+                          'রিপ্লেস'.tr,
+                          Icons.swap_horiz_rounded,
+                          Color(0xFF7C3AED),
+                          () => Get.toNamed(AppRoutes.replaceManagement),
+                        ),
+                        _actionButton(
+                          'স্টক আউট / Dispatch'.tr,
+                          Icons.receipt_long_rounded,
+                          Color(0xFFD97706),
+                          () => Get.toNamed(AppRoutes.dispatchHistory),
+                        ),
+                        _actionButton(
+                          'স্টক ইন'.tr,
+                          Icons.add_shopping_cart_rounded,
+                          Color(0xFF16A34A),
+                          () => Get.toNamed(AppRoutes.stockIn),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 22),
+                    SizedBox(height: 22),
                     Text(
-                      'Monthly Revenue',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w800),
+                      'Monthly Revenue'.tr,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     _revenueChart(),
                   ],
                 ),
@@ -201,35 +275,36 @@ class HomeView extends GetView<HomeController> {
       }),
       floatingActionButton: FloatingActionButton(
         onPressed: () => controller.refreshDashboard(force: true),
-        tooltip: 'Refresh',
-        child: const Icon(Icons.refresh),
+        tooltip: 'Refresh'.tr,
+        child: Icon(Icons.refresh),
       ),
     );
   }
 
-  Widget _infoCard(
-      String title, String value, IconData icon, Color color) {
+  Widget _infoCard(String title, String value, IconData icon, Color color) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(13),
+        padding: EdgeInsets.all(13),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Icon(icon, color: color, size: 25),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             Text(
               value,
               style: TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                  color: color),
+                fontSize: 19,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
-            const SizedBox(height: 3),
-            Text(title,
-                style:
-                    const TextStyle(fontSize: 12, color: Colors.grey),
-                textAlign: TextAlign.center),
+            SizedBox(height: 3),
+            Text(
+              title,
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -237,7 +312,11 @@ class HomeView extends GetView<HomeController> {
   }
 
   Widget _actionButton(
-      String label, IconData icon, Color color, VoidCallback onTap) {
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return ElevatedButton.icon(
       onPressed: onTap,
       icon: Icon(icon, color: Colors.white),
@@ -245,24 +324,36 @@ class HomeView extends GetView<HomeController> {
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
   }
 
   Widget _revenueChart() {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    final months = [
+      'Jan'.tr,
+      'Feb'.tr,
+      'Mar'.tr,
+      'Apr'.tr,
+      'May'.tr,
+      'Jun'.tr,
+      'Jul'.tr,
+      'Aug'.tr,
+      'Sep'.tr,
+      'Oct'.tr,
+      'Nov'.tr,
+      'Dec'.tr,
     ];
 
     return Obx(() {
       final data = controller.monthlyRevenue;
       if (data.isEmpty) {
-        return const SizedBox(
+        return SizedBox(
           height: 200,
-          child: Center(child: Text('Data নেই', style: TextStyle(color: Colors.grey))),
+          child: Center(
+            child: Text('Data নেই'.tr, style: TextStyle(color: Colors.grey)),
+          ),
         );
       }
 
@@ -313,17 +404,20 @@ class HomeView extends GetView<HomeController> {
                       ),
                     ),
                   ),
-                  topTitles:
-                      const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles:
-                      const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
                 barTouchData: BarTouchData(
                   touchTooltipData: BarTouchTooltipData(
-                    getTooltipItem: (group, _, rod, tooltipIndex) => BarTooltipItem(
-                      '${months[group.x]}\n৳${_formatNumber(rod.toY.toInt())}',
-                      const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
+                    getTooltipItem: (group, _, rod, tooltipIndex) =>
+                        BarTooltipItem(
+                          '${months[group.x]}\n৳${_formatNumber(rod.toY.toInt())}',
+                          const TextStyle(color: Colors.white, fontSize: 12),
+                        ),
                   ),
                 ),
               ),
@@ -339,178 +433,4 @@ class HomeView extends GetView<HomeController> {
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return n.toString();
   }
-
-Drawer _drawer() {
-  return Drawer(
-    child: ListView(
-      children: [
-        const DrawerHeader(
-          decoration: BoxDecoration(color: Colors.blue),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Icon(Icons.admin_panel_settings,
-                  color: Colors.white, size: 36),
-              SizedBox(height: 8),
-              Text(
-                'KGH Admin',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-        ListTile(
-          leading: const Icon(Icons.dashboard),
-          title: const Text('Dashboard'),
-          onTap: () {
-            Get.back();
-            Get.offAllNamed(AppRoutes.home);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.receipt_long),
-          title: Obx(() {
-            final count =
-                Get.find<OrderController>().pendingCount.value;
-            return Row(
-              children: [
-                const Text('Orders'),
-                if (count > 0) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '$count',
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ],
-            );
-          }),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.orders);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.inventory),
-          title: const Text('Products'),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.products);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.people),
-          title: const Text('Users'),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.users);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.query_stats),
-          title: const Text('Finance'),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.finance);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.receipt_long),
-          title: const Text('Expenses'),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.expenses);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.person_pin_circle),
-          title: const Text('SR Performance'),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.sr);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.shopping_cart),
-          title: const Text('Purchase Ledger'),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.purchases);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.store_mall_directory_rounded),
-          title: const Text('সাপ্লাইয়ার'),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.suppliers);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.swap_horiz_rounded),
-          title: const Text('রিপ্লেস ম্যানেজমেন্ট'),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.replaceManagement);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.local_shipping, color: Color(0xFFD97706)),
-          title: const Text('স্টক আউট / Dispatch'),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.dispatch);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.receipt_long, color: Color(0xFFD97706)),
-          title: const Text('Dispatch History'),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.dispatchHistory);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.add_shopping_cart, color: Color(0xFF16A34A)),
-          title: const Text('স্টক ইন'),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.stockIn);
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.bar_chart),
-          title: const Text('Sales Analytics'),
-          onTap: () {
-            Get.back();
-            Get.toNamed(AppRoutes.sales);
-          },
-        ),
-        const Divider(),
-        ListTile(
-          leading: const Icon(Icons.logout, color: Colors.red),
-          title: const Text('Logout',
-              style: TextStyle(color: Colors.red)),
-          onTap: () {
-            Get.back();
-            Get.find<AuthController>().logout();
-          },
-        ),
-      ],
-    ),
-  );
-}
 }

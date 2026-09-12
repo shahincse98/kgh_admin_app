@@ -5,6 +5,8 @@ import '../controller/dispatch_controller.dart';
 import '../../order/model/order_model.dart';
 import '../../order/view/order_details_view.dart';
 import '../../../widgets/responsive.dart';
+import '../../../localization/domain_labels.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class DispatchView extends GetView<DispatchController> {
   const DispatchView({super.key});
@@ -15,20 +17,28 @@ class DispatchView extends GetView<DispatchController> {
     final fmt = NumberFormat('#,##,##0');
 
     return Scaffold(
+      drawer: appDrawerFor(context),
       backgroundColor: scheme.surfaceContainerLowest,
       appBar: AppBar(
-        title: Obx(() => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('স্টক আউট / Dispatch',
-                    style: TextStyle(fontWeight: FontWeight.w800)),
-                Text(
-                  '${controller.filteredOrders.length} টি অর্ডার (Pending / Approved / Delivered w/o Dispatch)',
-                  style: TextStyle(fontSize: 12, color: scheme.onSurface.withAlpha(160)),
+        title: Obx(
+          () => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'স্টক আউট / Dispatch'.tr,
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              Text(
+                '${controller.filteredOrders.length} ${'টি অর্ডার'.tr} (Pending / Approved / Delivered w/o Dispatch)',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: scheme.onSurface.withAlpha(160),
                 ),
-              ],
-            )),
+              ),
+            ],
+          ),
+        ),
         actions: [
           Obx(() {
             final count = controller.selectedOrderIds.length;
@@ -48,39 +58,52 @@ class DispatchView extends GetView<DispatchController> {
           }),
         ],
       ),
-      body: ResponsiveWrapper(child: Column(
-        children: [
-          _searchBar(scheme),
-          _selectAllBar(scheme),
-          Expanded(child: Obx(() {
-            final orders = controller.filteredOrders;
-            if (orders.isEmpty && controller.loading.value) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (orders.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.check_circle_outline_rounded, size: 56, color: scheme.onSurface.withAlpha(60)),
-                    const SizedBox(height: 12),
-                    Text('Dispatch করার মতো কোনো Approved অর্ডার নেই',
-                        style: TextStyle(color: scheme.onSurface.withAlpha(120))),
-                  ],
-                ),
-              );
-            }
-            return RefreshIndicator(
-              onRefresh: () => controller.fetchDispatchableOrders(),
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-                itemCount: orders.length,
-                itemBuilder: (_, i) => _dispatchOrderCard(orders[i], scheme, fmt),
-              ),
-            );
-          })),
-        ],
-      )),
+      body: ResponsiveWrapper(
+        child: Column(
+          children: [
+            _searchBar(scheme),
+            _selectAllBar(scheme),
+            Expanded(
+              child: Obx(() {
+                final orders = controller.filteredOrders;
+                if (orders.isEmpty && controller.loading.value) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (orders.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 56,
+                          color: scheme.onSurface.withAlpha(60),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Dispatch করার মতো কোনো Approved অর্ডার নেই'.tr,
+                          style: TextStyle(
+                            color: scheme.onSurface.withAlpha(120),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () => controller.fetchDispatchableOrders(),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+                    itemCount: orders.length,
+                    itemBuilder: (_, i) =>
+                        _dispatchOrderCard(orders[i], scheme, fmt),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -90,7 +113,7 @@ class DispatchView extends GetView<DispatchController> {
       child: TextField(
         onChanged: (v) => controller.searchText.value = v,
         decoration: InputDecoration(
-          hintText: 'কাস্টমার নাম, Order ID বা মেমো নাম্বার দিয়ে খুঁজুন…',
+          hintText: 'কাস্টমার নাম, Order ID বা মেমো নাম্বার দিয়ে খুঁজুন…'.tr,
           prefixIcon: const Icon(Icons.search_rounded),
           filled: true,
           fillColor: scheme.surfaceContainerHigh,
@@ -98,7 +121,10 @@ class DispatchView extends GetView<DispatchController> {
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
           ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 12,
+            horizontal: 16,
+          ),
         ),
       ),
     );
@@ -107,7 +133,8 @@ class DispatchView extends GetView<DispatchController> {
   Widget _selectAllBar(ColorScheme scheme) {
     return Obx(() {
       if (controller.orders.isEmpty) return const SizedBox.shrink();
-      final allSelected = controller.selectedOrderIds.length == controller.orders.length &&
+      final allSelected =
+          controller.selectedOrderIds.length == controller.orders.length &&
           controller.orders.isNotEmpty;
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -115,20 +142,33 @@ class DispatchView extends GetView<DispatchController> {
           children: [
             TextButton.icon(
               onPressed: () => controller.selectAll(),
-              icon: Icon(allSelected ? Icons.deselect_rounded : Icons.select_all_rounded, size: 18),
-              label: Text(allSelected ? 'সব বাতিল' : 'সব সিলেক্ট'),
+              icon: Icon(
+                allSelected ? Icons.deselect_rounded : Icons.select_all_rounded,
+                size: 18,
+              ),
+              label: Text(allSelected ? 'সব বাতিল'.tr : 'সব সিলেক্ট'.tr),
             ),
             const Spacer(),
             if (controller.selectedOrderIds.isNotEmpty)
-              Text('${controller.selectedOrderIds.length} টি সিলেক্ট | ${controller.totalItems} টি প্রডাক্ট',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFFD97706), fontWeight: FontWeight.w600)),
+              Text(
+                '${controller.selectedOrderIds.length} ${'টি সিলেক্ট'.tr} | ${controller.totalItems} ${'টি প্রডাক্ট'.tr}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFFD97706),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
           ],
         ),
       );
     });
   }
 
-  Widget _dispatchOrderCard(OrderModel order, ColorScheme scheme, NumberFormat fmt) {
+  Widget _dispatchOrderCard(
+    OrderModel order,
+    ColorScheme scheme,
+    NumberFormat fmt,
+  ) {
     final isSelected = controller.selectedOrderIds.contains(order.id);
     final time = DateFormat('dd MMM yyyy, h:mm a').format(order.createdAt);
 
@@ -147,11 +187,20 @@ class DispatchView extends GetView<DispatchController> {
           await Get.to(() => OrderDetailsView(order: order));
           controller.fetchDispatchableOrders();
         },
-        child: IntrinsicHeight(
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(
+                color: isSelected
+                    ? const Color(0xFFD97706)
+                    : const Color(0xFF2563EB),
+                width: 5,
+              ),
+            ),
+          ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(width: 5, color: isSelected ? const Color(0xFFD97706) : const Color(0xFF2563EB)),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
@@ -163,9 +212,11 @@ class DispatchView extends GetView<DispatchController> {
                         children: [
                           Checkbox(
                             value: isSelected,
-                            onChanged: (_) => controller.toggleSelection(order.id),
+                            onChanged: (_) =>
+                                controller.toggleSelection(order.id),
                             activeColor: const Color(0xFFD97706),
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
                             visualDensity: VisualDensity.compact,
                           ),
                           const SizedBox(width: 4),
@@ -173,12 +224,24 @@ class DispatchView extends GetView<DispatchController> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(order.shopName.isEmpty ? 'Unknown Shop' : order.shopName,
-                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                                Text(
+                                  order.shopName.isEmpty
+                                      ? 'Unknown Shop'.tr
+                                      : order.shopName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                  ),
+                                ),
                                 if (order.shopPhone.isNotEmpty) ...[
                                   const SizedBox(height: 3),
-                                  Text(order.shopPhone,
-                                      style: TextStyle(fontSize: 12, color: scheme.onSurface.withAlpha(160))),
+                                  Text(
+                                    order.shopPhone,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: scheme.onSurface.withAlpha(160),
+                                    ),
+                                  ),
                                 ],
                               ],
                             ),
@@ -187,16 +250,31 @@ class DispatchView extends GetView<DispatchController> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF2563EB).withAlpha(20),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: const Text('Approved',
-                                    style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700, fontSize: 11)),
+                                child: Text(
+                                  'Approved'.tr,
+                                  style: TextStyle(
+                                    color: Color(0xFF2563EB),
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
+                                  ),
+                                ),
                               ),
                               const SizedBox(height: 4),
-                              Text(time, style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(120))),
+                              Text(
+                                time,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: scheme.onSurface.withAlpha(120),
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -207,13 +285,27 @@ class DispatchView extends GetView<DispatchController> {
                         runSpacing: 6,
                         children: [
                           _chip(Icons.tag_rounded, '#${order.id}', scheme),
-                          _chip(Icons.shopping_bag_outlined, '${order.items.length} পণ্য', scheme),
+                          _chip(
+                            Icons.shopping_bag_outlined,
+                            DomainLabels.productCount(order.items.length),
+                            scheme,
+                          ),
                           if (order.deliveryAssignedSrName.isNotEmpty)
-                            _chip(Icons.person_pin_rounded, order.deliveryAssignedSrName, scheme, labelColor: const Color(0xFF7C3AED)),
+                            _chip(
+                              Icons.person_pin_rounded,
+                              order.deliveryAssignedSrName,
+                              scheme,
+                              labelColor: const Color(0xFF7C3AED),
+                            ),
                           if (order.scheduledDeliveryDate != null)
-                            _chip(Icons.calendar_month_rounded,
-                                DateFormat('dd MMM').format(order.scheduledDeliveryDate!), scheme,
-                                labelColor: const Color(0xFF0891B2)),
+                            _chip(
+                              Icons.calendar_month_rounded,
+                              DateFormat(
+                                'dd MMM',
+                              ).format(order.scheduledDeliveryDate!),
+                              scheme,
+                              labelColor: const Color(0xFF0891B2),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -221,23 +313,38 @@ class DispatchView extends GetView<DispatchController> {
                         children: [
                           Expanded(
                             child: Text(
-                              order.items.take(3).map((i) => i.productName).join(', ') +
-                                  (order.items.length > 3 ? ' +${order.items.length - 3} more' : ''),
+                              order.items
+                                      .take(3)
+                                      .map((i) => i.productName)
+                                      .join(', ') +
+                                  (order.items.length > 3
+                                      ? ' +${order.items.length - 3} more'
+                                      : ''),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 12, color: scheme.onSurface.withAlpha(140)),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: scheme.onSurface.withAlpha(140),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFF0891B2).withAlpha(18),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               '৳ ${fmt.format(order.totalAmount.toInt())}',
-                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF0891B2)),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                                color: Color(0xFF0891B2),
+                              ),
                             ),
                           ),
                         ],
@@ -253,21 +360,42 @@ class DispatchView extends GetView<DispatchController> {
     );
   }
 
-  Widget _chip(IconData icon, String label, ColorScheme scheme, {Color? labelColor}) {
+  Widget _chip(
+    IconData icon,
+    String label,
+    ColorScheme scheme, {
+    Color? labelColor,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: labelColor != null ? labelColor.withAlpha(18) : scheme.surfaceContainerHigh,
+        color: labelColor != null
+            ? labelColor.withAlpha(18)
+            : scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(8),
-        border: labelColor != null ? Border.all(color: labelColor.withAlpha(80), width: 1) : null,
+        border: labelColor != null
+            ? Border.all(color: labelColor.withAlpha(80), width: 1)
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: labelColor ?? scheme.onSurface.withAlpha(160)),
+          Icon(
+            icon,
+            size: 13,
+            color: labelColor ?? scheme.onSurface.withAlpha(160),
+          ),
           const SizedBox(width: 5),
-          Text(label, style: TextStyle(fontSize: 12, fontWeight: labelColor != null ? FontWeight.w700 : FontWeight.normal,
-              color: labelColor ?? scheme.onSurface.withAlpha(180))),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: labelColor != null
+                  ? FontWeight.w700
+                  : FontWeight.normal,
+              color: labelColor ?? scheme.onSurface.withAlpha(180),
+            ),
+          ),
         ],
       ),
     );
@@ -275,17 +403,25 @@ class DispatchView extends GetView<DispatchController> {
 
   Future<void> _showBulkDispatchDialog(ColorScheme scheme) async {
     final memoCtrl = TextEditingController(
-      text: '#MEM${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+      text:
+          '#MEM${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
     );
 
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.local_shipping_rounded, color: Color(0xFFD97706), size: 22),
+            Icon(
+              Icons.local_shipping_rounded,
+              color: Color(0xFFD97706),
+              size: 22,
+            ),
             SizedBox(width: 8),
-            Text('বাল্ক Dispatch', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            Text(
+              'বাল্ক Dispatch'.tr,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -301,52 +437,98 @@ class DispatchView extends GetView<DispatchController> {
                 ),
                 child: Column(
                   children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      const Text('অর্ডার সংখ্যা', style: TextStyle(fontSize: 13, color: Colors.black54)),
-                      Text('${controller.selectedOrderIds.length} টি',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF2563EB))),
-                    ]),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'অর্ডার সংখ্যা'.tr,
+                          style: TextStyle(fontSize: 13, color: Colors.black54),
+                        ),
+                        Text(
+                          '${controller.selectedOrderIds.length} ${'টি'.tr}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2563EB),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 6),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      const Text('প্রডাক্ট সংখ্যা', style: TextStyle(fontSize: 13, color: Colors.black54)),
-                      Text('${controller.totalItems} টি',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF7C3AED))),
-                    ]),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'প্রডাক্ট সংখ্যা'.tr,
+                          style: TextStyle(fontSize: 13, color: Colors.black54),
+                        ),
+                        Text(
+                          '${controller.totalItems} ${'টি'.tr}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF7C3AED),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 14),
-              const Text('মেমো / চালান নাম্বার',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
+              Text(
+                'মেমো / চালান নাম্বার'.tr,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black54,
+                ),
+              ),
               const SizedBox(height: 4),
               TextField(
                 controller: memoCtrl,
                 autofocus: true,
                 decoration: InputDecoration(
-                  hintText: 'সকল অর্ডারের জন্য মেমো নাম্বার',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  hintText: 'সকল অর্ডারের জন্য মেমো নাম্বার'.tr,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
               Text(
-                'সতর্কতা: ${controller.selectedOrderIds.length} টি অর্ডার Dispatch করলে স্টক কেটে যাবে।',
-                style: TextStyle(fontSize: 11, color: Colors.red.shade700, fontWeight: FontWeight.w600),
+                '${'সতর্কতা'.tr}: ${controller.selectedOrderIds.length} ${'টি অর্ডার'.tr} Dispatch ${'করলে স্টক কেটে যাবে'.tr}।',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.red.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')),
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text('বাতিল'.tr),
+          ),
           ElevatedButton.icon(
             onPressed: () => Get.back(result: true),
             icon: const Icon(Icons.check_rounded, size: 16),
-            label: Text('${controller.selectedOrderIds.length} টি Dispatch'),
+            label: Text(
+              '${controller.selectedOrderIds.length} ${'টি'.tr} Dispatch',
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFD97706),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
         ],
@@ -356,16 +538,31 @@ class DispatchView extends GetView<DispatchController> {
     if (confirmed == true) {
       final memo = memoCtrl.text.trim();
       if (memo.isEmpty) {
-        Get.snackbar('ত্রুটি', 'মেমো নাম্বার দিতে হবে',
-            snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+        Get.snackbar(
+          'ত্রুটি'.tr,
+          'মেমো নাম্বার দিতে হবে'.tr,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
         return;
       }
-      Get.snackbar('প্রক্রিয়াধীন', 'Dispatch করা হচ্ছে…',
-          snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFFD97706), colorText: Colors.white);
+      Get.snackbar(
+        'প্রক্রিয়াধীন'.tr,
+        'Dispatch করা হচ্ছে…'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFFD97706),
+        colorText: Colors.white,
+      );
       await controller.dispatchSelected(memoNumber: memo);
       Get.closeCurrentSnackbar();
-      Get.snackbar('সফল', '${controller.selectedOrderIds.length} টি অর্ডার Dispatch হয়েছে\nমেমো: $memo',
-          snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
+      Get.snackbar(
+        'সফল'.tr,
+        '${controller.selectedOrderIds.length} ${'টি অর্ডার'.tr} Dispatch হয়েছে\nমেমো: $memo',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF16A34A),
+        colorText: Colors.white,
+      );
     }
     memoCtrl.dispose();
   }

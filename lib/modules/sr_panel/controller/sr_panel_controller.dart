@@ -314,7 +314,7 @@ class SrPanelController extends GetxController {
       await loadMyOrders();
       return true;
     } catch (e) {
-      orderError.value = 'অর্ডার করতে ব্যর্থ: $e';
+      orderError.value = '${'অর্ডার করতে ব্যর্থ'.tr}: $e';
       return false;
     } finally {
       submitting.value = false;

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:get/get.dart';
 
 /// Tracks every replace item at the admin level:
 ///   - Received from customer
@@ -179,13 +180,13 @@ class AdminReplaceModel {
   String get customerResolutionLabel {
     switch (customerResolutionType) {
       case 'product_replace':
-        return 'রিপ্লেস নেওয়া হল';
+        return 'রিপ্লেস নেওয়া হল'.tr;
       case 'money_deduct':
         return deductionAmount > 0
-            ? 'টাকা কাটা: ৳$deductionAmount'
-            : 'টাকা কাটা';
+            ? '${'টাকা কাটা'.tr}: ৳$deductionAmount'
+            : 'টাকা কাটা'.tr;
       default:
-        return 'রেজোলিউশন পেন্ডিং';
+        return 'রেজোলিউশন পেন্ডিং'.tr;
     }
   }
 
@@ -196,13 +197,13 @@ class AdminReplaceModel {
   String get entryTypeLabel {
     switch (entryType) {
       case 'customer_in':
-        return 'কাস্টমার থেকে';
+        return 'কাস্টমার থেকে'.tr;
       case 'supplier_out':
-        return 'সাপ্লাইয়ারে পাঠানো';
+        return 'সাপ্লাইয়ারে পাঠানো'.tr;
       case 'supplier_in':
-        return 'সাপ্লাইয়ার ফেরত';
+        return 'সাপ্লাইয়ার ফেরত'.tr;
       case 'shop_repair':
-        return 'দোকানে মেরামত';
+        return 'দোকানে মেরামত'.tr;
       default:
         return entryType;
     }
@@ -211,9 +212,9 @@ class AdminReplaceModel {
   String get statusLabel {
     switch (status) {
       case 'at_shop':
-        return 'দোকানে আছে';
+        return 'দোকানে আছে'.tr;
       case 'with_supplier':
-        return 'সাপ্লাইয়ারে আছে';
+        return 'সাপ্লাইয়ারে আছে'.tr;
       case 'resolved':
         return _resolutionLabel;
       default:
@@ -224,13 +225,13 @@ class AdminReplaceModel {
   String get _resolutionLabel {
     switch (resolution) {
       case 'added_to_regular_stock':
-        return 'রেগুলার স্টকে যোগ হয়েছে';
+        return 'রেগুলার স্টকে যোগ হয়েছে'.tr;
       case 'added_to_replace_stock':
-        return 'রিপ্লেস স্টকে যোগ হয়েছে';
+        return 'রিপ্লেস স্টকে যোগ হয়েছে'.tr;
       case 'scrapped':
-        return 'বাতিল করা হয়েছে';
+        return 'বাতিল করা হয়েছে'.tr;
       default:
-        return 'সম্পন্ন';
+        return 'সম্পন্ন'.tr;
     }
   }
 }

@@ -5,6 +5,7 @@ import '../controller/sales_plan_controller.dart';
 import '../model/sales_plan_model.dart';
 import '../../user/model/user_model.dart';
 import '../../user/controller/user_controller.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class SalesPlanView extends StatelessWidget {
   const SalesPlanView({super.key});
@@ -17,11 +18,12 @@ class SalesPlanView extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
-        title: const Text('কাস্টমার বিক্রয় পরিকল্পনা'),
+        title: Text('কাস্টমার বিক্রয় পরিকল্পনা'.tr),
         actions: [
           Obx(() => ctrl.actualsLoading.value
-              ? const Padding(
+              ? Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12),
                   child: SizedBox(
                       width: 20,
@@ -29,15 +31,15 @@ class SalesPlanView extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2)),
                 )
               : IconButton(
-                  icon: const Icon(Icons.sync_rounded),
-                  tooltip: 'Actual রিফ্রেশ করুন',
+                  icon: Icon(Icons.sync_rounded),
+                  tooltip: 'Actual রিফ্রেশ করুন'.tr,
                   onPressed: ctrl.refreshActuals,
                 )),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.person_add_alt_1_rounded),
-        label: const Text('কাস্টমার যোগ করুন'),
+        icon: Icon(Icons.person_add_alt_1_rounded),
+        label: Text('কাস্টমার যোগ করুন'.tr),
         onPressed: () => _showAddCustomerDialog(context, ctrl, cs),
       ),
       body: Column(
@@ -46,7 +48,7 @@ class SalesPlanView extends StatelessWidget {
           Expanded(
             child: Obx(() {
               if (ctrl.planLoading.value) {
-                return const Center(child: CircularProgressIndicator());
+                return Center(child: CircularProgressIndicator());
               }
               if (ctrl.planItems.isEmpty) {
                 return Center(
@@ -55,14 +57,14 @@ class SalesPlanView extends StatelessWidget {
                     children: [
                       Icon(Icons.store_outlined,
                           size: 58, color: cs.outlineVariant),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       Text(
                         '${ctrl.selectedMonth.value.year == DateTime.now().year && ctrl.selectedMonth.value.month == DateTime.now().month ? 'এই মাসে' : _monthLabel(ctrl.selectedMonth.value)} কোনো পরিকল্পনা নেই',
                         style: TextStyle(color: cs.onSurfaceVariant),
                       ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'কাস্টমার যোগ করতে নিচের + বোতাম চাপুন',
+                      SizedBox(height: 6),
+                      Text(
+                        'কাস্টমার যোগ করতে নিচের + বোতাম চাপুন'.tr,
                         style: TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ],
@@ -81,7 +83,7 @@ class SalesPlanView extends StatelessWidget {
 
               return ListView(
                 padding:
-                    const EdgeInsets.fromLTRB(14, 10, 14, 100),
+                    EdgeInsets.fromLTRB(14, 10, 14, 100),
                 children: [
                   _SummaryCard(
                     totalTarget: totalTarget,
@@ -90,7 +92,7 @@ class SalesPlanView extends StatelessWidget {
                     fmt: _fmt,
                     cs: cs,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   ...ctrl.planItems.map((item) => _CustomerRow(
                         item: item,
                         actual: ctrl.actualFor(item),
@@ -111,9 +113,9 @@ class SalesPlanView extends StatelessWidget {
   }
 
   static String _monthLabel(DateTime m) {
-    const names = [
-      'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-      'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+    final names = [
+      'জানুয়ারি'.tr, 'ফেব্রুয়ারি'.tr, 'মার্চ'.tr, 'এপ্রিল'.tr, 'মে'.tr, 'জুন'.tr,
+      'জুলাই'.tr, 'আগস্ট'.tr, 'সেপ্টেম্বর'.tr, 'অক্টোবর'.tr, 'নভেম্বর'.tr, 'ডিসেম্বর'.tr
     ];
     return '${names[m.month - 1]} ${m.year}';
   }
@@ -139,7 +141,7 @@ class SalesPlanView extends StatelessWidget {
               }).toList();
 
         return AlertDialog(
-          title: const Text('কাস্টমার যোগ করুন'),
+          title: Text('কাস্টমার যোগ করুন'.tr),
           content: SizedBox(
             width: 400,
             child: SingleChildScrollView(
@@ -151,16 +153,16 @@ class SalesPlanView extends StatelessWidget {
                     controller: searchCtrl,
                     onChanged: (_) => setSt(() {}),
                     decoration: InputDecoration(
-                      hintText: 'নাম / ফোন দিয়ে খুঁজুন...',
-                      prefixIcon: const Icon(Icons.search_rounded),
+                      hintText: 'নাম / ফোন দিয়ে খুঁজুন...'.tr,
+                      prefixIcon: Icon(Icons.search_rounded),
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                   // User list
                   Container(
-                    constraints: const BoxConstraints(maxHeight: 240),
+                    constraints: BoxConstraints(maxHeight: 240),
                     decoration: BoxDecoration(
                       border: Border.all(color: cs.outlineVariant),
                       borderRadius: BorderRadius.circular(10),
@@ -182,11 +184,11 @@ class SalesPlanView extends StatelessWidget {
                             u.shopName.isNotEmpty
                                 ? u.shopName
                                 : u.proprietorName,
-                            style: const TextStyle(
+                            style: TextStyle(
                                 fontWeight: FontWeight.w600),
                           ),
                           subtitle: Text(u.phone,
-                              style: const TextStyle(fontSize: 11)),
+                              style: TextStyle(fontSize: 11)),
                           leading: CircleAvatar(
                             radius: 16,
                             child: Text(
@@ -195,7 +197,7 @@ class SalesPlanView extends StatelessWidget {
                                       : u.proprietorName)
                                   .characters
                                   .first,
-                              style: const TextStyle(fontSize: 13),
+                              style: TextStyle(fontSize: 13),
                             ),
                           ),
                           onTap: () => setSt(() => picked = u),
@@ -203,13 +205,13 @@ class SalesPlanView extends StatelessWidget {
                       },
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   // Amount
                   TextField(
                     controller: amtCtrl,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      labelText: 'লক্ষ্যমাত্রা (টাকা) *',
+                      labelText: 'লক্ষ্যমাত্রা (টাকা) *'.tr,
                       prefixText: '৳ ',
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10)),
@@ -222,18 +224,18 @@ class SalesPlanView extends StatelessWidget {
           actions: [
             TextButton(
                 onPressed: () => Get.back(),
-                child: const Text('বাতিল')),
+                child: Text('বাতিল'.tr)),
             ElevatedButton(
               onPressed: () async {
                 if (picked == null) {
-                  Get.snackbar('ত্রুটি', 'কাস্টমার সিলেক্ট করুন',
+                  Get.snackbar('ত্রুটি'.tr, 'কাস্টমার সিলেক্ট করুন'.tr,
                       backgroundColor: Colors.orange,
                       colorText: Colors.white);
                   return;
                 }
                 final amt = double.tryParse(amtCtrl.text) ?? 0;
                 if (amt <= 0) {
-                  Get.snackbar('ত্রুটি', 'পরিমাণ ০-এর বেশি হতে হবে',
+                  Get.snackbar('ত্রুটি'.tr, 'পরিমাণ ০-এর বেশি হতে হবে'.tr,
                       backgroundColor: Colors.orange,
                       colorText: Colors.white);
                   return;
@@ -249,13 +251,13 @@ class SalesPlanView extends StatelessWidget {
                 );
                 Get.back();
                 await ctrl.upsertItem(item);
-                Get.snackbar('যোগ হয়েছে',
-                    '${item.shopName} পরিকল্পনায় যোগ হয়েছে',
+                Get.snackbar('যোগ হয়েছে'.tr,
+                    '${item.shopName} ${'পরিকল্পনায় যোগ হয়েছে'.tr}',
                     snackPosition: SnackPosition.BOTTOM,
                     backgroundColor: Colors.green,
                     colorText: Colors.white);
               },
-              child: const Text('যোগ করুন'),
+              child: Text('যোগ করুন'.tr),
             ),
           ],
         );
@@ -277,7 +279,7 @@ class SalesPlanView extends StatelessWidget {
         keyboardType: TextInputType.number,
         autofocus: true,
         decoration: InputDecoration(
-          labelText: 'লক্ষ্যমাত্রা (টাকা)',
+          labelText: 'লক্ষ্যমাত্রা (টাকা)'.tr,
           prefixText: '৳ ',
           border:
               OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -285,7 +287,7 @@ class SalesPlanView extends StatelessWidget {
       ),
       actions: [
         TextButton(
-            onPressed: () => Get.back(), child: const Text('বাতিল')),
+            onPressed: () => Get.back(), child: Text('বাতিল'.tr)),
         ElevatedButton(
           onPressed: () async {
             final amt = double.tryParse(amtCtrl.text) ?? 0;
@@ -293,7 +295,7 @@ class SalesPlanView extends StatelessWidget {
             Get.back();
             await ctrl.upsertItem(item.copyWith(targetAmount: amt));
           },
-          child: const Text('সেভ'),
+          child: Text('সেভ'.tr),
         ),
       ],
     ));
@@ -304,18 +306,18 @@ class SalesPlanView extends StatelessWidget {
   void _confirmDelete(BuildContext context, SalesPlanController ctrl,
       CustomerPlanItem item, ColorScheme cs) {
     Get.dialog(AlertDialog(
-      title: const Text('কাস্টমার বাদ দেবেন?'),
-      content: Text('"${item.shopName}" এই মাসের পরিকল্পনা থেকে বাদ যাবে।'),
+      title: Text('কাস্টমার বাদ দেবেন?'.tr),
+      content: Text('"${item.shopName}" ${'এই মাসের পরিকল্পনা থেকে বাদ যাবে'.tr}।'),
       actions: [
         TextButton(
-            onPressed: () => Get.back(), child: const Text('বাতিল')),
+            onPressed: () => Get.back(), child: Text('বাতিল'.tr)),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
           onPressed: () async {
             Get.back();
             await ctrl.removeItem(item.userId);
           },
-          child: const Text('বাদ দিন',
+          child: Text('বাদ দিন'.tr,
               style: TextStyle(color: Colors.white)),
         ),
       ],
@@ -328,15 +330,15 @@ class SalesPlanView extends StatelessWidget {
 class _MonthStrip extends StatelessWidget {
   final SalesPlanController ctrl;
   final ColorScheme cs;
-  const _MonthStrip({required this.ctrl, required this.cs});
+  _MonthStrip({required this.ctrl, required this.cs});
 
-  static const _fullNames = [
-    'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-    'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
+  static List<String> get _fullNames => [
+    'জানুয়ারি'.tr, 'ফেব্রুয়ারি'.tr, 'মার্চ'.tr, 'এপ্রিল'.tr, 'মে'.tr, 'জুন'.tr,
+    'জুলাই'.tr, 'আগস্ট'.tr, 'সেপ্টেম্বর'.tr, 'অক্টোবর'.tr, 'নভেম্বর'.tr, 'ডিসেম্বর'.tr,
   ];
-  static const _shortNames = [
-    'জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-    'জুলাই', 'আগস্ট', 'সেপ্ট', 'অক্টো', 'নভে', 'ডিসে',
+  static List<String> get _shortNames => [
+    'জানু'.tr, 'ফেব্রু'.tr, 'মার্চ'.tr, 'এপ্রিল'.tr, 'মে'.tr, 'জুন'.tr,
+    'জুলাই'.tr, 'আগস্ট'.tr, 'সেপ্ট'.tr, 'অক্টো'.tr, 'নভে'.tr, 'ডিসে'.tr,
   ];
 
   void _openPicker(BuildContext context) {
@@ -348,7 +350,7 @@ class _MonthStrip extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setSt) {
         return AlertDialog(
-          title: const Text('মাস ও সাল বেছে নিন'),
+          title: Text('মাস ও সাল বেছে নিন'.tr),
           content: SizedBox(
             width: 300,
             child: Column(
@@ -425,13 +427,13 @@ class _MonthStrip extends StatelessWidget {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('বাতিল')),
+                child: Text('বাতিল'.tr)),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(ctx);
                 ctrl.selectMonth(DateTime(pickerYear, pickerMonth));
               },
-              child: const Text('ঠিক আছে'),
+              child: Text('ঠিক আছে'.tr),
             ),
           ],
         );
@@ -460,7 +462,7 @@ class _MonthStrip extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.chevron_left_rounded),
               onPressed: ctrl.prevMonth,
-              tooltip: 'আগের মাস',
+              tooltip: 'আগের মাস'.tr,
             ),
             // Month label (tappable)
             Expanded(
@@ -487,7 +489,7 @@ class _MonthStrip extends StatelessWidget {
                     ),
                     if (isCurrentMonth)
                       Text(
-                        'চলতি মাস',
+                        'চলতি মাস'.tr,
                         style: TextStyle(
                             fontSize: 11, color: cs.primary),
                       ),
@@ -499,7 +501,7 @@ class _MonthStrip extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.chevron_right_rounded),
               onPressed: ctrl.nextMonth,
-              tooltip: 'পরের মাস',
+              tooltip: 'পরের মাস'.tr,
             ),
           ],
         ),
@@ -545,22 +547,22 @@ class _SummaryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('সামগ্রিক অগ্রগতি',
+            Text('সামগ্রিক অগ্রগতি'.tr,
                 style: TextStyle(
                     fontWeight: FontWeight.w800, fontSize: 13)),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
-                    child: _stat('মোট লক্ষ্য',
+                    child: _stat('মোট লক্ষ্য'.tr,
                         '৳ ${fmt.format(totalTarget.toInt())}',
                         cs.onSurface)),
                 Expanded(
-                    child: _stat('মোট বিক্রি',
+                    child: _stat('মোট বিক্রি'.tr,
                         '৳ ${fmt.format(totalActual.toInt())}',
                         const Color(0xFF0891B2))),
                 Expanded(
-                    child: _stat('অর্জন', pctStr, pctColor)),
+                    child: _stat('অর্জন'.tr, pctStr, pctColor)),
               ],
             ),
             const SizedBox(height: 10),
@@ -698,7 +700,7 @@ class _CustomerRow extends StatelessWidget {
                       color: const Color(0xFF16A34A).withAlpha(20),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Text('✓ পূরণ',
+                    child: Text('✓ পূরণ'.tr,
                         style: TextStyle(
                             fontSize: 10,
                             color: Color(0xFF16A34A),
@@ -710,12 +712,12 @@ class _CustomerRow extends StatelessWidget {
                     if (v == 'del') onDelete();
                   },
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                         value: 'edit',
                         child: Row(children: [
                           Icon(Icons.edit_rounded, size: 16),
                           SizedBox(width: 8),
-                          Text('লক্ষ্যমাত্রা পরিবর্তন'),
+                          Text('লক্ষ্যমাত্রা পরিবর্তন'.tr),
                         ])),
                     PopupMenuItem(
                         value: 'del',
@@ -723,7 +725,7 @@ class _CustomerRow extends StatelessWidget {
                           Icon(Icons.delete_outline_rounded,
                               size: 16, color: Colors.red.shade400),
                           const SizedBox(width: 8),
-                          Text('বাদ দিন',
+                          Text('বাদ দিন'.tr,
                               style: TextStyle(
                                   color: Colors.red.shade400)),
                         ])),
@@ -778,7 +780,7 @@ class _CustomerRow extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  '🎉 লক্ষ্য ছাড়িয়ে অতিরিক্ত ৳ ${fmt.format((actual - target).toInt())} বিক্রি',
+                  '🎉 লক্ষ্য ছাড়িয়ে অতিরিক্ত ৳ ${fmt.format((actual - target).toInt())} ${'বিক্রি'.tr}',
                   style: const TextStyle(
                       fontSize: 11, color: Color(0xFF16A34A)),
                 ),

@@ -5,11 +5,14 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'routes/app_routes.dart';
 import 'routes/app_pages.dart';
 import 'bindings/initial_binding.dart';
 import 'theme/app_theme.dart';
+import 'localization/app_translations.dart';
+import 'localization/locale_service.dart';
 import 'firebase_options.dart';
 
 String? srDocIdForStartup;
@@ -25,6 +28,16 @@ void main() async {
     await GetStorage.init().timeout(const Duration(seconds: 5));
   } catch (_) {}
 
+  // থিমের ফন্ট আগেই নামিয়ে নেওয়া হয়। না করলে প্রথম ফ্রেমে fallback ফন্টের
+  // মাপ দিয়ে টেক্সট মাপা হয়, পরে আসল ফন্ট এলে লেখা তার বাক্সের বাইরে চলে
+  // যায় — চিপ ও বোতামের লেখা কেটে যাওয়ার কারণ এটাই।
+  try {
+    await GoogleFonts.pendingFonts([
+      GoogleFonts.manrope(),
+      GoogleFonts.spaceGrotesk(),
+    ]).timeout(const Duration(seconds: 5));
+  } catch (_) {}
+
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -36,10 +49,9 @@ void main() async {
   } catch (_) {}
 
   try {
-    final user = await FirebaseAuth.instance
-        .authStateChanges()
-        .first
-        .timeout(const Duration(seconds: 10));
+    final user = await FirebaseAuth.instance.authStateChanges().first.timeout(
+      const Duration(seconds: 10),
+    );
     if (user != null && user.email != null) {
       try {
         final srSnap = await FirebaseFirestore.instance
@@ -89,6 +101,9 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       initialBinding: InitialBinding(),
+      translations: AppTranslations(),
+      locale: LocaleService.saved,
+      fallbackLocale: LocaleService.fallback,
       initialRoute: initialRoute,
       getPages: AppPages.pages,
       theme: AppTheme.light,

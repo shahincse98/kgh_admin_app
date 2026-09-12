@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controller/product_controller.dart';
 import '../model/product_model.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 /// Full-screen form for adding or editing a product.
 /// Pass [product] for edit mode; omit (null) for add mode.
@@ -97,9 +98,10 @@ class _ProductFormViewState extends State<ProductFormView> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
         title: Text(
-          _isEdit ? widget.product!.name : 'নতুন Product যোগ করুন',
+          _isEdit ? widget.product!.name : 'নতুন Product যোগ করুন'.tr,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -108,7 +110,7 @@ class _ProductFormViewState extends State<ProductFormView> {
             IconButton(
               icon: Icon(Icons.delete_outline_rounded,
                   color: Colors.red.shade400),
-              tooltip: 'Delete product',
+              tooltip: 'Delete product'.tr,
               onPressed: _confirmDelete,
             ),
           Obx(() => Padding(
@@ -121,7 +123,7 @@ class _ProductFormViewState extends State<ProductFormView> {
                           child:
                               CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.save_rounded, size: 20),
-                  label: const Text('Save'),
+                  label: Text('Save'.tr),
                   onPressed: _saving.value ? null : _save,
                 ),
               )),
@@ -133,59 +135,59 @@ class _ProductFormViewState extends State<ProductFormView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── মৌলিক তথ্য ─────────────────────────────────────────────
-            _sectionHeader('মৌলিক তথ্য', cs),
-            _tf(_name, 'Product Name *'),
-            _tf(_cat, 'Category *'),
-            _tf(_brand, 'Brand'),
-            _tf(_code, 'Product Code'),
-            _tf(_model, 'Model'),
+            _sectionHeader('মৌলিক তথ্য'.tr, cs),
+            _tf(_name, 'Product Name *'.tr),
+            _tf(_cat, 'Category *'.tr),
+            _tf(_brand, 'Brand'.tr),
+            _tf(_code, 'Product Code'.tr),
+            _tf(_model, 'Model'.tr),
 
             // ── মূল্য ──────────────────────────────────────────────────
-            _sectionHeader('মূল্য', cs),
+            _sectionHeader('মূল্য'.tr, cs),
             Row(children: [
               Expanded(
-                child: _tf(_buyPrice, 'ক্রয় মূল্য',
+                child: _tf(_buyPrice, 'ক্রয় মূল্য'.tr,
                   number: true, decimal: true)),
               const SizedBox(width: 10),
               Expanded(
-                child: _tf(_wholesale, 'পাইকারি',
+                child: _tf(_wholesale, 'পাইকারি'.tr,
                   number: true, decimal: true)),
               const SizedBox(width: 10),
               Expanded(
-                child: _tf(_retail, 'খুচরা',
+                child: _tf(_retail, 'খুচরা'.tr,
                   number: true, decimal: true)),
             ]),
 
             // ── স্টক ───────────────────────────────────────────────────
-            _sectionHeader('স্টক ও বিবরণ', cs),
+            _sectionHeader('স্টক ও বিবরণ'.tr, cs),
             Row(children: [
-              Expanded(child: _tf(_stock, 'Stock', number: true)),
+              Expanded(child: _tf(_stock, 'Stock'.tr, number: true)),
               const SizedBox(width: 10),
-              Expanded(child: _tf(_unit, 'Unit (pcs/box/set)')),
+              Expanded(child: _tf(_unit, 'Unit (pcs/box/set)'.tr)),
               const SizedBox(width: 10),
-              Expanded(child: _tf(_warranty, 'Warranty')),
+              Expanded(child: _tf(_warranty, 'Warranty'.tr)),
             ]),
 
             // ── লেবেল ──────────────────────────────────────────────────
-            _sectionHeader('লেবেল', cs),
-            _switchRow('Available (বিক্রয়যোগ্য)', _isAvailable,
+            _sectionHeader('লেবেল'.tr, cs),
+            _switchRow('Available (বিক্রয়যোগ্য)'.tr, _isAvailable,
                 (v) => setState(() => _isAvailable = v), cs),
-            _switchRow('Hot (🔥 Featured)', _isHot,
+            _switchRow('Hot (🔥 Featured)'.tr, _isHot,
                 (v) => setState(() => _isHot = v), cs),
-            _switchRow('New (✨ New Arrival)', _isNew,
+            _switchRow('New (✨ New Arrival)'.tr, _isNew,
                 (v) => setState(() => _isNew = v), cs),
 
             // ── ছবি ─────────────────────────────────────────────────────
-            _sectionHeader('ছবি (Image URLs)', cs),
+            _sectionHeader('ছবি (Image URLs)'.tr, cs),
             _imageSection(cs),
 
             // ── Product Details ─────────────────────────────────────────
-            _sectionHeader('Product Details / বৈশিষ্ট্য', cs),
+            _sectionHeader('Product Details / বৈশিষ্ট্য'.tr, cs),
             _detailsSection(cs),
 
             // ── Video Link ──────────────────────────────────────────────
-            _sectionHeader('Video Link', cs),
-            _tf(_video, 'YouTube / অন্য video URL'),
+            _sectionHeader('Video Link'.tr, cs),
+            _tf(_video, 'YouTube / অন্য video URL'.tr),
 
             // ── Delete (edit only) ──────────────────────────────────────
             if (_isEdit) ...[
@@ -199,7 +201,7 @@ class _ProductFormViewState extends State<ProductFormView> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   icon: const Icon(Icons.delete_forever_rounded),
-                  label: const Text('Product ডিলেট করুন'),
+                  label: Text('Product ডিলেট করুন'.tr),
                   onPressed: _confirmDelete,
                 ),
               ),
@@ -284,7 +286,7 @@ class _ProductFormViewState extends State<ProductFormView> {
               child: TextField(
                 controller: _imgInput,
                 decoration: InputDecoration(
-                  hintText: 'Image URL paste করুন...',
+                  hintText: 'Image URL paste করুন...'.tr,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10)),
                   contentPadding: const EdgeInsets.symmetric(
@@ -298,7 +300,7 @@ class _ProductFormViewState extends State<ProductFormView> {
               style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 14)),
-              child: const Text('যোগ'),
+              child: Text('যোগ'.tr),
             ),
           ],
         ),
@@ -344,7 +346,7 @@ class _ProductFormViewState extends State<ProductFormView> {
           IconButton(
             icon: Icon(Icons.delete_outline_rounded,
                 color: Colors.red.shade400, size: 20),
-            tooltip: 'Remove image',
+            tooltip: 'Remove image'.tr,
             onPressed: () => setState(() => _images.removeAt(index)),
           ),
         ],
@@ -378,7 +380,7 @@ class _ProductFormViewState extends State<ProductFormView> {
                 controller: _detailInput,
                 maxLines: 2,
                 decoration: InputDecoration(
-                  hintText: 'যেমন: Color: Black, Power: 20W...',
+                  hintText: 'যেমন: Color: Black, Power: 20W...'.tr,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10)),
                   contentPadding: const EdgeInsets.symmetric(
@@ -392,7 +394,7 @@ class _ProductFormViewState extends State<ProductFormView> {
               style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 14)),
-              child: const Text('যোগ'),
+              child: Text('যোগ'.tr),
             ),
           ],
         ),
@@ -438,7 +440,7 @@ class _ProductFormViewState extends State<ProductFormView> {
 
   Future<void> _save() async {
     if (_name.text.trim().isEmpty || _cat.text.trim().isEmpty) {
-      Get.snackbar('ত্রুটি', 'Name ও Category আবশ্যক',
+      Get.snackbar('ত্রুটি'.tr, 'Name ও Category আবশ্যক'.tr,
           backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
@@ -469,8 +471,8 @@ class _ProductFormViewState extends State<ProductFormView> {
         await _ctrl.updateProduct(widget.product!.id, data);
         Get.back();
         Get.snackbar(
-          'সেভ হয়েছে',
-          '${_name.text.trim()} আপডেট হয়েছে',
+          'সেভ হয়েছে'.tr,
+          '${_name.text.trim()} ${'আপডেট হয়েছে'.tr}',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white,
@@ -488,8 +490,8 @@ class _ProductFormViewState extends State<ProductFormView> {
         });
         Get.back();
         Get.snackbar(
-          'সফল',
-          '${_name.text.trim()} যোগ হয়েছে',
+          'সফল'.tr,
+          '${_name.text.trim()} ${'যোগ হয়েছে'.tr}',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white,
@@ -505,13 +507,13 @@ class _ProductFormViewState extends State<ProductFormView> {
   void _confirmDelete() {
     Get.dialog(
       AlertDialog(
-        title: const Text('Product ডিলেট করবেন?'),
+        title: Text('Product ডিলেট করবেন?'.tr),
         content:
-            Text('"${widget.product!.name}" স্থায়ীভাবে মুছে যাবে।'),
+            Text('"${widget.product!.name}" ${'স্থায়ীভাবে মুছে যাবে'.tr}।'),
         actions: [
           TextButton(
               onPressed: () => Get.back(),
-              child: const Text('বাতিল')),
+              child: Text('বাতিল'.tr)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
@@ -519,14 +521,14 @@ class _ProductFormViewState extends State<ProductFormView> {
               await _ctrl.deleteProduct(widget.product!.id);
               Get.back(); // close form
               Get.snackbar(
-                'ডিলেট হয়েছে',
-                '"${widget.product!.name}" মুছে ফেলা হয়েছে',
+                'ডিলেট হয়েছে'.tr,
+                '"${widget.product!.name}" ${'মুছে ফেলা হয়েছে'.tr}',
                 snackPosition: SnackPosition.BOTTOM,
                 backgroundColor: Colors.red.shade700,
                 colorText: Colors.white,
               );
             },
-            child: const Text('ডিলেট করুন',
+            child: Text('ডিলেট করুন'.tr,
                 style: TextStyle(color: Colors.white)),
           ),
         ],

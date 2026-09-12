@@ -1,30 +1,47 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:kgh_admin_app/main.dart';
+import 'package:kgh_admin_app/localization/app_translations.dart';
+import 'package:kgh_admin_app/localization/strings_bn.dart';
+import 'package:kgh_admin_app/localization/strings_en.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('AppTranslations', () {
+    final keys = AppTranslations().keys;
+    final bn = keys['bn_BD']!;
+    final en = keys['en_US']!;
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('দুই ভাষার key সেট সম্পূর্ণ ও অভিন্ন', () {
+      // অসম্পূর্ণ হলে GetX fallbackLocale-এ খুঁজবে এবং এক ভাষার লেখা
+      // অন্য ভাষায় ফাঁস হবে — সেই বাগটি যাতে ফিরে না আসে।
+      expect(bn.keys.toSet(), equals(en.keys.toSet()));
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    test('কোনো অনুবাদ ফাঁকা নয়', () {
+      for (final e in bn.entries) {
+        expect(e.value.trim(), isNotEmpty, reason: 'bn: ${e.key}');
+      }
+      for (final e in en.entries) {
+        expect(e.value.trim(), isNotEmpty, reason: 'en: ${e.key}');
+      }
+    });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('বাংলা source key ইংরেজিতে অনূদিত হয়', () {
+      expect(en['স্টক ইন'], 'Stock in');
+      expect(bn['স্টক ইন'], 'স্টক ইন');
+    });
+
+    test('ইংরেজি source key বাংলায় অনূদিত হয়', () {
+      expect(bn['Settings'], 'সেটিংস');
+      expect(en['Settings'], 'Settings');
+    });
+
+    test('সংরক্ষিত ডোমেইন মান অনুবাদ ম্যাপে নেই', () {
+      // পেমেন্ট মেথড ও বার Firestore-এ বাংলা টেক্সট হিসেবেই সেভ হয়।
+      // এগুলো অনূদিত হলে ডেটা নষ্ট হবে — প্রদর্শনের জন্য DomainLabels আছে।
+      for (final v in ['নগদ', 'বিকাশ', 'রকেট', 'ব্যাংক', 'হাতে',
+                       'রবিবার', 'সোমবার', 'নগদ অ্যাপ']) {
+        expect(enUS.containsKey(v), isFalse, reason: v);
+        expect(bnBD.containsKey(v), isFalse, reason: v);
+      }
+    });
   });
 }

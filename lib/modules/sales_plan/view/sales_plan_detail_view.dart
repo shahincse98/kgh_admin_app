@@ -62,14 +62,14 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Refresh actuals',
+            tooltip: 'Refresh actuals'.tr,
             onPressed: () => _loadActuals(refresh: true),
           ),
           PopupMenuButton<String>(
             onSelected: (v) {
               if (v == 'delete') _confirmDelete(cs);
             },
-            itemBuilder: (_) => const [
+            itemBuilder: (_) => [
               PopupMenuItem(
                 value: 'delete',
                 child: Row(
@@ -77,7 +77,7 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
                     Icon(Icons.delete_outline_rounded,
                         size: 18, color: Colors.red),
                     SizedBox(width: 8),
-                    Text('পরিকল্পনা ডিলেট করুন',
+                    Text('পরিকল্পনা ডিলেট করুন'.tr,
                         style: TextStyle(color: Colors.red)),
                   ],
                 ),
@@ -101,7 +101,7 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
                 const SizedBox(height: 16),
 
                 // ── Product breakdown ─────────────────────────────────────
-                _sectionHeader('প্রডাক্টওয়ারি অর্জন', cs),
+                _sectionHeader('প্রডাক্টওয়ারি অর্জন'.tr, cs),
                 const SizedBox(height: 10),
                 ...plan.items.map((item) =>
                     _productRow(item, (_actuals[item.productName] ?? 0).toInt(),
@@ -110,7 +110,7 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
                 // ── Extra actuals (sold but not in plan) ──────────────────
                 if (_extraActuals(plan).isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  _sectionHeader('পরিকল্পনার বাইরে বিক্রীত', cs),
+                  _sectionHeader('পরিকল্পনার বাইরে বিক্রীত'.tr, cs),
                   const SizedBox(height: 10),
                   ..._extraActuals(plan).map((e) =>
                       _extraRow(e.key, e.value, cs)),
@@ -137,11 +137,11 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _badge(isWeekly ? 'সাপ্তাহিক' : 'মাসিক', typeColor),
+                _badge(isWeekly ? 'সাপ্তাহিক'.tr : 'মাসিক'.tr, typeColor),
                 _badge(plan.displayPeriod, const Color(0xFF0891B2)),
                 _badge(
                     plan.assignedTo == 'all'
-                        ? 'সকল SR'
+                        ? 'সকল SR'.tr
                         : plan.srName,
                     const Color(0xFF16A34A)),
               ],
@@ -171,22 +171,22 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('সামগ্রিক অর্জন',
+            Text('সামগ্রিক অর্জন'.tr,
                 style: TextStyle(
                     fontWeight: FontWeight.w800, fontSize: 14)),
             const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
-                  child: _statCol('মোট লক্ষ্য',
-                      '$totalTarget টি', cs.onSurface),
+                  child: _statCol('মোট লক্ষ্য'.tr,
+                      '$totalTarget ${'টি'.tr}', cs.onSurface),
                 ),
                 Expanded(
-                  child: _statCol('মোট বিক্রি',
+                  child: _statCol('মোট বিক্রি'.tr,
                       '৳ ${NumberFormat('#,##0').format(totalActual.toInt())}', const Color(0xFF0891B2)),
                 ),
                 Expanded(
-                  child: _statCol('অর্জন %', pctDisplay, pctColor),
+                  child: _statCol('অর্জন %'.tr, pctDisplay, pctColor),
                 ),
               ],
             ),
@@ -265,7 +265,7 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
                     color: const Color(0xFF16A34A).withAlpha(20),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Text('✓ লক্ষ্য পূরণ',
+                  child: Text('✓ লক্ষ্য পূরণ'.tr,
                       style: TextStyle(
                           fontSize: 10,
                           color: Color(0xFF16A34A),
@@ -283,7 +283,7 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('$actual / $target টি',
+                        Text('$actual / $target ${'টি'.tr}',
                             style: TextStyle(
                                 fontSize: 12,
                                 color: cs.onSurfaceVariant)),
@@ -313,7 +313,7 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Text(
-                '🎉 লক্ষ্য ছাড়িয়ে অতিরিক্ত $extraQty টি বিক্রি হয়েছে',
+                '🎉 ${'লক্ষ্য ছাড়িয়ে অতিরিক্ত'.tr} $extraQty ${'টি বিক্রি হয়েছে'.tr}',
                 style: const TextStyle(
                     fontSize: 11, color: Color(0xFF16A34A)),
               ),
@@ -398,13 +398,13 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
 
   void _confirmDelete(ColorScheme cs) {
     Get.dialog(AlertDialog(
-      title: const Text('পরিকল্পনা ডিলেট করবেন?'),
+      title: Text('পরিকল্পনা ডিলেট করবেন?'.tr),
       content:
-          Text('"${widget.plan.title}" স্থায়ীভাবে মুছে যাবে।'),
+          Text('"${widget.plan.title}" ${'স্থায়ীভাবে মুছে যাবে'.tr}।'),
       actions: [
         TextButton(
             onPressed: () => Get.back(),
-            child: const Text('বাতিল')),
+            child: Text('বাতিল'.tr)),
         ElevatedButton(
           style:
               ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -413,14 +413,14 @@ class _SalesPlanDetailViewState extends State<SalesPlanDetailView> {
             await _ctrl.deletePlan(widget.plan.id);
             Get.back();
             Get.snackbar(
-              'ডিলেট হয়েছে',
-              '"${widget.plan.title}" মুছে ফেলা হয়েছে',
+              'ডিলেট হয়েছে'.tr,
+              '"${widget.plan.title}" ${'মুছে ফেলা হয়েছে'.tr}',
               snackPosition: SnackPosition.BOTTOM,
               backgroundColor: Colors.red.shade700,
               colorText: Colors.white,
             );
           },
-          child: const Text('ডিলেট করুন',
+          child: Text('ডিলেট করুন'.tr,
               style: TextStyle(color: Colors.white)),
         ),
       ],

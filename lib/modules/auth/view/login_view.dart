@@ -73,8 +73,8 @@ class LoginView extends GetView<AuthController> {
         children: [
           const Icon(Icons.workspace_premium_rounded, size: 42, color: Colors.white),
           const SizedBox(height: 14),
-          const Text(
-            'KGH Admin Console',
+          Text(
+            'KGH Admin Console'.tr,
             style: TextStyle(
               color: Colors.white,
               fontSize: 30,
@@ -84,7 +84,7 @@ class LoginView extends GetView<AuthController> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Orders, products, users, and analytics in one streamlined panel.',
+            'Orders, products, users, and analytics in one streamlined panel.'.tr,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.9),
               fontSize: 15,
@@ -105,7 +105,7 @@ class LoginView extends GetView<AuthController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Welcome back',
+              'Welcome back'.tr,
               style: Theme.of(context)
                   .textTheme
                   .headlineSmall
@@ -113,15 +113,15 @@ class LoginView extends GetView<AuthController> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Sign in to continue',
+              'Sign in to continue'.tr,
               style: TextStyle(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 18),
             TextField(
               keyboardType: TextInputType.emailAddress,
               onChanged: (v) => controller.email.value = v,
-              decoration: const InputDecoration(
-                labelText: 'Email',
+              decoration: InputDecoration(
+                labelText: 'Email'.tr,
                 prefixIcon: Icon(Icons.alternate_email_rounded),
               ),
             ),
@@ -151,7 +151,7 @@ class LoginView extends GetView<AuthController> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.login_rounded),
-                  label: Text(controller.loading.value ? 'Logging in...' : 'Login'),
+                  label: Text(controller.loading.value ? 'Logging in...'.tr : 'Login'.tr),
                 ),
               ),
             ),
@@ -180,7 +180,7 @@ class _PasswordFieldState extends State<_PasswordField> {
       onChanged: (v) => widget.controller.password.value = v,
       onSubmitted: (_) => widget.controller.login(),
       decoration: InputDecoration(
-        labelText: 'Password',
+        labelText: 'Password'.tr,
         prefixIcon: const Icon(Icons.lock_outline_rounded),
         suffixIcon: IconButton(
           icon: Icon(

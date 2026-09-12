@@ -7,6 +7,8 @@ import 'order_details_view.dart';
 import '../../../routes/app_routes.dart';
 import '../../../widgets/call_button.dart';
 import '../../../widgets/responsive.dart';
+import '../../../localization/domain_labels.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class OrderListView extends StatefulWidget {
   const OrderListView({super.key});
@@ -43,94 +45,107 @@ class _OrderListViewState extends State<OrderListView> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      drawer: appDrawerFor(context),
       backgroundColor: scheme.surfaceContainerLowest,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Get.toNamed(AppRoutes.createOrder),
         icon: const Icon(Icons.add_shopping_cart_rounded),
-        label: const Text('নতুন অর্ডার',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        tooltip: 'কাস্টমারের পক্ষে অর্ডার করুন',
+        label: Text(
+          'নতুন অর্ডার'.tr,
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        tooltip: 'কাস্টমারের পক্ষে অর্ডার করুন'.tr,
       ),
       appBar: AppBar(
-        title: Obx(() => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Orders',
-                    style: TextStyle(fontWeight: FontWeight.w800)),
-                Text(
-                  '${controller.filteredOrders.length} টি অর্ডার',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: scheme.onSurface.withAlpha(160)),
+        title: Obx(
+          () => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Orders'.tr, style: TextStyle(fontWeight: FontWeight.w800)),
+              Text(
+                '${controller.filteredOrders.length} ${'টি অর্ডার'.tr}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: scheme.onSurface.withAlpha(160),
                 ),
-              ],
-            )),
+              ),
+            ],
+          ),
+        ),
       ),
-      body: ResponsiveWrapper(child: Column(
-        children: [
-          _searchBar(scheme),
-          _statusChips(),
-          Expanded(
-            child: Obx(() {
-              final orders = controller.filteredOrders;
-              if (orders.isEmpty && controller.loading.value) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (orders.isEmpty) {
-                // Auto load more if filtered list is empty but there are more pages
-                if (controller.hasMore.value && !controller.loading.value) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    controller.fetchOrders(loadMore: true);
-                  });
+      body: ResponsiveWrapper(
+        child: Column(
+          children: [
+            _searchBar(scheme),
+            _statusChips(),
+            Expanded(
+              child: Obx(() {
+                final orders = controller.filteredOrders;
+                if (orders.isEmpty && controller.loading.value) {
+                  return const Center(child: CircularProgressIndicator());
                 }
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.receipt_long_rounded,
+                if (orders.isEmpty) {
+                  // Auto load more if filtered list is empty but there are more pages
+                  if (controller.hasMore.value && !controller.loading.value) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      controller.fetchOrders(loadMore: true);
+                    });
+                  }
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.receipt_long_rounded,
                           size: 56,
-                          color: scheme.onSurface.withAlpha(60)),
-                      const SizedBox(height: 12),
-                      Text('কোনো অর্ডার পাওয়া যায়নি',
+                          color: scheme.onSurface.withAlpha(60),
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'কোনো অর্ডার পাওয়া যায়নি'.tr,
                           style: TextStyle(
-                              color: scheme.onSurface.withAlpha(120))),
-                    ],
-                  ),
-                );
-              }
+                            color: scheme.onSurface.withAlpha(120),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-              final grouped = _groupByDate(orders);
-              return RefreshIndicator(
-                onRefresh: () async {
-                  controller.lastDoc = null;
-                  controller.hasMore.value = true;
-                  await controller.fetchOrders();
-                },
-                child: ListView(
-                  controller: _scrollCtrl,
-                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-                  children: [
-                    ...grouped.entries.map((entry) => Column(
+                final grouped = _groupByDate(orders);
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    controller.lastDoc = null;
+                    controller.hasMore.value = true;
+                    await controller.fetchOrders();
+                  },
+                  child: ListView(
+                    controller: _scrollCtrl,
+                    padding: EdgeInsets.fromLTRB(12, 4, 12, 24),
+                    children: [
+                      ...grouped.entries.map(
+                        (entry) => Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _dateHeader(entry.key, entry.value.length),
-                            ...entry.value
-                                .map((o) => _orderCard(o, scheme)),
+                            ...entry.value.map((o) => _orderCard(o, scheme)),
                           ],
-                        )),
-                    if (controller.loading.value)
-                      const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(child: CircularProgressIndicator()),
+                        ),
                       ),
-                  ],
-                ),
-              );
-            }),
-          ),
-        ],
-      )),
+                      if (controller.loading.value)
+                        Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -138,20 +153,19 @@ class _OrderListViewState extends State<OrderListView> {
 
   Widget _searchBar(ColorScheme scheme) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      padding: EdgeInsets.fromLTRB(12, 10, 12, 6),
       child: TextField(
         onChanged: (v) => controller.searchText.value = v,
         decoration: InputDecoration(
-          hintText: 'Shop নাম, ফোন নং বা Order ID দিয়ে খুঁজুন…',
-          prefixIcon: const Icon(Icons.search_rounded),
+          hintText: 'Shop নাম, ফোন নং বা Order ID দিয়ে খুঁজুন…'.tr,
+          prefixIcon: Icon(Icons.search_rounded),
           filled: true,
           fillColor: scheme.surfaceContainerHigh,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         ),
       ),
     );
@@ -160,48 +174,49 @@ class _OrderListViewState extends State<OrderListView> {
   // ── Horizontal status chips ────────────────────────────────────
 
   Widget _statusChips() {
-    const filters = [
-      ('all', 'সব'),
-      ('pending', 'Pending'),
-      ('approved', 'Approved'),
-      ('dispatched', 'Dispatched'),
-      ('delivered', 'Delivered'),
-      ('cancelled', 'বাতিল'),
-      ('scheduled', 'নির্ধারিত'),
+    final filters = [
+      ('all', 'সব'.tr),
+      ('pending', 'Pending'.tr),
+      ('approved', 'Approved'.tr),
+      ('dispatched', 'Dispatched'.tr),
+      ('delivered', 'Delivered'.tr),
+      ('cancelled', 'Cancelled'.tr),
+      ('scheduled', 'নির্ধারিত'.tr),
     ];
     return SizedBox(
       height: 44,
-      child: Obx(() => ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            children: filters.map((pair) {
-              final (val, label) = pair;
-              final selected = controller.selectedStatus.value == val;
-              final color = val == 'all' || val == 'scheduled'
-                  ? const Color(0xFF0891B2)
-                  : _statusColor(val);
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(label),
-                  selected: selected,
-                  onSelected: (_) => controller.changeFilter(val),
-                  selectedColor: color.withAlpha(30),
-                  checkmarkColor: color,
-                  labelStyle: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: selected ? color : null,
-                    fontSize: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
-                  side: selected
-                      ? BorderSide(color: color, width: 1.5)
-                      : null,
+      child: Obx(
+        () => ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          children: filters.map((pair) {
+            final (val, label) = pair;
+            final selected = controller.selectedStatus.value == val;
+            final color = val == 'all' || val == 'scheduled'
+                ? const Color(0xFF0891B2)
+                : _statusColor(val);
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                label: Text(label),
+                selected: selected,
+                onSelected: (_) => controller.changeFilter(val),
+                selectedColor: color.withAlpha(30),
+                checkmarkColor: color,
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: selected ? color : null,
+                  fontSize: 12,
                 ),
-              );
-            }).toList(),
-          )),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                side: selected ? BorderSide(color: color, width: 1.5) : null,
+              ),
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
 
@@ -231,65 +246,82 @@ class _OrderListViewState extends State<OrderListView> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  order.shopName.isEmpty ? 'Unknown Shop' : order.shopName,
+                  order.shopName.isEmpty ? 'Unknown Shop'.tr : order.shopName,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w800),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text(
-                  '#${order.id} • ${order.items.length} পণ্য • ৳${_fmt.format(order.totalAmount.toInt())}',
+                  '#${order.id} • ${DomainLabels.productCount(order.items.length)} • ৳${_fmt.format(order.totalAmount.toInt())}',
                   style: TextStyle(
-                      fontSize: 12, color: scheme.onSurface.withAlpha(140)),
+                    fontSize: 12,
+                    color: scheme.onSurface.withAlpha(140),
+                  ),
                 ),
               ),
               const Divider(height: 20),
               ListTile(
                 leading: const Icon(Icons.visibility_outlined, size: 22),
-                title: const Text('বিস্তারিত দেখুন'),
+                title: Text('বিস্তারিত দেখুন'.tr),
                 onTap: () {
                   Get.back();
                   Get.to(() => OrderDetailsView(order: order));
                 },
               ),
               ListTile(
-                leading: Icon(Icons.delete_outline_rounded,
-                    color: Colors.red.shade600, size: 22),
-                title: Text('অর্ডার ডিলিট করুন',
-                    style: TextStyle(color: Colors.red.shade600)),
+                leading: Icon(
+                  Icons.delete_outline_rounded,
+                  color: Colors.red.shade600,
+                  size: 22,
+                ),
+                title: Text(
+                  'অর্ডার ডিলিট করুন'.tr,
+                  style: TextStyle(color: Colors.red.shade600),
+                ),
                 subtitle: Text(
-                    (order.status == 'dispatched' || order.status == 'delivered')
-                        ? 'স্টক ফিরে যাবে'
-                        : 'এই অর্ডার মুছে ফেলা হবে',
-                    style: TextStyle(
-                        fontSize: 11, color: scheme.onSurface.withAlpha(140))),
+                  (order.status == 'dispatched' || order.status == 'delivered')
+                      ? 'স্টক ফিরে যাবে'.tr
+                      : 'এই অর্ডার মুছে ফেলা হবে'.tr,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: scheme.onSurface.withAlpha(140),
+                  ),
+                ),
                 onTap: () async {
                   Get.back();
-                  final ok = await Get.dialog<bool>(AlertDialog(
-                    title: const Text('অর্ডার ডিলিট করবেন?'),
-                    content: Text(
-                        '"${order.shopName}" এর অর্ডার #${order.id} স্থায়ীভাবে মুছে ফেলা হবে।${(order.status == 'dispatched' || order.status == 'delivered') ? '\nস্টক স্বয়ংক্রিয়ভাবে ফিরে যাবে।' : ''}'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Get.back(result: false),
-                          child: const Text('না')),
-                      ElevatedButton(
-                        onPressed: () => Get.back(result: true),
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white),
-                        child: const Text('ডিলিট করুন'),
+                  final ok = await Get.dialog<bool>(
+                    AlertDialog(
+                      title: Text('অর্ডার ডিলিট করবেন?'.tr),
+                      content: Text(
+                        '"${order.shopName}" ${'এর অর্ডার'.tr} #${order.id} ${'স্থায়ীভাবে মুছে ফেলা হবে'.tr}।${(order.status == 'dispatched' || order.status == 'delivered') ? '\nস্টক স্বয়ংক্রিয়ভাবে ফিরে যাবে।' : ''}',
                       ),
-                    ],
-                  ));
+                      actions: [
+                        TextButton(
+                          onPressed: () => Get.back(result: false),
+                          child: Text('না'.tr),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Get.back(result: true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text('ডিলিট করুন'.tr),
+                        ),
+                      ],
+                    ),
+                  );
                   if (ok == true) {
                     await controller.deleteOrder(order.id);
                     if (mounted) {
                       Get.snackbar(
-                        'সফল',
-                        'অর্ডার ডিলিট হয়েছে',
+                        'সফল'.tr,
+                        'অর্ডার ডিলিট হয়েছে'.tr,
                         snackPosition: SnackPosition.BOTTOM,
                         backgroundColor: Colors.red,
                         colorText: Colors.white,
@@ -314,13 +346,13 @@ class _OrderListViewState extends State<OrderListView> {
       padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
       child: Row(
         children: [
-          Text(date,
-              style: const TextStyle(
-                  fontSize: 14, fontWeight: FontWeight.w800)),
+          Text(
+            date,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+          ),
           const SizedBox(width: 8),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: scheme.primaryContainer,
               borderRadius: BorderRadius.circular(12),
@@ -328,9 +360,10 @@ class _OrderListViewState extends State<OrderListView> {
             child: Text(
               '$count',
               style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onPrimaryContainer),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: scheme.onPrimaryContainer,
+              ),
             ),
           ),
         ],
@@ -354,12 +387,15 @@ class _OrderListViewState extends State<OrderListView> {
           await Get.to(() => OrderDetailsView(order: order));
         },
         onLongPress: () => _showOrderActions(order, scheme),
-        child: IntrinsicHeight(
+        // বাঁ পাশের স্ট্যাটাস-স্ট্রিপ border হিসেবে আঁকা হয়, ফলে
+        // IntrinsicHeight ছাড়াই কার্ড তার প্রকৃত উচ্চতা পায়।
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: statusColor, width: 5)),
+          ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Status color strip on left
-              Container(width: 5, color: statusColor),
               // Content
               Expanded(
                 child: Padding(
@@ -377,28 +413,32 @@ class _OrderListViewState extends State<OrderListView> {
                               children: [
                                 Text(
                                   order.shopName.isEmpty
-                                      ? 'Unknown Shop'
+                                      ? 'Unknown Shop'.tr
                                       : order.shopName,
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 15),
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                  ),
                                 ),
                                 if (order.shopPhone.isNotEmpty) ...[
                                   const SizedBox(height: 3),
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.storefront_rounded,
-                                          size: 13,
-                                          color: scheme.onSurface
-                                              .withAlpha(140)),
+                                      Icon(
+                                        Icons.storefront_rounded,
+                                        size: 13,
+                                        color: scheme.onSurface.withAlpha(140),
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         order.shopPhone,
                                         style: TextStyle(
-                                            fontSize: 12,
-                                            color: scheme.onSurface
-                                                .withAlpha(160)),
+                                          fontSize: 12,
+                                          color: scheme.onSurface.withAlpha(
+                                            160,
+                                          ),
+                                        ),
                                       ),
                                       CallButton(phone: order.shopPhone),
                                     ],
@@ -416,9 +456,24 @@ class _OrderListViewState extends State<OrderListView> {
                               if (order.isDueCollection) ...[
                                 const SizedBox(height: 4),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(color: const Color(0xFF16A34A).withAlpha(20), borderRadius: BorderRadius.circular(6)),
-                                  child: const Text('বাকি জমা', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF16A34A))),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF16A34A,
+                                    ).withAlpha(20),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'বাকি জমা'.tr,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF16A34A),
+                                    ),
+                                  ),
                                 ),
                               ],
                               if (order.status != 'delivered' &&
@@ -430,45 +485,52 @@ class _OrderListViewState extends State<OrderListView> {
                                       context: context,
                                       initialDate:
                                           order.scheduledDeliveryDate ??
-                                              DateTime.now(),
+                                          DateTime.now(),
                                       firstDate: DateTime(2020),
                                       lastDate: DateTime(2030),
                                     );
                                     if (picked == null) return;
                                     await controller.setScheduledDelivery(
-                                        order.id, picked);
+                                      order.id,
+                                      picked,
+                                    );
                                   },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF0891B2)
-                                          .withAlpha(15),
-                                      borderRadius:
-                                          BorderRadius.circular(8),
+                                      color: const Color(
+                                        0xFF0891B2,
+                                      ).withAlpha(15),
+                                      borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                          color: const Color(0xFF0891B2)
-                                              .withAlpha(60)),
+                                        color: const Color(
+                                          0xFF0891B2,
+                                        ).withAlpha(60),
+                                      ),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         const Icon(
-                                            Icons.calendar_month_rounded,
-                                            size: 11,
-                                            color: Color(0xFF0891B2)),
+                                          Icons.calendar_month_rounded,
+                                          size: 11,
+                                          color: Color(0xFF0891B2),
+                                        ),
                                         const SizedBox(width: 4),
                                         Text(
-                                          order.scheduledDeliveryDate !=
-                                                  null
+                                          order.scheduledDeliveryDate != null
                                               ? DateFormat('dd MMM').format(
-                                                  order
-                                                      .scheduledDeliveryDate!)
-                                              : 'তারিখ',
+                                                  order.scheduledDeliveryDate!,
+                                                )
+                                              : 'তারিখ'.tr,
                                           style: const TextStyle(
-                                              fontSize: 10,
-                                              color: Color(0xFF0891B2),
-                                              fontWeight: FontWeight.w600),
+                                            fontSize: 10,
+                                            color: Color(0xFF0891B2),
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -485,23 +547,28 @@ class _OrderListViewState extends State<OrderListView> {
                         spacing: 8,
                         runSpacing: 6,
                         children: [
-                          _chip(
-                              Icons.tag_rounded,
-                              '#${order.id}',
-                              scheme),
+                          _chip(Icons.tag_rounded, '#${order.id}', scheme),
                           _chip(Icons.schedule_rounded, time, scheme),
-                          _chip(Icons.shopping_bag_outlined,
-                              order.isDueCollection ? 'বাকি জমা' : '${order.items.length} পণ্য', scheme),
+                          _chip(
+                            Icons.shopping_bag_outlined,
+                            order.isDueCollection
+                                ? 'বাকি জমা'.tr
+                                : DomainLabels.productCount(order.items.length),
+                            scheme,
+                          ),
                           if (order.userPhone.isNotEmpty)
                             GestureDetector(
                               onTap: () => launchPhone(order.userPhone),
-                              child: _chip(Icons.phone_rounded,
-                                  order.userPhone, scheme),
+                              child: _chip(
+                                Icons.phone_rounded,
+                                order.userPhone,
+                                scheme,
+                              ),
                             ),
                           if (order.userDue > 0)
                             _chip(
                               Icons.account_balance_wallet_outlined,
-                              'বাকি: ৳${_fmt.format(order.userDue)}',
+                              '${'বাকি'.tr}: ৳${_fmt.format(order.userDue)}',
                               scheme,
                               labelColor: const Color(0xFFDC2626),
                             ),
@@ -550,7 +617,7 @@ class _OrderListViewState extends State<OrderListView> {
                           if (order.localMemo.isNotEmpty)
                             _chip(
                               Icons.tag_rounded,
-                              'লোকাল: #${order.localMemo}',
+                              '${'লোকাল'.tr}: #${order.localMemo}',
                               scheme,
                               labelColor: const Color(0xFF0891B2),
                             ),
@@ -561,9 +628,11 @@ class _OrderListViewState extends State<OrderListView> {
                       Row(
                         children: [
                           if (order.shopAddress.isNotEmpty) ...[
-                            Icon(Icons.location_on_outlined,
-                                size: 13,
-                                color: scheme.onSurface.withAlpha(120)),
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 13,
+                              color: scheme.onSurface.withAlpha(120),
+                            ),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
@@ -571,9 +640,9 @@ class _OrderListViewState extends State<OrderListView> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                    fontSize: 12,
-                                    color:
-                                        scheme.onSurface.withAlpha(140)),
+                                  fontSize: 12,
+                                  color: scheme.onSurface.withAlpha(140),
+                                ),
                               ),
                             ),
                           ] else
@@ -581,7 +650,9 @@ class _OrderListViewState extends State<OrderListView> {
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: order.isDueCollection
                                   ? const Color(0xFF16A34A).withAlpha(18)
@@ -617,12 +688,13 @@ class _OrderListViewState extends State<OrderListView> {
   // ── Helpers ────────────────────────────────────────────────────
 
   Widget _statusBadge(String status, Color color) {
-    final label = {
-          'pending': 'Pending',
-          'approved': 'Approved',
-          'dispatched': 'Dispatched',
-          'delivered': 'Delivered',
-          'cancelled': 'Cancelled',
+    final label =
+        {
+          'pending': 'Pending'.tr,
+          'approved': 'Approved'.tr,
+          'dispatched': 'Dispatched'.tr,
+          'delivered': 'Delivered'.tr,
+          'cancelled': 'Cancelled'.tr,
         }[status] ??
         (status.capitalizeFirst ?? status);
     return Container(
@@ -635,13 +707,20 @@ class _OrderListViewState extends State<OrderListView> {
       child: Text(
         label,
         style: TextStyle(
-            color: color, fontWeight: FontWeight.w700, fontSize: 11),
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
       ),
     );
   }
 
-  Widget _chip(IconData icon, String label, ColorScheme scheme,
-      {Color? labelColor}) {
+  Widget _chip(
+    IconData icon,
+    String label,
+    ColorScheme scheme, {
+    Color? labelColor,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
@@ -656,17 +735,22 @@ class _OrderListViewState extends State<OrderListView> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon,
-              size: 13,
-              color: labelColor ?? scheme.onSurface.withAlpha(160)),
+          Icon(
+            icon,
+            size: 13,
+            color: labelColor ?? scheme.onSurface.withAlpha(160),
+          ),
           const SizedBox(width: 5),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: labelColor != null
-                      ? FontWeight.w700
-                      : FontWeight.normal,
-                  color: labelColor ?? scheme.onSurface.withAlpha(180))),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: labelColor != null
+                  ? FontWeight.w700
+                  : FontWeight.normal,
+              color: labelColor ?? scheme.onSurface.withAlpha(180),
+            ),
+          ),
         ],
       ),
     );
@@ -694,11 +778,11 @@ class _OrderListViewState extends State<OrderListView> {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
     final delivDateOnly = DateTime(d.year, d.month, d.day);
-    if (delivDateOnly == todayDate) return 'আজকের ডেলিভারি';
+    if (delivDateOnly == todayDate) return 'আজকের ডেলিভারি'.tr;
     if (delivDateOnly.isBefore(todayDate) && order.status != 'delivered') {
-      return 'মিস: ${DateFormat('dd MMM').format(d)}';
+      return '${'মিস'.tr}: ${DateFormat('dd MMM').format(d)}';
     }
-    return 'ডেলিভারি: ${DateFormat('dd MMM').format(d)}';
+    return '${'ডেলিভারি'.tr}: ${DateFormat('dd MMM').format(d)}';
   }
 
   Color? _scheduledChipColor(OrderModel order) {

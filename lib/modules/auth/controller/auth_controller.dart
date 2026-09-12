@@ -31,7 +31,7 @@ class AuthController extends GetxController {
   Future<void> login() async {
     errorMsg.value = '';
     if (email.value.trim().isEmpty || password.value.isEmpty) {
-      errorMsg.value = 'Email ও Password দিন';
+      errorMsg.value = 'Email ও Password দিন'.tr;
       return;
     }
     loading.value = true;
@@ -44,16 +44,16 @@ class AuthController extends GetxController {
     } on FirebaseAuthException catch (e) {
       switch (e.code) {
         case 'user-not-found':
-          errorMsg.value = 'এই email এ কোনো account নেই';
+          errorMsg.value = 'এই email এ কোনো account নেই'.tr;
           break;
         case 'wrong-password':
-          errorMsg.value = 'Password ভুল';
+          errorMsg.value = 'Password ভুল'.tr;
           break;
         case 'invalid-credential':
-          errorMsg.value = 'Email বা Password ভুল';
+          errorMsg.value = 'Email বা Password ভুল'.tr;
           break;
         case 'too-many-requests':
-          errorMsg.value = 'অনেক বার চেষ্টা হয়েছে, কিছুক্ষণ পর চেষ্টা করুন';
+          errorMsg.value = 'অনেক বার চেষ্টা হয়েছে, কিছুক্ষণ পর চেষ্টা করুন'.tr;
           break;
         default:
           errorMsg.value = 'Login failed: ${e.message}';

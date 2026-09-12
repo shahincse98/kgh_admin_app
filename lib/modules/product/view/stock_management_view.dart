@@ -5,6 +5,7 @@ import '../controller/product_controller.dart';
 import '../model/product_model.dart';
 import '../../replace/controller/admin_replace_controller.dart';
 import 'stock_snapshot_view.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 enum _StockAppBarAction { history, resetAll, refresh, addInternal }
 
@@ -47,8 +48,9 @@ class _StockManagementViewState extends State<StockManagementView>
     final isCompact = MediaQuery.sizeOf(context).width < 720;
 
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
-        title: const Text('স্টক ম্যানেজমেন্ট'),
+        title: Text('স্টক ম্যানেজমেন্ট'.tr),
         actions: [
           Obx(() {
             final q = _searchText.value.toLowerCase();
@@ -82,47 +84,47 @@ class _StockManagementViewState extends State<StockManagementView>
               ..sort((a, b) => a.key.compareTo(b.key));
             final buf = StringBuffer();
             if (regular.isNotEmpty) {
-              buf.writeln('── সকল পণ্য ──');
+              buf.writeln('── সকল পণ্য ──'.tr);
               for (final p in regular) {
                 buf.writeln('${p.name}: ${p.stock}');
               }
             }
             if (internal.isNotEmpty) {
               if (buf.isNotEmpty) buf.writeln();
-              buf.writeln('── ইন্টার্নাল পণ্য ──');
+              buf.writeln('── ইন্টার্নাল পণ্য ──'.tr);
               for (final p in internal) {
                 buf.writeln('${p.name}: ${p.stock}');
               }
             }
             if (replaceStockList.isNotEmpty) {
               if (buf.isNotEmpty) buf.writeln();
-              buf.writeln('── রিপ্লেস পণ্য ──');
+              buf.writeln('── রিপ্লেস পণ্য ──'.tr);
               for (final e in replaceStockList) {
                 buf.writeln('${e.key}: ${e.value}');
               }
             }
             final copyText = buf.toString().trimRight();
             return IconButton(
-              tooltip: 'স্টক লিস্ট কপি করুন',
-              icon: const Icon(Icons.copy_rounded),
+              tooltip: 'স্টক লিস্ট কপি করুন'.tr,
+              icon: Icon(Icons.copy_rounded),
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: copyText));
                 Get.snackbar(
-                  'কপি হয়েছে!',
-                  'সকল ${regular.length}টি + ইন্টার্নাল ${internal.length}টি + রিপ্লেস ${replaceStockList.length}টি পণ্য কপি হয়েছে',
+                  'কপি হয়েছে!'.tr,
+                  '${'সকল'.tr} ${regular.length}${'টি'.tr} + ${'ইন্টার্নাল'.tr} ${internal.length}${'টি'.tr} + ${'রিপ্লেস'.tr} ${replaceStockList.length}${'টি পণ্য কপি হয়েছে'.tr}',
                   snackPosition: SnackPosition.BOTTOM,
-                  duration: const Duration(seconds: 2),
+                  duration: Duration(seconds: 2),
                 );
               },
             );
           }),
           if (isCompact)
             PopupMenuButton<_StockAppBarAction>(
-              tooltip: 'More actions',
+              tooltip: 'More actions'.tr,
               onSelected: (value) {
                 switch (value) {
                   case _StockAppBarAction.history:
-                    Get.to(() => const StockSnapshotView());
+                    Get.to(() => StockSnapshotView());
                     break;
                   case _StockAppBarAction.resetAll:
                     _confirmResetAll(ctrl);
@@ -136,38 +138,38 @@ class _StockManagementViewState extends State<StockManagementView>
                     break;
                 }
               },
-              itemBuilder: (_) => const [
+              itemBuilder: (_) => [
                 PopupMenuItem(
                   value: _StockAppBarAction.history,
-                  child: Text('স্টক স্ন্যাপশট ইতিহাস'),
+                  child: Text('স্টক স্ন্যাপশট ইতিহাস'.tr),
                 ),
                 PopupMenuItem(
                   value: _StockAppBarAction.resetAll,
-                  child: Text('সব স্টক শূন্য করুন'),
+                  child: Text('সব স্টক শূন্য করুন'.tr),
                 ),
                 PopupMenuItem(
                   value: _StockAppBarAction.refresh,
-                  child: Text('Refresh'),
+                  child: Text('Refresh'.tr),
                 ),
                 PopupMenuItem(
                   value: _StockAppBarAction.addInternal,
-                  child: Text('নতুন ইন্টার্নাল পণ্য'),
+                  child: Text('নতুন ইন্টার্নাল পণ্য'.tr),
                 ),
               ],
             )
           else ...[
             IconButton(
-              tooltip: 'স্টক স্ন্যাপশট ইতিহাস',
+              tooltip: 'স্টক স্ন্যাপশট ইতিহাস'.tr,
               icon: const Icon(Icons.history_rounded),
               onPressed: () => Get.to(() => const StockSnapshotView()),
             ),
             IconButton(
-              tooltip: 'সব স্টক শূন্য করুন',
+              tooltip: 'সব স্টক শূন্য করুন'.tr,
               icon: const Icon(Icons.layers_clear_rounded),
               onPressed: () => _confirmResetAll(ctrl),
             ),
             IconButton(
-              tooltip: 'Refresh',
+              tooltip: 'Refresh'.tr,
               icon: const Icon(Icons.refresh_rounded),
               onPressed: () {
                 ctrl.fetchProducts(forceRefresh: true);
@@ -175,8 +177,8 @@ class _StockManagementViewState extends State<StockManagementView>
               },
             ),
             IconButton(
-              tooltip: 'নতুন ইন্টার্নাল পণ্য',
-              icon: const Icon(Icons.add_box_rounded),
+              tooltip: 'নতুন ইন্টার্নাল পণ্য'.tr,
+              icon: Icon(Icons.add_box_rounded),
               onPressed: () => _addInternalProductDialog(ctrl),
             ),
           ],
@@ -184,9 +186,9 @@ class _StockManagementViewState extends State<StockManagementView>
         bottom: TabBar(
           controller: _tabs,
           isScrollable: isCompact,
-          tabs: const [
-            Tab(text: 'সকল পণ্য'),
-            Tab(text: 'ইন্টার্নাল পণ্য'),
+          tabs: [
+            Tab(text: 'সকল পণ্য'.tr),
+            Tab(text: 'ইন্টার্নাল পণ্য'.tr),
           ],
         ),
       ),
@@ -201,7 +203,7 @@ class _StockManagementViewState extends State<StockManagementView>
                 child: TextField(
                   controller: _search,
                   decoration: InputDecoration(
-                    hintText: 'পণ্য খুঁজুন...',
+                    hintText: 'পণ্য খুঁজুন...'.tr,
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: Obx(() => _searchText.value.isNotEmpty
                         ? IconButton(
@@ -269,8 +271,8 @@ class _StockManagementViewState extends State<StockManagementView>
             const SizedBox(height: 12),
             Text(
               isInternal
-                  ? 'কোনো ইন্টার্নাল পণ্য নেই\n(+ বাটন দিয়ে যোগ করুন)'
-                  : 'কোনো পণ্য পাওয়া যায়নি',
+                  ? 'কোনো ইন্টার্নাল পণ্য নেই\n(+ বাটন দিয়ে যোগ করুন)'.tr
+                  : 'কোনো পণ্য পাওয়া যায়নি'.tr,
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurface.withOpacity(0.5)),
             ),
@@ -293,13 +295,13 @@ class _StockManagementViewState extends State<StockManagementView>
   void _confirmResetAll(ProductController ctrl) {
     Get.dialog(
       AlertDialog(
-        title: const Text('সব স্টক শূন্য করবেন?'),
-        content: const Text(
-            'সব পণ্যের স্টক ০ হয়ে যাবে। এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।'),
+        title: Text('সব স্টক শূন্য করবেন?'.tr),
+        content: Text(
+            'সব পণ্যের স্টক ০ হয়ে যাবে। এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।'.tr),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('বাতিল'),
+            child: Text('বাতিল'.tr),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -307,14 +309,14 @@ class _StockManagementViewState extends State<StockManagementView>
               Get.back();
               await ctrl.resetAllStockToZero();
               Get.snackbar(
-                'সফল',
-                'সব স্টক শূন্য করা হয়েছে',
+                'সফল'.tr,
+                'সব স্টক শূন্য করা হয়েছে'.tr,
                 snackPosition: SnackPosition.BOTTOM,
                 backgroundColor: Colors.orange.shade700,
                 colorText: Colors.white,
               );
             },
-            child: const Text('হ্যাঁ, শূন্য করুন',
+            child: Text('হ্যাঁ, শূন্য করুন'.tr,
                 style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -324,7 +326,7 @@ class _StockManagementViewState extends State<StockManagementView>
 
   void _addInternalProductDialog(ProductController ctrl) {
     final name = TextEditingController();
-    final cat = TextEditingController(text: 'ইন্টার্নাল');
+    final cat = TextEditingController(text: 'ইন্টার্নাল'.tr);
     final brand = TextEditingController();
     final code = TextEditingController();
     final unit = TextEditingController();
@@ -335,26 +337,26 @@ class _StockManagementViewState extends State<StockManagementView>
 
     Get.dialog(
       AlertDialog(
-        title: const Text('নতুন ইন্টার্নাল পণ্য'),
+        title: Text('নতুন ইন্টার্নাল পণ্য'.tr),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _sectionTitle('পণ্যের তথ্য'),
-              _tf(name, 'পণ্যের নাম *'),
-              _tf(brand, 'ব্র্যান্ড'),
-              _tf(code, 'প্রোডাক্ট কোড'),
-              _tf(unit, 'ইউনিট (pcs/box/set)'),
+              _sectionTitle('পণ্যের তথ্য'.tr),
+              _tf(name, 'পণ্যের নাম *'.tr),
+              _tf(brand, 'ব্র্যান্ড'.tr),
+              _tf(code, 'প্রোডাক্ট কোড'.tr),
+              _tf(unit, 'ইউনিট (pcs/box/set)'.tr),
               const SizedBox(height: 8),
-              _sectionTitle('ক্যাটাগরি ও স্টক'),
-              _tf(cat, 'ক্যাটাগরি'),
-              _tf(stock, 'স্টক', number: true),
+              _sectionTitle('ক্যাটাগরি ও স্টক'.tr),
+              _tf(cat, 'ক্যাটাগরি'.tr),
+              _tf(stock, 'স্টক'.tr, number: true),
               const SizedBox(height: 8),
-              _sectionTitle('মূল্য'),
-              _priceTf(purchasePrice, 'ক্রয়মূল্য'),
-              _priceTf(wholesalePrice, 'পাইকারি মূল্য'),
-              _priceTf(retailPrice, 'খুচরা মূল্য'),
+              _sectionTitle('মূল্য'.tr),
+              _priceTf(purchasePrice, 'ক্রয়মূল্য'.tr),
+              _priceTf(wholesalePrice, 'পাইকারি মূল্য'.tr),
+              _priceTf(retailPrice, 'খুচরা মূল্য'.tr),
             ],
           ),
         ),
@@ -372,12 +374,12 @@ class _StockManagementViewState extends State<StockManagementView>
               retailPrice.dispose();
               Get.back();
             },
-            child: const Text('বাতিল'),
+            child: Text('বাতিল'.tr),
           ),
           ElevatedButton(
             onPressed: () async {
               if (name.text.trim().isEmpty) {
-                Get.snackbar('ত্রুটি', 'নাম আবশ্যক',
+                Get.snackbar('ত্রুটি'.tr, 'নাম আবশ্যক'.tr,
                     backgroundColor: Colors.red, colorText: Colors.white);
                 return;
               }
@@ -409,12 +411,12 @@ class _StockManagementViewState extends State<StockManagementView>
               });
               Get.back();
               _tabs.animateTo(1);
-              Get.snackbar('সফল', 'ইন্টার্নাল পণ্য যোগ হয়েছে',
+              Get.snackbar('সফল'.tr, 'ইন্টার্নাল পণ্য যোগ হয়েছে'.tr,
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: Colors.green,
                   colorText: Colors.white);
             },
-            child: const Text('যোগ করুন'),
+            child: Text('যোগ করুন'.tr),
           ),
         ],
       ),
@@ -440,20 +442,20 @@ class _StockManagementViewState extends State<StockManagementView>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _sectionTitle('পণ্যের তথ্য'),
-              _tf(name, 'পণ্যের নাম *'),
-              _tf(brand, 'ব্র্যান্ড'),
-              _tf(code, 'প্রোডাক্ট কোড'),
-              _tf(unit, 'ইউনিট (pcs/box/set)'),
+              _sectionTitle('পণ্যের তথ্য'.tr),
+              _tf(name, 'পণ্যের নাম *'.tr),
+              _tf(brand, 'ব্র্যান্ড'.tr),
+              _tf(code, 'প্রোডাক্ট কোড'.tr),
+              _tf(unit, 'ইউনিট (pcs/box/set)'.tr),
               const SizedBox(height: 8),
-              _sectionTitle('ক্যাটাগরি ও স্টক'),
-              _tf(cat, 'ক্যাটাগরি'),
-              _tf(stock, 'স্টক', number: true),
+              _sectionTitle('ক্যাটাগরি ও স্টক'.tr),
+              _tf(cat, 'ক্যাটাগরি'.tr),
+              _tf(stock, 'স্টক'.tr, number: true),
               const SizedBox(height: 8),
-              _sectionTitle('মূল্য'),
-              _priceTf(purchasePrice, 'ক্রয়মূল্য'),
-              _priceTf(wholesalePrice, 'পাইকারি মূল্য'),
-              _priceTf(retailPrice, 'খুচরা মূল্য'),
+              _sectionTitle('মূল্য'.tr),
+              _priceTf(purchasePrice, 'ক্রয়মূল্য'.tr),
+              _priceTf(wholesalePrice, 'পাইকারি মূল্য'.tr),
+              _priceTf(retailPrice, 'খুচরা মূল্য'.tr),
             ],
           ),
         ),
@@ -471,12 +473,12 @@ class _StockManagementViewState extends State<StockManagementView>
               retailPrice.dispose();
               Get.back();
             },
-            child: const Text('বাতিল'),
+            child: Text('বাতিল'.tr),
           ),
           ElevatedButton(
             onPressed: () async {
               if (name.text.trim().isEmpty) {
-                Get.snackbar('ত্রুটি', 'নাম আবশ্যক',
+                Get.snackbar('ত্রুটি'.tr, 'নাম আবশ্যক'.tr,
                     backgroundColor: Colors.red, colorText: Colors.white);
                 return;
               }
@@ -492,12 +494,12 @@ class _StockManagementViewState extends State<StockManagementView>
                 'retailPrice': double.tryParse(retailPrice.text.trim()) ?? 0,
               });
               Get.back();
-              Get.snackbar('সফল', 'পণ্য আপডেট হয়েছে',
+              Get.snackbar('সফল'.tr, 'পণ্য আপডেট হয়েছে'.tr,
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: Colors.green,
                   colorText: Colors.white);
             },
-            child: const Text('আপডেট করুন'),
+            child: Text('আপডেট করুন'.tr),
           ),
         ],
       ),
@@ -606,7 +608,7 @@ class _StockTile extends StatelessWidget {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            'ইন্টার্নাল',
+                            'ইন্টার্নাল'.tr,
                             style: TextStyle(
                                 fontSize: 10,
                                 color: cs.onTertiaryContainer,
@@ -660,7 +662,7 @@ class _StockTile extends StatelessWidget {
             _actionBtn(
               icon: Icons.remove_circle_outline_rounded,
               color: Colors.red,
-              tooltip: 'স্টক কমান (বিক্রি/ব্যবহার)',
+              tooltip: 'স্টক কমান (বিক্রি/ব্যবহার)'.tr,
               compact: isCompact,
               onTap: () => _adjustStockDialog(context, isAdd: false),
             ),
@@ -668,7 +670,7 @@ class _StockTile extends StatelessWidget {
             _actionBtn(
               icon: Icons.add_circle_outline_rounded,
               color: Colors.green.shade700,
-              tooltip: 'স্টক বাড়ান (ক্রয়/যোগ)',
+              tooltip: 'স্টক বাড়ান (ক্রয়/যোগ)'.tr,
               compact: isCompact,
               onTap: () => _adjustStockDialog(context, isAdd: true),
             ),
@@ -677,7 +679,7 @@ class _StockTile extends StatelessWidget {
               _actionBtn(
                 icon: Icons.edit_outlined,
                 color: Colors.blue.shade700,
-                tooltip: 'পণ্য এডিট করুন',
+                tooltip: 'পণ্য এডিট করুন'.tr,
                 compact: isCompact,
                 onTap: () => _editInternalProduct(context),
               ),
@@ -685,7 +687,7 @@ class _StockTile extends StatelessWidget {
               _actionBtn(
                 icon: Icons.delete_outline_rounded,
                 color: Colors.red.shade700,
-                tooltip: 'পণ্য ডিলেট করুন',
+                tooltip: 'পণ্য ডিলেট করুন'.tr,
                 compact: isCompact,
                 onTap: () => _confirmDelete(context),
               ),
@@ -739,21 +741,21 @@ class _StockTile extends StatelessWidget {
   void _confirmDelete(BuildContext context) {
     Get.dialog(
       AlertDialog(
-        title: const Text('পণ্য ডিলেট করবেন?'),
-        content: Text('"${product.name}" স্থায়ীভাবে মুছে যাবে।'),
+        title: Text('পণ্য ডিলেট করবেন?'.tr),
+        content: Text('"${product.name}" ${'স্থায়ীভাবে মুছে যাবে'.tr}।'),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('বাতিল')),
+          TextButton(onPressed: () => Get.back(), child: Text('বাতিল'.tr)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               Get.back();
               await ctrl.deleteProduct(product.id);
-              Get.snackbar('ডিলেট হয়েছে', '"${product.name}" মুছে ফেলা হয়েছে',
+              Get.snackbar('ডিলেট হয়েছে'.tr, '"${product.name}" ${'মুছে ফেলা হয়েছে'.tr}',
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: Colors.red.shade700,
                   colorText: Colors.white);
             },
-            child: const Text('ডিলেট করুন',
+            child: Text('ডিলেট করুন'.tr,
                 style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -813,33 +815,33 @@ class _StockTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              section('পণ্যের তথ্য'),
-              tf(name, 'পণ্যের নাম *'),
-              tf(brand, 'ব্র্যান্ড'),
-              tf(code, 'প্রোডাক্ট কোড'),
-              tf(unitCtrl, 'ইউনিট (pcs/box/set)'),
+              section('পণ্যের তথ্য'.tr),
+              tf(name, 'পণ্যের নাম *'.tr),
+              tf(brand, 'ব্র্যান্ড'.tr),
+              tf(code, 'প্রোডাক্ট কোড'.tr),
+              tf(unitCtrl, 'ইউনিট (pcs/box/set)'.tr),
               const SizedBox(height: 8),
-              section('ক্যাটাগরি ও স্টক'),
-              tf(cat, 'ক্যাটাগরি'),
-              tf(stockCtrl, 'স্টক', number: true),
+              section('ক্যাটাগরি ও স্টক'.tr),
+              tf(cat, 'ক্যাটাগরি'.tr),
+              tf(stockCtrl, 'স্টক'.tr, number: true),
               const SizedBox(height: 8),
-              section('মূল্য'),
-              tf(purchaseCtrl, 'ক্রয়মূল্য',
+              section('মূল্য'.tr),
+              tf(purchaseCtrl, 'ক্রয়মূল্য'.tr,
                   number: true, decimal: true, prefix: '৳ '),
-              tf(wholesaleCtrl, 'পাইকারি মূল্য',
+              tf(wholesaleCtrl, 'পাইকারি মূল্য'.tr,
                   number: true, decimal: true, prefix: '৳ '),
-              tf(retailCtrl, 'খুচরা মূল্য',
+              tf(retailCtrl, 'খুচরা মূল্য'.tr,
                   number: true, decimal: true, prefix: '৳ '),
             ],
           ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Get.back(), child: const Text('বাতিল')),
+              onPressed: () => Get.back(), child: Text('বাতিল'.tr)),
           ElevatedButton(
             onPressed: () async {
               if (name.text.trim().isEmpty) {
-                Get.snackbar('ত্রুটি', 'নাম আবশ্যক',
+                Get.snackbar('ত্রুটি'.tr, 'নাম আবশ্যক'.tr,
                     backgroundColor: Colors.red, colorText: Colors.white);
                 return;
               }
@@ -857,12 +859,12 @@ class _StockTile extends StatelessWidget {
                 'retailPrice': double.tryParse(retailCtrl.text.trim()) ?? 0,
               });
               Get.back();
-              Get.snackbar('সফল', 'পণ্য আপডেট হয়েছে',
+              Get.snackbar('সফল'.tr, 'পণ্য আপডেট হয়েছে'.tr,
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: Colors.green,
                   colorText: Colors.white);
             },
-            child: const Text('আপডেট করুন'),
+            child: Text('আপডেট করুন'.tr),
           ),
         ],
       ),
@@ -878,13 +880,13 @@ class _StockTile extends StatelessWidget {
           controller: stockCtrl,
           keyboardType: TextInputType.number,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'নতুন স্টক পরিমাণ',
+          decoration: InputDecoration(
+            labelText: 'নতুন স্টক পরিমাণ'.tr,
             border: OutlineInputBorder(),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('বাতিল')),
+          TextButton(onPressed: () => Get.back(), child: Text('বাতিল'.tr)),
           ElevatedButton(
             onPressed: () async {
               final val = int.tryParse(stockCtrl.text);
@@ -892,7 +894,7 @@ class _StockTile extends StatelessWidget {
               await ctrl.updateProduct(product.id, {'stock': val});
               Get.back();
             },
-            child: const Text('সেট করুন'),
+            child: Text('সেট করুন'.tr),
           ),
         ],
       ),
@@ -908,8 +910,8 @@ class _StockTile extends StatelessWidget {
     final retailCtrl = TextEditingController(
         text: product.retailPrice > 0 ? product.retailPrice.toString() : '');
 
-    final title = isAdd ? 'স্টক যোগ করুন' : 'স্টক কমান';
-    final hint = isAdd ? 'কত যোগ করবেন?' : 'কত বাদ দেবেন?';
+    final title = isAdd ? 'স্টক যোগ করুন'.tr : 'স্টক কমান'.tr;
+    final hint = isAdd ? 'কত যোগ করবেন?'.tr : 'কত বাদ দেবেন?'.tr;
     final icon = isAdd ? Icons.add_circle_rounded : Icons.remove_circle_rounded;
     final color = isAdd ? Colors.green.shade700 : Colors.red;
 
@@ -934,7 +936,7 @@ class _StockTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
-                'বর্তমান স্টক: ${product.stock}',
+                '${'বর্তমান স্টক'.tr}: ${product.stock}',
                 style: const TextStyle(fontSize: 12.5, color: Colors.grey),
               ),
               const SizedBox(height: 12),
@@ -950,34 +952,34 @@ class _StockTile extends StatelessWidget {
               if (isAdd) ...[
                 const SizedBox(height: 14),
                 const Divider(),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 6),
                   child: Text(
-                    'মূল্য আপডেট (ঐচ্ছিক)',
+                    'মূল্য আপডেট (ঐচ্ছিক)'.tr,
                     style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: Colors.grey),
                   ),
                 ),
-                _priceTf(purchaseCtrl, 'ক্রয়মূল্য'),
+                _priceTf(purchaseCtrl, 'ক্রয়মূল্য'.tr),
                 const SizedBox(height: 8),
-                _priceTf(wholesaleCtrl, 'পাইকারি মূল্য'),
+                _priceTf(wholesaleCtrl, 'পাইকারি মূল্য'.tr),
                 const SizedBox(height: 8),
-                _priceTf(retailCtrl, 'খুচরা মূল্য'),
+                _priceTf(retailCtrl, 'খুচরা মূল্য'.tr),
               ],
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('বাতিল')),
+          TextButton(onPressed: () => Get.back(), child: Text('বাতিল'.tr)),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: color, foregroundColor: Colors.white),
             onPressed: () async {
               final qty = int.tryParse(qtyCtrl.text);
               if (qty == null || qty <= 0) {
-                Get.snackbar('ত্রুটি', 'সঠিক পরিমাণ দিন',
+                Get.snackbar('ত্রুটি'.tr, 'সঠিক পরিমাণ দিন'.tr,
                     backgroundColor: Colors.red, colorText: Colors.white);
                 return;
               }
@@ -999,7 +1001,7 @@ class _StockTile extends StatelessWidget {
               }
               Get.back();
               Get.snackbar(
-                isAdd ? 'যোগ হয়েছে' : 'কমানো হয়েছে',
+                isAdd ? 'যোগ হয়েছে'.tr : 'কমানো হয়েছে'.tr,
                 '${product.name}: ${isAdd ? '+' : '-'}$qty',
                 snackPosition: SnackPosition.BOTTOM,
                 backgroundColor: isAdd ? Colors.green : Colors.orange,
@@ -1007,7 +1009,7 @@ class _StockTile extends StatelessWidget {
                 duration: const Duration(seconds: 2),
               );
             },
-            child: Text(isAdd ? 'যোগ করুন' : 'কমান'),
+            child: Text(isAdd ? 'যোগ করুন'.tr : 'কমান'.tr),
           ),
         ],
       ),

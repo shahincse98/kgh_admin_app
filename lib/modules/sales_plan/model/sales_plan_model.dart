@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:get/get.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Customer-based monthly sales plan.
@@ -69,10 +70,10 @@ class CustomerSalesPlan {
     if (parts.length != 2) return month;
     final y = int.tryParse(parts[0]) ?? 0;
     final m = int.tryParse(parts[1]) ?? 0;
-    const names = [
-      'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-      'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর',
-      'ডিসেম্বর'
+    final names = [
+      'জানুয়ারি'.tr, 'ফেব্রুয়ারি'.tr, 'মার্চ'.tr, 'এপ্রিল'.tr, 'মে'.tr, 'জুন'.tr,
+      'জুলাই'.tr, 'আগস্ট'.tr, 'সেপ্টেম্বর'.tr, 'অক্টোবর'.tr, 'নভেম্বর'.tr,
+      'ডিসেম্বর'.tr
     ];
     if (m < 1 || m > 12) return month;
     return '${names[m - 1]} $y';
@@ -160,12 +161,12 @@ class SalesPlanModel {
 
   String get displayPeriod {
     if (type == 'weekly') {
-      final end = periodEnd.subtract(const Duration(days: 1));
+      final end = periodEnd.subtract(Duration(days: 1));
       return '${_d(periodStart)} – ${_d(end)}';
     }
-    const months = [
-      'জানু', 'ফেব্রু', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-      'জুলাই', 'আগস্ট', 'সেপ্ট', 'অক্টো', 'নভে', 'ডিসে'
+    final months = [
+      'জানু'.tr, 'ফেব্রু'.tr, 'মার্চ'.tr, 'এপ্রিল'.tr, 'মে'.tr, 'জুন'.tr,
+      'জুলাই'.tr, 'আগস্ট'.tr, 'সেপ্ট'.tr, 'অক্টো'.tr, 'নভে'.tr, 'ডিসে'.tr
     ];
     return '${months[periodStart.month - 1]} ${periodStart.year}';
   }

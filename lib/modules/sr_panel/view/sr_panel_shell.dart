@@ -28,7 +28,7 @@ class SrPanelShell extends StatelessWidget {
 
     final scheme = Theme.of(context).colorScheme;
 
-    final pages = const [
+    final pages = [
       SrHomeView(),
       SrPlaceOrderView(),
       SrMyOrdersView(),
@@ -38,12 +38,12 @@ class SrPanelShell extends StatelessWidget {
 
     return Obx(() {
       final idx = navCtrl.tabIndex.value;
-      final destinations = const [
-        NavigationDestination(icon: Icon(Icons.dashboard_rounded), label: 'ড্যাশবোর্ড'),
-        NavigationDestination(icon: Icon(Icons.add_shopping_cart_rounded), label: 'অর্ডার করুন'),
-        NavigationDestination(icon: Icon(Icons.receipt_long_rounded), label: 'আমার অর্ডার'),
-        NavigationDestination(icon: Icon(Icons.people_alt_rounded), label: 'ইউজার'),
-        NavigationDestination(icon: Icon(Icons.account_balance_wallet_rounded), label: 'বাকি'),
+      final destinations = [
+        NavigationDestination(icon: Icon(Icons.dashboard_rounded), label: 'ড্যাশবোর্ড'.tr),
+        NavigationDestination(icon: Icon(Icons.add_shopping_cart_rounded), label: 'অর্ডার করুন'.tr),
+        NavigationDestination(icon: Icon(Icons.receipt_long_rounded), label: 'আমার অর্ডার'.tr),
+        NavigationDestination(icon: Icon(Icons.people_alt_rounded), label: 'ইউজার'.tr),
+        NavigationDestination(icon: Icon(Icons.account_balance_wallet_rounded), label: 'বাকি'.tr),
       ];
 
       return LayoutBuilder(builder: (ctx, c) {
@@ -58,12 +58,12 @@ class SrPanelShell extends StatelessWidget {
                   selectedIndex: idx,
                   onDestinationSelected: (i) => navCtrl.tabIndex.value = i,
                   labelType: NavigationRailLabelType.all,
-                  destinations: const [
-                    NavigationRailDestination(icon: Icon(Icons.dashboard_rounded), label: Text('ড্যাশবোর্ড')),
-                    NavigationRailDestination(icon: Icon(Icons.add_shopping_cart_rounded), label: Text('অর্ডার')),
-                    NavigationRailDestination(icon: Icon(Icons.receipt_long_rounded), label: Text('অর্ডার তালিকা')),
-                    NavigationRailDestination(icon: Icon(Icons.people_alt_rounded), label: Text('ইউজার')),
-                    NavigationRailDestination(icon: Icon(Icons.account_balance_wallet_rounded), label: Text('বাকি')),
+                  destinations: [
+                    NavigationRailDestination(icon: Icon(Icons.dashboard_rounded), label: Text('ড্যাশবোর্ড'.tr)),
+                    NavigationRailDestination(icon: Icon(Icons.add_shopping_cart_rounded), label: Text('অর্ডার'.tr)),
+                    NavigationRailDestination(icon: Icon(Icons.receipt_long_rounded), label: Text('অর্ডার তালিকা'.tr)),
+                    NavigationRailDestination(icon: Icon(Icons.people_alt_rounded), label: Text('ইউজার'.tr)),
+                    NavigationRailDestination(icon: Icon(Icons.account_balance_wallet_rounded), label: Text('বাকি'.tr)),
                   ],
                 ),
                 const VerticalDivider(width: 1, thickness: 1),

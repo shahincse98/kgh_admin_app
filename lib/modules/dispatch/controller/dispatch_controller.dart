@@ -34,7 +34,10 @@ class DispatchController extends GetxController {
       final deliveredSnap = await _db
           .collection('orders')
           .where('status', isEqualTo: 'delivered')
-          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(ninetyDaysAgo))
+          .where(
+            'createdAt',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(ninetyDaysAgo),
+          )
           .get();
 
       final list = <OrderModel>[];
@@ -58,11 +61,13 @@ class DispatchController extends GetxController {
     final q = searchText.value.trim().toLowerCase();
     if (q.isNotEmpty) {
       list = list
-          .where((o) =>
-              o.shopName.toLowerCase().contains(q) ||
-              o.id.toLowerCase().contains(q) ||
-              o.shopPhone.contains(q) ||
-              o.memoNumber.toLowerCase().contains(q))
+          .where(
+            (o) =>
+                o.shopName.toLowerCase().contains(q) ||
+                o.id.toLowerCase().contains(q) ||
+                o.shopPhone.contains(q) ||
+                o.memoNumber.toLowerCase().contains(q),
+          )
           .toList();
     }
     return list;
@@ -84,10 +89,9 @@ class DispatchController extends GetxController {
     }
   }
 
-  int get totalItems =>
-      orders
-          .where((o) => selectedOrderIds.contains(o.id))
-          .fold(0, (s, o) => s + o.items.length);
+  int get totalItems => orders
+      .where((o) => selectedOrderIds.contains(o.id))
+      .fold(0, (s, o) => s + o.items.length);
 
   Future<void> dispatchSelected({required String memoNumber}) async {
     final oc = Get.find<OrderController>();
@@ -99,10 +103,7 @@ class DispatchController extends GetxController {
       await oc.dispatchOrder(
         orderId: order.id,
         items: order.items
-            .map((i) => {
-                  'productId': i.productId,
-                  'quantity': i.quantity,
-                })
+            .map((i) => {'productId': i.productId, 'quantity': i.quantity})
             .toList(),
         memoNumber: memoNumber,
       );

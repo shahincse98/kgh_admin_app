@@ -32,7 +32,8 @@ class StockInController extends GetxController {
           .get();
 
       entries.assignAll(
-          snap.docs.map((e) => StockInModel.fromFirestore(e)).toList());
+        snap.docs.map((e) => StockInModel.fromFirestore(e)).toList(),
+      );
       _loadedOnce = true;
     } catch (_) {}
     loading.value = false;
@@ -42,9 +43,7 @@ class StockInController extends GetxController {
     var list = entries.toList();
 
     if (selectedProductId.value.isNotEmpty) {
-      list = list
-          .where((e) => e.productId == selectedProductId.value)
-          .toList();
+      list = list.where((e) => e.productId == selectedProductId.value).toList();
     }
 
     if (fromDate.value != null) {
@@ -52,18 +51,27 @@ class StockInController extends GetxController {
     }
     if (toDate.value != null) {
       final toEnd = DateTime(
-          toDate.value!.year, toDate.value!.month, toDate.value!.day, 23, 59, 59);
+        toDate.value!.year,
+        toDate.value!.month,
+        toDate.value!.day,
+        23,
+        59,
+        59,
+      );
       list = list.where((e) => !e.date.isAfter(toEnd)).toList();
     }
 
     final q = searchText.value.trim().toLowerCase();
     if (q.isNotEmpty) {
-      list = list.where((e) =>
-        e.productName.toLowerCase().contains(q) ||
-        e.source.toLowerCase().contains(q) ||
-        e.note.toLowerCase().contains(q) ||
-        e.id.toLowerCase().contains(q)
-      ).toList();
+      list = list
+          .where(
+            (e) =>
+                e.productName.toLowerCase().contains(q) ||
+                e.source.toLowerCase().contains(q) ||
+                e.note.toLowerCase().contains(q) ||
+                e.id.toLowerCase().contains(q),
+          )
+          .toList();
     }
     return list;
   }
@@ -73,8 +81,7 @@ class StockInController extends GetxController {
       filteredEntries.fold(0, (s, e) => s + e.totalPrice);
 
   /// Total quantity of all (filtered) entries
-  int get totalQuantity =>
-      filteredEntries.fold(0, (s, e) => s + e.quantity);
+  int get totalQuantity => filteredEntries.fold(0, (s, e) => s + e.quantity);
 
   /// Total entries count
   int get totalEntries => filteredEntries.length;
@@ -85,17 +92,19 @@ class StockInController extends GetxController {
 
     for (final e in list) {
       final key = '${e.date.toIso8601String().substring(0, 10)}|${e.source}';
-      map.putIfAbsent(key, () => StockInGroup(
-        date: e.date,
-        source: e.source,
-        note: e.note,
-        entries: [],
-      ));
+      map.putIfAbsent(
+        key,
+        () => StockInGroup(
+          date: e.date,
+          source: e.source,
+          note: e.note,
+          entries: [],
+        ),
+      );
       map[key]!.entries.add(e);
     }
 
-    return map.values.toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    return map.values.toList()..sort((a, b) => b.date.compareTo(a.date));
   }
 
   Future<void> addStockIn({
@@ -149,20 +158,23 @@ class StockInController extends GetxController {
     } catch (_) {}
 
     // Add to local cache
-    entries.insert(0, StockInModel(
-      id: docRef.id,
-      productId: productId,
-      productName: productName,
-      image: image,
-      quantity: quantity,
-      unitPrice: unitPrice,
-      totalPrice: totalPrice,
-      source: source,
-      note: note,
-      date: date,
-      createdAt: DateTime.now(),
-      createdBy: currentUser,
-    ));
+    entries.insert(
+      0,
+      StockInModel(
+        id: docRef.id,
+        productId: productId,
+        productName: productName,
+        image: image,
+        quantity: quantity,
+        unitPrice: unitPrice,
+        totalPrice: totalPrice,
+        source: source,
+        note: note,
+        date: date,
+        createdAt: DateTime.now(),
+        createdBy: currentUser,
+      ),
+    );
   }
 
   Future<void> addMultipleStockIn({
@@ -233,20 +245,22 @@ class StockInController extends GetxController {
       final quantity = (item['quantity'] as num?)?.toInt() ?? 0;
       final unitPrice = (item['unitPrice'] as num?) ?? 0;
       if (productId.isEmpty || quantity <= 0) continue;
-      newEntries.add(StockInModel(
-        id: '',
-        productId: productId,
-        productName: productName,
-        image: image,
-        quantity: quantity,
-        unitPrice: unitPrice,
-        totalPrice: unitPrice * quantity,
-        source: source,
-        note: note,
-        date: date,
-        createdAt: DateTime.now(),
-        createdBy: currentUser,
-      ));
+      newEntries.add(
+        StockInModel(
+          id: '',
+          productId: productId,
+          productName: productName,
+          image: image,
+          quantity: quantity,
+          unitPrice: unitPrice,
+          totalPrice: unitPrice * quantity,
+          source: source,
+          note: note,
+          date: date,
+          createdAt: DateTime.now(),
+          createdBy: currentUser,
+        ),
+      );
     }
     entries.insertAll(0, newEntries);
   }
@@ -256,14 +270,18 @@ class StockInController extends GetxController {
     if (entry != null && entry.productId.isNotEmpty) {
       final batch = _db.batch();
       // Restore stock
-      batch.update(_db.collection('products').doc(entry.productId),
-          {'stock': FieldValue.increment(-entry.quantity)});
+      batch.update(_db.collection('products').doc(entry.productId), {
+        'stock': FieldValue.increment(-entry.quantity),
+      });
       batch.delete(_db.collection('stock_ins').doc(id));
       await batch.commit();
 
       // Update product stock locally
       try {
-        Get.find<ProductController>().updateStockLocally(entry.productId, -entry.quantity);
+        Get.find<ProductController>().updateStockLocally(
+          entry.productId,
+          -entry.quantity,
+        );
       } catch (_) {}
     } else {
       await _db.collection('stock_ins').doc(id).delete();
@@ -290,8 +308,9 @@ class StockInController extends GetxController {
 
     // 1. Reverse old stock
     if (oldEntry.productId.isNotEmpty) {
-      batch.update(_db.collection('products').doc(oldEntry.productId),
-          {'stock': FieldValue.increment(-oldEntry.quantity)});
+      batch.update(_db.collection('products').doc(oldEntry.productId), {
+        'stock': FieldValue.increment(-oldEntry.quantity),
+      });
     }
 
     // 2. Apply new stock + update purchase price

@@ -13,6 +13,7 @@ import '../../replace/controller/admin_replace_controller.dart';
 import '../../stock_in/controller/stock_in_controller.dart';
 import '../../../widgets/call_button.dart';
 import '../../../widgets/responsive.dart';
+import '../../../localization/domain_labels.dart';
 
 // ─── Editable item state ────────────────────────────────────────
 class _EditItem {
@@ -240,7 +241,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 child: Row(children: [
                   const Icon(Icons.person_search_rounded),
                   const SizedBox(width: 10),
-                  Text('SR নির্বাচন করুন',
+                  Text('SR নির্বাচন করুন'.tr,
                       style: Theme.of(ctx)
                           .textTheme
                           .titleMedium
@@ -341,8 +342,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   Future<void> _saveItems() async {
     if (_editItems.isEmpty) {
       final confirm = await _confirm(
-        'সতর্কতা',
-        'সব প্রডাক্ট রিমুভ করা হয়েছে। Order টি খালি সেভ করবেন?',
+        'সতর্কতা'.tr,
+        'সব প্রডাক্ট রিমুভ করা হয়েছে। Order টি খালি সেভ করবেন?'.tr,
       );
       if (confirm != true) return;
     }
@@ -361,7 +362,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       _productSearchCtrl.clear();
       _productQuery = '';
     });
-    Get.snackbar('সফল', 'প্রডাক্ট লিস্ট আপডেট হয়েছে',
+    Get.snackbar('সফল'.tr, 'প্রডাক্ট লিস্ট আপডেট হয়েছে'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: const Color(0xFF16A34A),
         colorText: Colors.white);
@@ -375,10 +376,10 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         actions: [
             TextButton(
                 onPressed: () => Get.back(result: false),
-                child: const Text('না')),
+                child: Text('না'.tr)),
             ElevatedButton(
                 onPressed: () => Get.back(result: true),
-                child: const Text('হ্যাঁ')),
+                child: Text('হ্যাঁ'.tr)),
           ],
         ),
       );
@@ -426,12 +427,12 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 _initEditItems(); // discard changes
               }),
               icon: const Icon(Icons.close_rounded),
-              label: const Text('বাতিল'),
+              label: Text('বাতিল'.tr),
             )
           else
             IconButton(
               icon: const Icon(Icons.edit_note_rounded),
-              tooltip: 'প্রডাক্ট এডিট করুন',
+              tooltip: 'প্রডাক্ট এডিট করুন'.tr,
               onPressed: () => setState(() => _editMode = true),
             ),
         ],
@@ -464,8 +465,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFF2563EB).withAlpha(20), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.person_search_rounded, color: Color(0xFF2563EB), size: 18)),
                     const SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('ক্রেতা', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
-                      Text(_currentShopName.isNotEmpty ? _currentShopName : 'ক্রেতা নির্বাচিত নেই', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                      Text('ক্রেতা'.tr, style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
+                      Text(_currentShopName.isNotEmpty ? _currentShopName : 'ক্রেতা নির্বাচিত নেই'.tr, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                     ])),
                     const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                   ]),
@@ -537,7 +538,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     children: [
                       Text(
                         widget.order.shopName.isEmpty
-                            ? 'Unknown Shop'
+                            ? 'Unknown Shop'.tr
                             : widget.order.shopName,
                         style: const TextStyle(
                             color: Colors.white,
@@ -567,7 +568,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                             const Icon(Icons.person_rounded,
                                 color: Colors.white70, size: 13),
                             const SizedBox(width: 4),
-                            Text('ক্রেতা: ${widget.order.userPhone}',
+                            Text('${'ক্রেতা'.tr}: ${widget.order.userPhone}',
                                 style: const TextStyle(
                                     color: Colors.white70, fontSize: 13)),
                             CallButton(
@@ -676,7 +677,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('অর্ডার স্ট্যাটাস',
+            Text('অর্ডার স্ট্যাটাস'.tr,
                 style: Theme.of(context)
                     .textTheme
                     .titleSmall
@@ -770,7 +771,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               children: [
                 Expanded(
                   child: Text(
-                    'প্রডাক্ট লিস্ট',
+                    'প্রডাক্ট লিস্ট'.tr,
                     style: Theme.of(context)
                         .textTheme
                         .titleSmall
@@ -779,7 +780,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 ),
                 if (_editMode)
                   Text(
-                    '${_editItems.length} টি পণ্য',
+                    '${_editItems.length} ${'টি পণ্য'.tr}',
                     style: const TextStyle(
                         fontSize: 12, color: Colors.grey),
                   ),
@@ -802,7 +803,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('মোট',
+                Text('মোট'.tr,
                     style: const TextStyle(
                         fontWeight: FontWeight.w700, fontSize: 14)),
                 Text(
@@ -828,7 +829,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                               strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.save_rounded),
                   label: Text(
-                      _saving ? 'সেভ হচ্ছে…' : 'পরিবর্তন সেভ করুন'),
+                      _saving ? 'সেভ হচ্ছে…'.tr : 'পরিবর্তন সেভ করুন'.tr),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0891B2),
                     foregroundColor: Colors.white,
@@ -846,7 +847,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 child: OutlinedButton.icon(
                   onPressed: _addReplaceFromDetailPage,
                   icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-                  label: const Text('রিপ্লেস প্রডাক্ট যোগ'),
+                  label: Text('রিপ্লেস প্রডাক্ট যোগ'.tr),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF7C3AED),
                     side: const BorderSide(color: Color(0xFF7C3AED)),
@@ -903,8 +904,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                           color: const Color(0xFF6366F1),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: const Text(
-                          'ইন্টার্নাল',
+                        child: Text(
+                          'ইন্টার্নাল'.tr,
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 9,
@@ -1073,11 +1074,11 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             iconSize: 20,
             color: Colors.red.shade400,
             visualDensity: VisualDensity.compact,
-            tooltip: 'রিমুভ করুন',
+            tooltip: 'রিমুভ করুন'.tr,
             onPressed: () async {
               final ok = await _confirm(
-                  'রিমুভ করবেন?',
-                  '"${item.productName}" এই অর্ডার থেকে রিমুভ করতে চান?');
+                  'রিমুভ করবেন?'.tr,
+                  '"${item.productName}" ${'এই অর্ডার থেকে রিমুভ করতে চান'.tr}?');
               if (ok == true) {
                 setState(() => _editItems.removeAt(index));
               }
@@ -1108,7 +1109,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     onChanged: (v) =>
                         setState(() => _productQuery = v.trim().toLowerCase()),
                     decoration: InputDecoration(
-                      hintText: 'প্রডাক্ট নাম দিয়ে খুঁজুন…',
+                      hintText: 'প্রডাক্ট নাম দিয়ে খুঁজুন…'.tr,
                       prefixIcon: _loadingProducts
                           ? const Padding(
                               padding: EdgeInsets.all(12),
@@ -1169,7 +1170,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             const SizedBox(width: 8),
             // ─ Browse-All button ───────────────────────────────
             Tooltip(
-              message: 'সব প্রডাক্ট দেখুন',
+              message: 'সব প্রডাক্ট দেখুন'.tr,
               child: InkWell(
                 onTap: () => _showProductPickerSheet(scheme),
                 borderRadius: BorderRadius.circular(12),
@@ -1267,7 +1268,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               : Colors.red.withAlpha(20),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Text('স্টক: $stock',
+        child: Text('${'স্টক'.tr}: $stock',
             style: TextStyle(
                 fontSize: 10,
                 color: stock > 0
@@ -1355,7 +1356,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: Text('প্রডাক্ট বেছে নিন',
+                          child: Text('প্রডাক্ট বেছে নিন'.tr,
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
@@ -1363,7 +1364,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                                       fontWeight: FontWeight.w800)),
                         ),
                         if (selected.isNotEmpty)
-                          Text('${selected.length} টি বেছেছেন',
+                          Text('${selected.length} ${'টি বেছেছেন'.tr}',
                               style: const TextStyle(
                                   fontSize: 13,
                                   color: Color(0xFF0891B2),
@@ -1381,7 +1382,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                       onChanged: (v) => setSheetState(
                           () => sheetQuery = v.trim().toLowerCase()),
                       decoration: InputDecoration(
-                        hintText: 'নাম বা কোড দিয়ে ফিল্টার করুন…',
+                        hintText: 'নাম বা কোড দিয়ে ফিল্টার করুন…'.tr,
                         prefixIcon:
                             const Icon(Icons.search_rounded, size: 20),
                         filled: true,
@@ -1403,8 +1404,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                         ? const Center(
                             child: CircularProgressIndicator())
                         : displayed.isEmpty
-                            ? const Center(
-                                child: Text('কোনো প্রডাক্ট পাওয়া যায়নি',
+                            ? Center(
+                                child: Text('কোনো প্রডাক্ট পাওয়া যায়নি'.tr,
                                     style:
                                         TextStyle(color: Colors.grey)))
                             : ListView.separated(
@@ -1530,7 +1531,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                                 },
                           icon: const Icon(Icons.done_all_rounded),
                           label: Text(selected.isEmpty
-                              ? 'প্রডাক্ট বেছে নিন'
+                              ? 'প্রডাক্ট বেছে নিন'.tr
                               : '${selected.length} টি প্রডাক্ট যোগ করুন'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF0891B2),
@@ -1588,11 +1589,11 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.local_shipping_rounded, color: Color(0xFFD97706), size: 22),
             SizedBox(width: 8),
-            Text('স্টক আউট / Dispatch', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            Text('স্টক আউট / Dispatch'.tr, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
           ],
         ),
         content: SingleChildScrollView(
@@ -1608,25 +1609,25 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 ),
                 child: Column(
                   children: [
-                    _dialogPayRow('অর্ডার', '#${widget.order.id}', const Color(0xFF0891B2)),
+                    _dialogPayRow('অর্ডার'.tr, '#${widget.order.id}', const Color(0xFF0891B2)),
                     const SizedBox(height: 6),
-                    _dialogPayRow('কাস্টমার', widget.order.shopName, const Color(0xFF2563EB)),
+                    _dialogPayRow('কাস্টমার'.tr, widget.order.shopName, const Color(0xFF2563EB)),
                     const SizedBox(height: 6),
-                    _dialogPayRow('প্রডাক্ট', '${widget.order.items.length} টি', const Color(0xFF7C3AED)),
+                    _dialogPayRow('প্রডাক্ট'.tr, '${widget.order.items.length} ${'টি'.tr}', const Color(0xFF7C3AED)),
                     const SizedBox(height: 6),
-                    _dialogPayRow('টোটাল', '৳ ${_fmt.format(widget.order.totalAmount.toInt())}', const Color(0xFF0891B2)),
+                    _dialogPayRow('টোটাল'.tr, '৳ ${_fmt.format(widget.order.totalAmount.toInt())}', const Color(0xFF0891B2)),
                   ],
                 ),
               ),
               const SizedBox(height: 14),
-              const Text('মেমো / চালান নাম্বার',
+              Text('মেমো / চালান নাম্বার'.tr,
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
               const SizedBox(height: 4),
               TextField(
                 controller: memoCtrl,
                 autofocus: true,
                 decoration: InputDecoration(
-                  hintText: 'মেমো নাম্বার লিখুন',
+                  hintText: 'মেমো নাম্বার লিখুন'.tr,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1634,18 +1635,18 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               ),
               const SizedBox(height: 10),
               Text(
-                'সতর্কতা: Dispatch করলে স্টক কেটে যাবে। এটি undo করা যাবে না।',
+                'সতর্কতা: Dispatch করলে স্টক কেটে যাবে। এটি undo করা যাবে না।'.tr,
                 style: TextStyle(fontSize: 11, color: Colors.red.shade700, fontWeight: FontWeight.w600),
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')),
+          TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)),
           ElevatedButton.icon(
             onPressed: () => Get.back(result: true),
             icon: const Icon(Icons.check_rounded, size: 16),
-            label: const Text('Dispatch করুন'),
+            label: Text('Dispatch করুন'.tr),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFD97706),
               foregroundColor: Colors.white,
@@ -1659,7 +1660,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     if (confirmed == true) {
       final memo = memoCtrl.text.trim();
       if (memo.isEmpty) {
-        Get.snackbar('ত্রুটি', 'মেমো নাম্বার দিতে হবে', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+        Get.snackbar('ত্রুটি'.tr, 'মেমো নাম্বার দিতে হবে'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
         return;
       }
       setState(() => _currentStatus = 'dispatched');
@@ -1668,7 +1669,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         items: widget.order.items.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList(),
         memoNumber: memo,
       );
-      Get.snackbar('সফল', 'স্টক আউট সম্পন্ন হয়েছে\nমেমো: $memo', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFFD97706), colorText: Colors.white);
+      Get.snackbar('সফল'.tr, '${'স্টক আউট সম্পন্ন হয়েছে'.tr}\nমেমো: $memo', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFFD97706), colorText: Colors.white);
     }
     memoCtrl.dispose();
   }
@@ -1712,7 +1713,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 14, 12, 0),
-                child: const Row(children: [Icon(Icons.local_shipping_rounded, color: Color(0xFF16A34A), size: 22), SizedBox(width: 8), Text('ডেলিভারি পেমেন্ট', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))]),
+                child: Row(children: [Icon(Icons.local_shipping_rounded, color: Color(0xFF16A34A), size: 22), SizedBox(width: 8), Text('ডেলিভারি পেমেন্ট'.tr, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))]),
               ),
               Flexible(
                 child: Padding(
@@ -1727,23 +1728,23 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           final totalPayable = grandTotal;
           return SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: scheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(12), border: Border.all(color: scheme.outlineVariant.withAlpha(80))), child: Column(children: [
-              Row(children: [const Icon(Icons.receipt_long_rounded, size: 16, color: Color(0xFF0891B2)), const SizedBox(width: 6), const Text('মেমো হিসাব', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0891B2)))]),
+              Row(children: [const Icon(Icons.receipt_long_rounded, size: 16, color: Color(0xFF0891B2)), const SizedBox(width: 6), Text('মেমো হিসাব'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0891B2)))]),
               const SizedBox(height: 8),
-              _dialogPayRow('পূর্বের বাকি', '৳ ${_fmt.format(previousDue)}', const Color(0xFFDC2626)),
+              _dialogPayRow('পূর্বের বাকি'.tr, '৳ ${_fmt.format(previousDue)}', const Color(0xFFDC2626)),
               const SizedBox(height: 4),
-              _dialogPayRow('আজকের অর্ডার', '৳ ${_fmt.format(orderDue.toInt())}', const Color(0xFF0891B2)),
-              if (saleReturnTotal > 0) ...[const SizedBox(height: 4), _dialogPayRow('ফেরত বাদ', '− ৳ ${_fmt.format(saleReturnTotal)}', const Color(0xFF8B5CF6))],
+              _dialogPayRow('আজকের অর্ডার'.tr, '৳ ${_fmt.format(orderDue.toInt())}', const Color(0xFF0891B2)),
+              if (saleReturnTotal > 0) ...[const SizedBox(height: 4), _dialogPayRow('ফেরত বাদ'.tr, '− ৳ ${_fmt.format(saleReturnTotal)}', const Color(0xFF8B5CF6))],
               const SizedBox(height: 4), Container(height: 1, color: scheme.outlineVariant),
               const SizedBox(height: 4),
-              _dialogPayRow('দিতে হবে', '৳ ${_fmt.format(totalPayable)}', const Color(0xFF0891B2), bold: true),
-              if (discountAmount > 0) ...[const SizedBox(height: 4), _dialogPayRow('ডিসকাউন্ট', '− ৳ ${_fmt.format(discountAmount.toInt())}', const Color(0xFFD97706))],
-              if (paidNow > 0) ...[const SizedBox(height: 4), _dialogPayRow('আজকের জমা', '৳ ${_fmt.format(totalPaidNow.toInt())}', const Color(0xFF16A34A))],
-              if (totalPaidNow > 0) ...[const SizedBox(height: 4), _dialogPayRow('আজকের বাকি', '৳ ${_fmt.format((total.toInt() - totalPaidNow.toInt() - discountAmount.toInt()).clamp(0, 9999999))}', const Color(0xFFDC2626))],
+              _dialogPayRow('দিতে হবে'.tr, '৳ ${_fmt.format(totalPayable)}', const Color(0xFF0891B2), bold: true),
+              if (discountAmount > 0) ...[const SizedBox(height: 4), _dialogPayRow('ডিসকাউন্ট'.tr, '− ৳ ${_fmt.format(discountAmount.toInt())}', const Color(0xFFD97706))],
+              if (paidNow > 0) ...[const SizedBox(height: 4), _dialogPayRow('আজকের জমা'.tr, '৳ ${_fmt.format(totalPaidNow.toInt())}', const Color(0xFF16A34A))],
+              if (totalPaidNow > 0) ...[const SizedBox(height: 4), _dialogPayRow('আজকের বাকি'.tr, '৳ ${_fmt.format((total.toInt() - totalPaidNow.toInt() - discountAmount.toInt()).clamp(0, 9999999))}', const Color(0xFFDC2626))],
               if (totalDeduction > 0) Padding(padding: const EdgeInsets.only(top: 4), child: _dialogPayRow('  (রিপ্লেস জমা হিসাবে)', '৳ ${_fmt.format(totalDeduction)}', const Color(0xFF16A34A), small: true)),
               const SizedBox(height: 4), Container(height: 1, color: scheme.outlineVariant),
               const SizedBox(height: 4),
               Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), decoration: BoxDecoration(color: newDue > 0 ? const Color(0xFFDC2626).withAlpha(15) : const Color(0xFF16A34A).withAlpha(15), borderRadius: BorderRadius.circular(10), border: Border.all(color: newDue > 0 ? const Color(0xFFDC2626).withAlpha(60) : const Color(0xFF16A34A).withAlpha(60))),
-                child: Row(children: [Icon(Icons.account_balance_wallet_rounded, size: 18, color: newDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)), const SizedBox(width: 8), const Text('নতুন বাকি', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)), const Spacer(), Text('৳ ${_fmt.format(newDue)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: newDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)))]),
+                child: Row(children: [Icon(Icons.account_balance_wallet_rounded, size: 18, color: newDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)), const SizedBox(width: 8), Text('নতুন বাকি'.tr, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)), const Spacer(), Text('৳ ${_fmt.format(newDue)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: newDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)))]),
               ),
             ])),
             const SizedBox(height: 12),
@@ -1751,19 +1752,19 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             Row(children: [
               const Icon(Icons.swap_horiz_rounded, size: 18, color: Color(0xFF7C3AED)),
               const SizedBox(width: 6),
-              const Text('রিপ্লেস প্রডাক্ট', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('রিপ্লেস প্রডাক্ট'.tr, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
               if (pendingReplaces.isNotEmpty || returnItems.isNotEmpty)
                 Container(
                   margin: const EdgeInsets.only(left: 6),
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(color: const Color(0xFF7C3AED).withAlpha(20), borderRadius: BorderRadius.circular(8)),
-                  child: Text('${selectedPendingIds.length + returnItems.length}টি', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF7C3AED))),
+                  child: Text('${selectedPendingIds.length + returnItems.length}${'টি'.tr}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF7C3AED))),
                 ),
               const Spacer(),
               TextButton.icon(
                 onPressed: () => _showReplaceProductSheet(setSt, pendingReplaces, selectedPendingIds, returnItems, scheme),
                 icon: const Icon(Icons.add_rounded, size: 14),
-                label: const Text('যোগ', style: TextStyle(fontSize: 11)),
+                label: Text('যোগ'.tr, style: TextStyle(fontSize: 11)),
                 style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
               ),
             ]),
@@ -1771,7 +1772,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               const SizedBox(height: 4),
               ...pendingReplaces.where((r) => selectedPendingIds.contains(r.id)).map((r) => Padding(
                 padding: const EdgeInsets.only(bottom: 2, left: 24),
-                child: Text('✓ ${r.productName}: ${r.quantity}টি হস্তান্তর', style: const TextStyle(fontSize: 11, color: Color(0xFF7C3AED))),
+                child: Text('✓ ${r.productName}: ${r.quantity}${'টি হস্তান্তর'.tr}', style: const TextStyle(fontSize: 11, color: Color(0xFF7C3AED))),
               )),
             ],
             if (returnItems.isNotEmpty) ...[
@@ -1780,13 +1781,13 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 final item = e.value;
                 final idx = e.key;
                 String label;
-                final qtyStr = item.quantity > 1 ? '${item.quantity}টি ' : '';
+                final qtyStr = item.quantity > 1 ? '${item.quantity}${'টি'.tr} ' : '';
                 if (item.resolutionType == 'money_deduct') {
-                  label = '$qtyStr${item.product.name}: ৳${item.deductionAmount} টাকা কাটা';
+                  label = '$qtyStr${item.product.name}: ৳${item.deductionAmount} ${'টাকা কাটা'.tr}';
                 } else if (item.resolutionType == 'replace_given') {
-                  label = '$qtyStr${item.product.name}: রিপ্লেস দেওয়া হল';
+                  label = '$qtyStr${item.product.name}: ${'রিপ্লেস দেওয়া হল'.tr}';
                 } else {
-                  label = '$qtyStr${item.product.name}: রিপ্লেস নেওয়া হল';
+                  label = '$qtyStr${item.product.name}: ${'রিপ্লেস নেওয়া হল'.tr}';
                 }
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 2),
@@ -1803,19 +1804,19 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             Row(children: [
               const Icon(Icons.keyboard_return_rounded, size: 18, color: Color(0xFF8B5CF6)),
               const SizedBox(width: 6),
-              const Text('ফেরত প্রডাক্ট', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('ফেরত প্রডাক্ট'.tr, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
               if (_saleReturnItems.isNotEmpty)
                 Container(
                   margin: const EdgeInsets.only(left: 6),
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(color: const Color(0xFF8B5CF6).withAlpha(20), borderRadius: BorderRadius.circular(8)),
-                  child: Text('${_saleReturnItems.length}টি', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF8B5CF6))),
+                  child: Text('${_saleReturnItems.length}${'টি'.tr}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF8B5CF6))),
                 ),
               const Spacer(),
               TextButton.icon(
                 onPressed: () => _showReturnProductSheet(setSt, _saleReturnItems, scheme),
                 icon: const Icon(Icons.add_rounded, size: 14),
-                label: const Text('যোগ', style: TextStyle(fontSize: 11)),
+                label: Text('যোগ'.tr, style: TextStyle(fontSize: 11)),
                 style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
               ),
             ]),
@@ -1827,7 +1828,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   padding: const EdgeInsets.only(bottom: 2),
                   child: Row(children: [
                     const SizedBox(width: 24),
-                    Expanded(child: Text('${item.product.name}: ${item.quantity}টি × ৳${_fmt.format(item.unitPrice.toInt())} = ৳${_fmt.format(item.totalPrice.toInt())}', style: const TextStyle(fontSize: 11, color: Color(0xFF8B5CF6)))),
+                    Expanded(child: Text('${item.product.name}: ${item.quantity}${'টি'.tr} × ৳${_fmt.format(item.unitPrice.toInt())} = ৳${_fmt.format(item.totalPrice.toInt())}', style: const TextStyle(fontSize: 11, color: Color(0xFF8B5CF6)))),
                     Text('৳${_fmt.format(item.totalPrice.toInt())}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF8B5CF6))),
                     const SizedBox(width: 4),
                     IconButton(icon: const Icon(Icons.close_rounded, size: 14), visualDensity: VisualDensity.compact, padding: EdgeInsets.zero, color: Colors.red.shade400, onPressed: () => setSt(() { item.dispose(); _saleReturnItems.removeAt(idx); })),
@@ -1835,7 +1836,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 );
               }),
             const SizedBox(height: 14),
-            Row(children: [const Text('নগদ জমা', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const Spacer(), TextButton.icon(onPressed: () => setSt(() => paymentRows.add(_PaymentRow())), icon: const Icon(Icons.add_rounded, size: 16), label: const Text('আরও মাধ্যম', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact))]),
+            Row(children: [Text('নগদ জমা'.tr, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const Spacer(), TextButton.icon(onPressed: () => setSt(() => paymentRows.add(_PaymentRow())), icon: const Icon(Icons.add_rounded, size: 16), label: Text('আরও মাধ্যম'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact))]),
             const SizedBox(height: 4),
             ...paymentRows.asMap().entries.map((e) {
               final i = e.key;
@@ -1845,20 +1846,20 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                   SizedBox(width: 80, child: _paymentMethodDropdown2(setSt, r)),
                   const SizedBox(width: 8),
-                  Expanded(child: TextField(controller: r.amountCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(prefixText: '৳ ', hintText: 'টাকা', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10)), onChanged: (_) => setSt(() {}))),
+                  Expanded(child: TextField(controller: r.amountCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(prefixText: '৳ ', hintText: 'টাকা'.tr, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10)), onChanged: (_) => setSt(() {}))),
                   if (paymentRows.length > 1)
                     Padding(padding: const EdgeInsets.only(left: 4), child: IconButton(icon: const Icon(Icons.close_rounded, size: 16), visualDensity: VisualDensity.compact, color: Colors.red.shade400, onPressed: () => setSt(() { r.dispose(); paymentRows.removeAt(i); }))),
                 ]),
               );
             }),
             const SizedBox(height: 12),
-            const Text('ডিসকাউন্ট (বাদ)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
-            TextField(controller: discountCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(prefixText: '৳ ', hintText: 'যদি ডিসকাউন্ট দিতে চান', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)), onChanged: (_) => setSt(() {})),
+            Text('ডিসকাউন্ট (বাদ)'.tr, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
+            TextField(controller: discountCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(prefixText: '৳ ', hintText: 'যদি ডিসকাউন্ট দিতে চান'.tr, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)), onChanged: (_) => setSt(() {})),
             const SizedBox(height: 12),
-            const Text('লোকাল মেমো নাম্বার', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
-            TextField(controller: memoCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'যেমন: 233', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10))),
+            Text('লোকাল মেমো নাম্বার'.tr, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
+            TextField(controller: memoCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(hintText: 'যেমন: 233'.tr, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10))),
             const SizedBox(height: 12),
-            const Text('ডেলিভারির তারিখ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
+            Text('ডেলিভারির তারিখ'.tr, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)), const SizedBox(height: 4),
             InkWell(
               onTap: () async {
                 final picked = await showDatePicker(context: ctx, initialDate: deliveryDate, firstDate: DateTime(2020), lastDate: DateTime.now().add(const Duration(days: 1)));
@@ -1880,9 +1881,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')),
+                    TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)),
                     const SizedBox(width: 8),
-                    ElevatedButton.icon(onPressed: () => Get.back(result: true), icon: const Icon(Icons.check_rounded, size: 16), label: const Text('ডেলিভার্ড করুন'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))),
+                    ElevatedButton.icon(onPressed: () => Get.back(result: true), icon: const Icon(Icons.check_rounded, size: 16), label: Text('ডেলিভার্ড করুন'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))),
                   ],
                 ),
               ),
@@ -1899,13 +1900,13 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       final overlay = OverlayEntry(
         builder: (context) => Container(
           color: Colors.black54,
-          child: const Center(
+          child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 CircularProgressIndicator(color: Colors.white),
                 SizedBox(height: 16),
-                Text('ডেলিভারি প্রসেসিং হচ্ছে...', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                Text('ডেলিভারি প্রসেসিং হচ্ছে...'.tr, style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -1940,7 +1941,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             await controller.updateOrderStatus(widget.order.id, 'delivered', previousStatus: previousStatus, deliveredBySrId: widget.srDocId, deliveryDate: deliveryDate, items: _savedItems.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList()).timeout(_to);
             stockOutDone = true;
           } catch (e) {
-            warnings.add('স্টক আউট ব্যর্থ');
+            warnings.add('স্টক আউট ব্যর্থ'.tr);
           }
         } else {
           stockOutDone = true;
@@ -1980,7 +1981,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             _currentDiscountAmount = discountAmount;
           });
         } catch (e) {
-          warnings.add('অর্ডার আপডেট ব্যর্থ');
+          warnings.add('অর্ডার আপডেট ব্যর্থ'.tr);
         }
 
         try {
@@ -1989,36 +1990,36 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             setState(() => _currentUserDue = newDue.toInt());
           }
         } catch (e) {
-          warnings.add('বাকি আপডেট ব্যর্থ');
+          warnings.add('বাকি আপডেট ব্যর্থ'.tr);
         }
         
         try {
           if (_saleReturnItems.isNotEmpty) {
             final sc = Get.find<StockInController>();
-            await sc.addMultipleStockIn(date: deliveryDate, source: _currentShopName, note: 'অর্ডার #${widget.order.id} — ফেরত', updatePurchasePrice: false, items: _saleReturnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'image': i.product.images.isNotEmpty ? i.product.images.first : '', 'quantity': i.quantity, 'unitPrice': i.unitPrice}).toList()).timeout(_to);
+            await sc.addMultipleStockIn(date: deliveryDate, source: _currentShopName, note: '${'অর্ডার'.tr} #${widget.order.id} — ফেরত', updatePurchasePrice: false, items: _saleReturnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'image': i.product.images.isNotEmpty ? i.product.images.first : '', 'quantity': i.quantity, 'unitPrice': i.unitPrice}).toList()).timeout(_to);
             for (final item in _saleReturnItems) { item.dispose(); }
           }
         } catch (e) {
-          warnings.add('ফেরত প্রডাক্ট স্টকে যোগ করা যায়নি');
+          warnings.add('ফেরত প্রডাক্ট স্টকে যোগ করা যায়নি'.tr);
         }
         
         try {
           if (selectedPendingIds.isNotEmpty && _rc != null) {
             for (final r in pendingReplaces) {
               if (selectedPendingIds.contains(r.id)) {
-                await _rc!.deliverToCustomer(entry: r, note: 'অর্ডার #${widget.order.id} এর সাথে ডেলিভারি');
+                await _rc!.deliverToCustomer(entry: r, note: '${'অর্ডার'.tr} #${widget.order.id} এর সাথে ডেলিভারি');
               }
             }
             await _rc!.fetchEntries(force: true);
           }
         } catch (e) {
-          warnings.add('রিপ্লেস ডেলিভারি সম্পন্ন হয়নি');
+          warnings.add('রিপ্লেস ডেলিভারি সম্পন্ন হয়নি'.tr);
         }
         
         try {
           if (returnItems.isNotEmpty && _rc != null) {
             for (final item in returnItems.where((i) => i.resolutionType != 'replace_given')) {
-              await _rc!.addCustomerIn(productId: item.product.id, productName: item.product.name, quantity: item.quantity, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: item.resolutionType, deductionAmount: item.deductionAmount, note: 'ডেলিভারি #${widget.order.id} এ ফেরত', date: DateTime.now());
+              await _rc!.addCustomerIn(productId: item.product.id, productName: item.product.name, quantity: item.quantity, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: item.resolutionType, deductionAmount: item.deductionAmount, note: '${'ডেলিভারি'.tr} #${widget.order.id} এ ফেরত', date: DateTime.now());
             }
             final stockBatch = FirebaseFirestore.instance.batch();
             bool hasStockChanges = false;
@@ -2041,7 +2042,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             if (_rc != null) await _rc!.fetchEntries(force: true);
           }
         } catch (e) {
-          warnings.add('রিপ্লেস প্রসেসিং সম্পন্ন হয়নি');
+          warnings.add('রিপ্লেস প্রসেসিং সম্পন্ন হয়নি'.tr);
         }
         
         try {
@@ -2086,23 +2087,23 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           }
         } catch (_) {}
         
-        final msgParts = <String>['ডেলিভারি সম্পন্ন হয়েছে'];
-        if (selectedPendingIds.isNotEmpty) msgParts.add('${selectedPendingIds.length} টি রিপ্লেস ডেলিভারি');
-        if (returnItems.isNotEmpty) msgParts.add('${returnItems.length} টি ফেরত রিপ্লেস');
+        final msgParts = <String>['ডেলিভারি সম্পন্ন হয়েছে'.tr];
+        if (selectedPendingIds.isNotEmpty) msgParts.add('${selectedPendingIds.length} ${'টি রিপ্লেস ডেলিভারি'.tr}');
+        if (returnItems.isNotEmpty) msgParts.add('${returnItems.length} ${'টি ফেরত রিপ্লেস'.tr}');
         if (_saleReturnItems.isNotEmpty) msgParts.add('${_saleReturnItems.length} টি ফেরত প্রডাক্ট স্টকে');
         if (discountAmount.toInt() > 0) msgParts.add('ডিসকাউন্ট ৳${_fmt.format(discountAmount.toInt())}');
         msgParts.add('নতুন বাকি ৳${_fmt.format(newDue.toInt())}');
         
         if (warnings.isEmpty) {
-          Get.snackbar('সফল', msgParts.join(' • '), snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 5), backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
+          Get.snackbar('সফল'.tr, msgParts.join(' • '), snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 5), backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
         } else {
-          Get.snackbar('সতর্কতা', '${msgParts.join(' • ')}\n${warnings.join(', ')}', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 6), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
+          Get.snackbar('সতর্কতা'.tr, '${msgParts.join(' • ')}\n${warnings.join(', ')}', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 6), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
         }
       } catch (e) {
         if (stockOutDone) {
-          Get.snackbar('সতর্কতা', 'ডেলিভারি সম্পন্ন হয়েছে কিছু আপডেট ব্যর্থ হয়েছে', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 5), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
+          Get.snackbar('সতর্কতা'.tr, 'ডেলিভারি সম্পন্ন হয়েছে কিছু আপডেট ব্যর্থ হয়েছে'.tr, snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 5), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
         } else {
-          Get.snackbar('ত্রুটি', 'ডেলিভারি সম্পন্ন হয়নি: $e', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 4), backgroundColor: Colors.red, colorText: Colors.white);
+          Get.snackbar('ত্রুটি'.tr, '${'ডেলিভারি সম্পন্ন হয়নি'.tr}: $e', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 4), backgroundColor: Colors.red, colorText: Colors.white);
         }
       } finally {
         try { overlay.remove(); } catch (_) {}
@@ -2127,7 +2128,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       value: methods.contains(_currentPaymentMethod) ? _currentPaymentMethod : _handLabel,
       isDense: true,
       decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-      items: methods.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(fontSize: 13)))).toList(),
+      items: methods.map((m) => DropdownMenuItem(value: m, child: Text(DomainLabels.paymentMethod(m), style: const TextStyle(fontSize: 13)))).toList(),
       onChanged: (v) { if (v != null) { _currentPaymentMethod = v; setSt(() {}); } },
     );
   }
@@ -2163,12 +2164,12 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(children: [
-                  Expanded(child: Text('রিপ্লেস প্রডাক্ট যোগ', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+                  Expanded(child: Text('রিপ্লেস প্রডাক্ট যোগ'.tr, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
                   if (sel != null)
                     TextButton.icon(
                       onPressed: () => sheetSt(() { sel = null; res = 'money_deduct'; qty = 1; dedC.clear(); }),
                       icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                      label: const Text('তালিকায় ফিরুন', style: TextStyle(fontSize: 12)),
+                      label: Text('তালিকায় ফিরুন'.tr, style: TextStyle(fontSize: 12)),
                       style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
                     ),
                 ]),
@@ -2182,7 +2183,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     autofocus: false,
                     onChanged: (v) => sheetSt(() => q = v.trim().toLowerCase()),
                     decoration: InputDecoration(
-                      hintText: 'নাম বা কোড দিয়ে খুঁজুন…',
+                      hintText: 'নাম বা কোড দিয়ে খুঁজুন…'.tr,
                       prefixIcon: const Icon(Icons.search_rounded, size: 20),
                       filled: true, fillColor: scheme.surfaceContainerHigh,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -2196,7 +2197,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 if (pendingReplaces.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-                    child: Text('হস্তান্তরযোগ্য রিপ্লেস', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
+                    child: Text('হস্তান্তরযোগ্য রিপ্লেস'.tr, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
                   ),
                   ...pendingReplaces.map((r) => InkWell(
                     onTap: () => sheetSt(() { if (selectedPendingIds.contains(r.id)) selectedPendingIds.remove(r.id); else selectedPendingIds.add(r.id); }),
@@ -2211,7 +2212,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                         const SizedBox(width: 12),
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(r.productName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                          Text('${r.quantity}টি • ${r.customerName}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                          Text('${r.quantity}${'টি'.tr} • ${r.customerName}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                         ])),
                       ]),
                     ),
@@ -2223,7 +2224,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   child: _loadingProducts
                       ? const Center(child: CircularProgressIndicator())
                       : displayed.isEmpty
-                          ? const Center(child: Text('কোনো প্রডাক্ট পাওয়া যায়নি', style: TextStyle(color: Colors.grey)))
+                          ? Center(child: Text('কোনো প্রডাক্ট পাওয়া যায়নি'.tr, style: TextStyle(color: Colors.grey)))
                           : ListView.separated(
                               controller: scrollCtrl, itemCount: displayed.length,
                               separatorBuilder: (_, __) => const Divider(height: 1),
@@ -2278,7 +2279,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   ),
                   const SizedBox(height: 20),
                   // Quantity
-                  Text('পরিমাণ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
+                  Text('পরিমাণ'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
                   const SizedBox(height: 8),
                   Row(children: [
                     _qtyBtnPurple(Icons.remove_rounded, () { if (qty > 1) sheetSt(() => qty--); }),
@@ -2289,15 +2290,15 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   ]),
                   const SizedBox(height: 20),
                   // Resolution type
-                  Text('রিপ্লেস স্ট্যাটাস', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
-                  const SizedBox(height: 8),
+                  Text('রিপ্লেস স্ট্যাটাস'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
+                  SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: res,
-                    decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
-                    items: const [
-                      DropdownMenuItem(value: 'money_deduct', child: Text('টাকা কাটা', style: TextStyle(fontSize: 13))),
-                      DropdownMenuItem(value: 'product_replace', child: Text('রিপ্লেস নেওয়া হল', style: TextStyle(fontSize: 13))),
-                      DropdownMenuItem(value: 'replace_given', child: Text('রিপ্লেস দেওয়া হল', style: TextStyle(fontSize: 13))),
+                    decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
+                    items: [
+                      DropdownMenuItem(value: 'money_deduct', child: Text('টাকা কাটা'.tr, style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 'product_replace', child: Text('রিপ্লেস নেওয়া হল'.tr, style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 'replace_given', child: Text('রিপ্লেস দেওয়া হল'.tr, style: TextStyle(fontSize: 13))),
                     ],
                     onChanged: (v) => sheetSt(() {
                       res = v!;
@@ -2306,14 +2307,14 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   ),
                   if (res == 'money_deduct') ...[
                     const SizedBox(height: 16),
-                    Text('টাকার পরিমাণ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
+                    Text('টাকার পরিমাণ'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
                     const SizedBox(height: 8),
                     TextField(
                       controller: dedC, keyboardType: TextInputType.number,
-                      decoration: InputDecoration(prefixText: '৳ ', hintText: 'টাকার পরিমাণ লিখুন', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
+                      decoration: InputDecoration(prefixText: '৳ ', hintText: 'টাকার পরিমাণ লিখুন'.tr, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
                     ),
                     const SizedBox(height: 6),
-                    Text('এই টাকা কাস্টমারের জমা হিসাবে যোগ হবে', style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic)),
+                    Text('এই টাকা কাস্টমারের জমা হিসাবে যোগ হবে'.tr, style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic)),
                   ],
                   const SizedBox(height: 24),
                   SizedBox(width: double.infinity, child: ElevatedButton.icon(
@@ -2323,7 +2324,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                       dedC.dispose();
                       Navigator.pop(ctx);
                     },
-                    icon: const Icon(Icons.add_rounded), label: const Text('যোগ করুন'),
+                    icon: const Icon(Icons.add_rounded), label: Text('যোগ করুন'.tr),
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                   )),
                   const SizedBox(height: 16),
@@ -2366,12 +2367,12 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(children: [
-                  Expanded(child: Text('ফেরত প্রডাক্ট যোগ', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+                  Expanded(child: Text('ফেরত প্রডাক্ট যোগ'.tr, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
                   if (sel != null)
                     TextButton.icon(
                       onPressed: () => sheetSt(() { sel = null; qt = 1; priceC.clear(); }),
                       icon: const Icon(Icons.arrow_back_rounded, size: 16),
-                      label: const Text('তালিকায় ফিরুন', style: TextStyle(fontSize: 12)),
+                      label: Text('তালিকায় ফিরুন'.tr, style: TextStyle(fontSize: 12)),
                       style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
                     ),
                 ]),
@@ -2385,7 +2386,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     autofocus: false,
                     onChanged: (v) => sheetSt(() => q = v.trim().toLowerCase()),
                     decoration: InputDecoration(
-                      hintText: 'নাম বা কোড দিয়ে খুঁজুন…',
+                      hintText: 'নাম বা কোড দিয়ে খুঁজুন…'.tr,
                       prefixIcon: const Icon(Icons.search_rounded, size: 20),
                       filled: true, fillColor: scheme.surfaceContainerHigh,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -2400,7 +2401,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   child: _loadingProducts
                       ? const Center(child: CircularProgressIndicator())
                       : displayed.isEmpty
-                          ? const Center(child: Text('কোনো প্রডাক্ট পাওয়া যায়নি', style: TextStyle(color: Colors.grey)))
+                          ? Center(child: Text('কোনো প্রডাক্ট পাওয়া যায়নি'.tr, style: TextStyle(color: Colors.grey)))
                           : ListView.separated(
                               controller: scrollCtrl, itemCount: displayed.length,
                               separatorBuilder: (_, __) => const Divider(height: 1),
@@ -2454,7 +2455,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   ),
                   const SizedBox(height: 20),
                   // Quantity
-                  Text('পরিমাণ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
+                  Text('পরিমাণ'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
                   const SizedBox(height: 8),
                   Row(children: [
                     _qtyBtnPurple(Icons.remove_rounded, () { if (qt > 1) sheetSt(() => qt--); }),
@@ -2465,11 +2466,11 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   ]),
                   const SizedBox(height: 20),
                   // Price
-                  Text('মূল্য (প্রতি পিস)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
+                  Text('মূল্য (প্রতি পিস)'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: priceC, keyboardType: TextInputType.number,
-                    decoration: InputDecoration(prefixText: '৳ ', hintText: 'মূল্য লিখুন', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
+                    decoration: InputDecoration(prefixText: '৳ ', hintText: 'মূল্য লিখুন'.tr, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
                     onChanged: (_) => sheetSt(() {}),
                   ),
                   const SizedBox(height: 8),
@@ -2478,13 +2479,13 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(color: const Color(0xFF8B5CF6).withAlpha(15), borderRadius: BorderRadius.circular(10)),
                     child: Row(children: [
-                      const Text('মোট ফেরত মূল্য', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF8B5CF6))),
+                      Text('মোট ফেরত মূল্য'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF8B5CF6))),
                       const Spacer(),
                       Text('৳${_fmt.format((qt * (num.tryParse(priceC.text.trim()) ?? 0)).toInt())}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF8B5CF6))),
                     ]),
                   ),
                   const SizedBox(height: 6),
-                  Text('এই টাকা কাস্টমারের জমা হিসাবে যোগ হবে', style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic)),
+                  Text('এই টাকা কাস্টমারের জমা হিসাবে যোগ হবে'.tr, style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic)),
                   const SizedBox(height: 24),
                   SizedBox(width: double.infinity, child: ElevatedButton.icon(
                     onPressed: () {
@@ -2493,7 +2494,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                       priceC.dispose();
                       Navigator.pop(ctx);
                     },
-                    icon: const Icon(Icons.add_rounded), label: const Text('যোগ করুন'),
+                    icon: const Icon(Icons.add_rounded), label: Text('যোগ করুন'.tr),
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                   )),
                   const SizedBox(height: 16),
@@ -2513,7 +2514,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       isDense: true,
       isExpanded: false,
       decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10)),
-      items: methods.map((m) => DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(fontSize: 10)))).toList(),
+      items: methods.map((m) => DropdownMenuItem(value: m, child: Text(DomainLabels.paymentMethod(m), style: const TextStyle(fontSize: 10)))).toList(),
       onChanged: (v) { if (v != null) { row.method = v; setSt(() {}); } },
     );
   }
@@ -2589,7 +2590,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   child: const Icon(Icons.local_shipping_rounded, color: Color(0xFFD97706), size: 18),
                 ),
                 const SizedBox(width: 12),
-                const Text('স্টক আউট / Dispatch', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                Text('স্টক আউট / Dispatch'.tr, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
               ],
             ),
             const SizedBox(height: 10),
@@ -2607,7 +2608,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   IconButton(
                     icon: const Icon(Icons.edit_rounded, size: 16),
                     visualDensity: VisualDensity.compact,
-                    tooltip: 'তারিখ সম্পাদন',
+                    tooltip: 'তারিখ সম্পাদন'.tr,
                     onPressed: () => _editDispatchedAt(),
                   ),
                 ],
@@ -2648,7 +2649,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 18),
                 ),
                 const SizedBox(width: 12),
-                const Text('ডেলিভারি সম্পন্ন', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                Text('ডেলিভারি সম্পন্ন'.tr, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
               ],
             ),
             const SizedBox(height: 10),
@@ -2663,7 +2664,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 IconButton(
                   icon: const Icon(Icons.edit_rounded, size: 16),
                   visualDensity: VisualDensity.compact,
-                  tooltip: 'তারিখ সম্পাদন',
+                  tooltip: 'তারিখ সম্পাদন'.tr,
                   onPressed: () => _editDeliveredAt(),
                 ),
               ],
@@ -2712,13 +2713,13 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('নির্ধারিত ডেলিভারি তারিখ',
+                      Text('নির্ধারিত ডেলিভারি তারিখ'.tr,
                           style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey,
                               fontWeight: FontWeight.w500)),
                       Text(
-                        hasDate ? dateFmt.format(date) : 'তারিখ নির্ধারিত নেই',
+                        hasDate ? dateFmt.format(date) : 'তারিখ নির্ধারিত নেই'.tr,
                         style: TextStyle(
                             fontWeight: FontWeight.w700,
                             fontSize: 13,
@@ -2732,7 +2733,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 if (hasDate)
                   IconButton(
                     icon: const Icon(Icons.clear_rounded, size: 18),
-                    tooltip: 'তারিখ মুছুন',
+                    tooltip: 'তারিখ মুছুন'.tr,
                     color: Colors.red.shade400,
                     onPressed: () async {
                       await controller.setScheduledDelivery(widget.order.id, null);
@@ -2752,7 +2753,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     setState(() => _scheduledDate = picked);
                   },
                   icon: const Icon(Icons.calendar_month_rounded, size: 16),
-                  label: Text(hasDate ? 'পরিবর্তন' : 'তারিখ দিন'),
+                  label: Text(hasDate ? 'পরিবর্তন'.tr : 'তারিখ দিন'.tr),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     textStyle: const TextStyle(fontSize: 12),
@@ -2784,13 +2785,13 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('ডেলিভারি SR',
+                        Text('ডেলিভারি SR'.tr,
                             style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey,
                                 fontWeight: FontWeight.w500)),
                         Text(
-                          hasAssignedSr ? _assignedSrName : 'SR নির্বাচিত নেই',
+                          hasAssignedSr ? _assignedSrName : 'SR নির্বাচিত নেই'.tr,
                           style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 13,
@@ -2804,7 +2805,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   if (hasAssignedSr)
                     IconButton(
                       icon: const Icon(Icons.clear_rounded, size: 18),
-                      tooltip: 'SR সরান',
+                      tooltip: 'SR সরান'.tr,
                       color: Colors.red.shade400,
                       onPressed: () async {
                         await controller.assignDelivery(
@@ -2821,7 +2822,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                         ? Icons.hourglass_top_rounded
                         : Icons.person_search_rounded,
                         size: 16),
-                    label: Text(hasAssignedSr ? 'পরিবর্তন' : 'SR দিন'),
+                    label: Text(hasAssignedSr ? 'পরিবর্তন'.tr : 'SR দিন'.tr),
                     style: OutlinedButton.styleFrom(
                       padding:
                           const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -2866,7 +2867,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('SR দ্বারা ডেলিভার করা হয়েছে',
+                      Text('SR দ্বারা ডেলিভার করা হয়েছে'.tr,
                           style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey,
@@ -2885,7 +2886,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                       color: const Color(0xFF16A34A).withAlpha(20),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text('কমিশন নিশ্চিত',
+                    child: Text('কমিশন নিশ্চিত'.tr,
                         style: TextStyle(
                             fontSize: 11,
                             color: Color(0xFF16A34A),
@@ -2902,8 +2903,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                       ? null
                       : () async {
                           final ok = await _confirm(
-                            'কমিশন নিশ্চিত করুন',
-                            'এই SR-এর কমিশন চূড়ান্ত করবেন? এটি SR-এর পেমেন্ট রেকর্ডে যুক্ত হবে।',
+                            'কমিশন নিশ্চিত করুন'.tr,
+                            'এই SR-এর কমিশন চূড়ান্ত করবেন? এটি SR-এর পেমেন্ট রেকর্ডে যুক্ত হবে।'.tr,
                           );
                           if (ok != true) return;
                           setState(() => _saving = true);
@@ -2914,8 +2915,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                           );
                           setState(() => _saving = false);
                           Get.snackbar(
-                            'কমিশন নিশ্চিত হয়েছে',
-                            'SR-এর কমিশন রেকর্ড আপডেট হয়েছে',
+                            'কমিশন নিশ্চিত হয়েছে'.tr,
+                            'SR-এর কমিশন রেকর্ড আপডেট হয়েছে'.tr,
                             snackPosition: SnackPosition.BOTTOM,
                             backgroundColor: const Color(0xFF7C3AED),
                             colorText: Colors.white,
@@ -2929,7 +2930,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                               strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.verified_rounded),
                   label:
-                      Text(_saving ? 'প্রক্রিয়া চলছে…' : 'কমিশন নিশ্চিত করুন'),
+                      Text(_saving ? 'প্রক্রিয়া চলছে…'.tr : 'কমিশন নিশ্চিত করুন'.tr),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF7C3AED),
                     foregroundColor: Colors.white,
@@ -2959,18 +2960,18 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('পেমেন্ট তথ্য', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+          Text('পেমেন্ট তথ্য'.tr, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(height: 12),
-          _payRow('মোট অর্ডার', '৳ ${_fmt.format(total.toInt())}', const Color(0xFF0891B2)),
+          _payRow('মোট অর্ডার'.tr, '৳ ${_fmt.format(total.toInt())}', const Color(0xFF0891B2)),
           const SizedBox(height: 4),
-          _payRow('পূর্বের বাকি (ডেলিভারির সময়)', '৳ ${_fmt.format(_currentPreviousDue)}', _currentPreviousDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)),
+          _payRow('পূর্বের বাকি (ডেলিভারির সময়)'.tr, '৳ ${_fmt.format(_currentPreviousDue)}', _currentPreviousDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)),
           const SizedBox(height: 4),
           Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
           const SizedBox(height: 4),
-          _payRow('মোট দেনা', '৳ ${_fmt.format((total.toInt() + _currentPreviousDue))}', const Color(0xFF0891B2), bold: true),
-          if (_currentDeductionAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('রিপ্লেস বাবদ বাদ', '− ৳ ${_fmt.format(_currentDeductionAmount.toInt())}', const Color(0xFFDC2626))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'রিপ্লেস বাবদ সম্পাদন', onPressed: _editDeductionAmount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editDeductionAmount, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('রিপ্লেস বাবদ যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
-          if (_currentReturnAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('ফেরত বাদ', '− ৳ ${_fmt.format(_currentReturnAmount.toInt())}', const Color(0xFF8B5CF6))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'ফেরত বাদ সম্পাদন', onPressed: _editReturnAmount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editReturnAmount, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('ফেরত বাদ যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
-          if (_currentDiscountAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('ডিসকাউন্ট', '− ৳ ${_fmt.format(_currentDiscountAmount.toInt())}', const Color(0xFFD97706))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'ডিসকাউন্ট সম্পাদন', onPressed: _editDiscount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editDiscount, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('ডিসকাউন্ট যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+          _payRow('মোট দেনা'.tr, '৳ ${_fmt.format((total.toInt() + _currentPreviousDue))}', const Color(0xFF0891B2), bold: true),
+          if (_currentDeductionAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('রিপ্লেস বাবদ বাদ'.tr, '− ৳ ${_fmt.format(_currentDeductionAmount.toInt())}', const Color(0xFFDC2626))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'রিপ্লেস বাবদ সম্পাদন'.tr, onPressed: _editDeductionAmount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editDeductionAmount, icon: const Icon(Icons.add_rounded, size: 14), label: Text('রিপ্লেস বাবদ যোগ'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+          if (_currentReturnAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('ফেরত বাদ'.tr, '− ৳ ${_fmt.format(_currentReturnAmount.toInt())}', const Color(0xFF8B5CF6))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'ফেরত বাদ সম্পাদন'.tr, onPressed: _editReturnAmount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editReturnAmount, icon: const Icon(Icons.add_rounded, size: 14), label: Text('ফেরত বাদ যোগ'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+          if (_currentDiscountAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('ডিসকাউন্ট'.tr, '− ৳ ${_fmt.format(_currentDiscountAmount.toInt())}', const Color(0xFFD97706))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'ডিসকাউন্ট সম্পাদন'.tr, onPressed: _editDiscount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editDiscount, icon: const Icon(Icons.add_rounded, size: 14), label: Text('ডিসকাউন্ট যোগ'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
           const SizedBox(height: 4),
           Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
           const SizedBox(height: 4),
@@ -2982,20 +2983,20 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             final payMethod = _currentPayments.isNotEmpty ? (_currentPayments.first['method'] ?? '').toString() : '';
             final methodLabel = payMethod.isNotEmpty ? payMethod : _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : _handLabel;
             return Column(children: [
-              if (deduction > 0) _payRow('জমা: রিপ্লেস বাবদ', '৳ ${_fmt.format(deduction)}', const Color(0xFF7C3AED)),
-              if (returnAmt > 0) _payRow('জমা: ফেরত বাবদ', '৳ ${_fmt.format(returnAmt)}', const Color(0xFF8B5CF6)),
+              if (deduction > 0) _payRow('জমা: রিপ্লেস বাবদ'.tr, '৳ ${_fmt.format(deduction)}', const Color(0xFF7C3AED)),
+              if (returnAmt > 0) _payRow('জমা: ফেরত বাবদ'.tr, '৳ ${_fmt.format(returnAmt)}', const Color(0xFF8B5CF6)),
               if (_currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).isNotEmpty)
                 ..._currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).map((p) {
                   final m = (p['method'] ?? '').toString();
-                  final label = m.isNotEmpty ? m : methodLabel;
-                  return _payRow('জমা: $label', '৳ ${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)}', const Color(0xFF16A34A));
+                  final label = DomainLabels.paymentMethod(m.isNotEmpty ? m : methodLabel);
+                  return _payRow('${'জমা'.tr}: $label', '৳ ${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)}', const Color(0xFF16A34A));
                 })
               else if (cashPaid > 0)
-                _payRow('জমা: $methodLabel', '৳ ${_fmt.format(cashPaid)}', const Color(0xFF16A34A)),
+                _payRow('${'জমা'.tr}: ${DomainLabels.paymentMethod(methodLabel)}', '৳ ${_fmt.format(cashPaid)}', const Color(0xFF16A34A)),
               const SizedBox(height: 4),
               Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
               const SizedBox(height: 4),
-              _payRow('মোট জমা', '৳ ${_fmt.format(paid.toInt())}', const Color(0xFF16A34A), bold: true),
+              _payRow('মোট জমা'.tr, '৳ ${_fmt.format(paid.toInt())}', const Color(0xFF16A34A), bold: true),
             ]);
           }),
           Builder(builder: (_) {
@@ -3006,31 +3007,31 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             return Column(children: [
               if (todayDue > 0) ...[
                 const SizedBox(height: 4),
-                _payRow('আজকের বাকি', '৳ ${_fmt.format(todayDue)}', const Color(0xFFDC2626)),
+                _payRow('আজকের বাকি'.tr, '৳ ${_fmt.format(todayDue)}', const Color(0xFFDC2626)),
               ] else if (paidInt + disc > totalInt) ...[
                 const SizedBox(height: 4),
-                _payRow('আজকের বাকি কালেকশন', '৳ ${_fmt.format((paidInt + disc - totalInt).clamp(0, 9999999))}', const Color(0xFF16A34A)),
+                _payRow('আজকের বাকি কালেকশন'.tr, '৳ ${_fmt.format((paidInt + disc - totalInt).clamp(0, 9999999))}', const Color(0xFF16A34A)),
               ],
             ]);
           }),
           const SizedBox(height: 4),
           Builder(builder: (_) {
             final nd = (_currentPreviousDue + total.toInt() - paid.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999);
-            return _payRow('নতুন বাকি', '৳ ${_fmt.format(nd)}', nd > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A));
+            return _payRow('নতুন বাকি'.tr, '৳ ${_fmt.format(nd)}', nd > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A));
           }),
           const SizedBox(height: 4),
           if (_currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).isNotEmpty)
-            _payRow('পেমেন্ট মাধ্যম', _currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).map((p) { final m = (p['method'] ?? '').toString(); final label = m.isNotEmpty ? m : _handLabel; return '$label (৳${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)})'; }).join(', '), const Color(0xFF7C3AED))
+            _payRow('পেমেন্ট মাধ্যম'.tr, _currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).map((p) { final m = (p['method'] ?? '').toString(); final label = m.isNotEmpty ? m : _handLabel; return '$label (৳${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)})'; }).join(', '), const Color(0xFF7C3AED))
           else
-            Row(children: [Expanded(child: _payRow('পেমেন্ট মাধ্যম', _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : _handLabel, const Color(0xFF7C3AED))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'মাধ্যম পরিবর্তন', onPressed: _editPaymentMethod)]),
-          if (_currentLocalMemo.isNotEmpty) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('লোকাল মেমো', '#$_currentLocalMemo', const Color(0xFF0891B2))), IconButton(icon: const Icon(Icons.edit_rounded, size: 16), visualDensity: VisualDensity.compact, tooltip: 'লোকাল মেমো আপডেট', onPressed: _editLocalMemo)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editLocalMemo, icon: const Icon(Icons.add_rounded, size: 14), label: const Text('লোকাল মেমো যোগ', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+            Row(children: [Expanded(child: _payRow('পেমেন্ট মাধ্যম'.tr, _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : _handLabel, const Color(0xFF7C3AED))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'মাধ্যম পরিবর্তন'.tr, onPressed: _editPaymentMethod)]),
+          if (_currentLocalMemo.isNotEmpty) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('লোকাল মেমো'.tr, '#$_currentLocalMemo', const Color(0xFF0891B2))), IconButton(icon: const Icon(Icons.edit_rounded, size: 16), visualDensity: VisualDensity.compact, tooltip: 'লোকাল মেমো আপডেট'.tr, onPressed: _editLocalMemo)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editLocalMemo, icon: const Icon(Icons.add_rounded, size: 14), label: Text('লোকাল মেমো যোগ'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
           if (_currentReplaceItems.isNotEmpty) ...[
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(color: const Color(0xFF7C3AED).withAlpha(12), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF7C3AED).withAlpha(40))),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [const Icon(Icons.swap_horiz_rounded, size: 15, color: Color(0xFF7C3AED)), const SizedBox(width: 6), Text('রিপ্লেস প্রডাক্ট (${_currentReplaceItems.length}টি)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF7C3AED)))]),
+                Row(children: [const Icon(Icons.swap_horiz_rounded, size: 15, color: Color(0xFF7C3AED)), const SizedBox(width: 6), Text('${'রিপ্লেস প্রডাক্ট'.tr} (${_currentReplaceItems.length}${'টি'.tr})', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF7C3AED)))]),
                 const SizedBox(height: 6),
                 ..._currentReplaceItems.asMap().entries.map((entry) {
                   final idx = entry.key;
@@ -3039,7 +3040,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   final qty = item['quantity'] ?? 0;
                   final type = item['resolutionType'] ?? '';
                   final ded = item['deductionAmount'] ?? 0;
-                  final label = type == 'money_deduct' ? '$name × $qty — ৳${_fmt.format(ded)} টাকা কাটা' : type == 'replace_given' ? '$name × $qty — রিপ্লেস দেওয়া হল' : '$name × $qty — রিপ্লেস নেওয়া হল';
+                  final label = type == 'money_deduct' ? '$name × $qty — ৳${_fmt.format(ded)} ${'টাকা কাটা'.tr}' : type == 'replace_given' ? '$name × $qty — ${'রিপ্লেস দেওয়া হল'.tr}' : '$name × $qty — ${'রিপ্লেস নেওয়া হল'.tr}';
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 2),
                     child: Row(children: [
@@ -3060,13 +3061,13 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           ],
           if (_currentStatus == 'delivered' && !widget.order.isDueCollection) ...[
             const SizedBox(height: 4),
-            Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editPaidAmount, icon: const Icon(Icons.edit_rounded, size: 14), label: const Text('জমা সম্পাদন', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+            Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editPaidAmount, icon: const Icon(Icons.edit_rounded, size: 14), label: Text('জমা সম্পাদন'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
             const SizedBox(height: 4),
-            Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editPreviousDue, icon: const Icon(Icons.edit_rounded, size: 14), label: const Text('বাকি সম্পাদন', style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+            Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editPreviousDue, icon: const Icon(Icons.edit_rounded, size: 14), label: Text('বাকি সম্পাদন'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
             const Divider(height: 20),
             _profitSection(scheme),
           ],
-          if (_currentStatus != 'delivered') ...[const Divider(height: 20), TextField(controller: _paidCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(labelText: 'নতুন জমার পরিমাণ আপডেট করুন', prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12))), const SizedBox(height: 10), SizedBox(width: double.infinity, child: ElevatedButton.icon(onPressed: () async { final amount = num.tryParse(_paidCtrl.text.trim()) ?? _currentPaid; await controller.updatePaidAmount(widget.order.id, amount); setState(() => _currentPaid = amount); Get.snackbar('আপডেট হয়েছে', 'পেমেন্ট তথ্য সেভ হয়েছে', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white); }, icon: const Icon(Icons.payments_rounded), label: const Text('পেমেন্ট আপডেট করুন'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))))],
+          if (_currentStatus != 'delivered') ...[const Divider(height: 20), TextField(controller: _paidCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(labelText: 'নতুন জমার পরিমাণ আপডেট করুন'.tr, prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12))), const SizedBox(height: 10), SizedBox(width: double.infinity, child: ElevatedButton.icon(onPressed: () async { final amount = num.tryParse(_paidCtrl.text.trim()) ?? _currentPaid; await controller.updatePaidAmount(widget.order.id, amount); setState(() => _currentPaid = amount); Get.snackbar('আপডেট হয়েছে'.tr, 'পেমেন্ট তথ্য সেভ হয়েছে'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white); }, icon: const Icon(Icons.payments_rounded), label: Text('পেমেন্ট আপডেট করুন'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))))],
         ]),
       ),
     );
@@ -3082,17 +3083,17 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     try { final pc = Get.find<ProductController>(); for (final item in _savedItems) { num c = item.purchasePrice; if (c <= 0) { final p = pc.products.firstWhereOrNull((p) => p.id == item.productId); if (p != null) c = p.purchasePrice; } cost += c * item.quantity; } } catch (_) {}
     final profit = (netSales - cost.toInt()).clamp(0, 9999999);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('লাভের হিসাব', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)), const SizedBox(height: 10),
-      _payRow('মোট অর্ডার', '৳ ${_fmt.format(tot.toInt())}', const Color(0xFF0891B2)),
+      Text('লাভের হিসাব'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)), const SizedBox(height: 10),
+      _payRow('মোট অর্ডার'.tr, '৳ ${_fmt.format(tot.toInt())}', const Color(0xFF0891B2)),
        if (ded > 0) _payRow('  − রিপ্লেস বাবদ বাদ', '− ৳ ${_fmt.format(ded)}', const Color(0xFFDC2626)),
       if (ret > 0) _payRow('  − ফেরত বাদ', '− ৳ ${_fmt.format(ret)}', const Color(0xFF8B5CF6)),
       if (disc > 0) _payRow('  − ডিসকাউন্ট', '− ৳ ${_fmt.format(disc)}', const Color(0xFFD97706)),
       const SizedBox(height: 6),
-      _payRow('নেট বিক্রি', '৳ ${_fmt.format(netSales)}', netSales > 0 ? const Color(0xFF0891B2) : Colors.grey),
-      if (cost > 0) ...[const SizedBox(height: 4), _payRow('ক্রয় মূল্য', '− ৳ ${_fmt.format(cost.toInt())}', const Color(0xFFDC2626))],
+      _payRow('নেট বিক্রি'.tr, '৳ ${_fmt.format(netSales)}', netSales > 0 ? const Color(0xFF0891B2) : Colors.grey),
+      if (cost > 0) ...[const SizedBox(height: 4), _payRow('ক্রয় মূল্য'.tr, '− ৳ ${_fmt.format(cost.toInt())}', const Color(0xFFDC2626))],
       const SizedBox(height: 6),
-      _payRow('নিট লাভ', '৳ ${_fmt.format(profit)}', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
-      if (cost > 0) ...[const SizedBox(height: 4), Builder(builder: (_) { final gpct = cost > 0 ? (profit / cost * 100).toStringAsFixed(2) : '0.00'; return _payRow('লাভের হার', '$gpct%', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)); })],
+      _payRow('নিট লাভ'.tr, '৳ ${_fmt.format(profit)}', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+      if (cost > 0) ...[const SizedBox(height: 4), Builder(builder: (_) { final gpct = cost > 0 ? (profit / cost * 100).toStringAsFixed(2) : '0.00'; return _payRow('লাভের হার'.tr, '$gpct%', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)); })],
     ]);
   }
 
@@ -3122,8 +3123,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         ),
       ]),
       actions: [
-        TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')),
-        ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('আপডেট'),
+        TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)),
+        ElevatedButton(onPressed: () => Get.back(result: true), child: Text('আপডেট'.tr),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white)),
       ],
     ));
@@ -3148,7 +3149,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   void _editSellingPriceEditMode(_EditItem item) async {
     final ctrl = TextEditingController(text: item.pricePerUnit.toStringAsFixed(0));
     final ok = await Get.dialog<bool>(AlertDialog(
-      title: const Text('বিক্রয়মূল্য সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)),
+      title: Text('বিক্রয়মূল্য সম্পাদন'.tr, style: TextStyle(fontWeight: FontWeight.w800)),
       content: Column(mainAxisSize: MainAxisSize.min, children: [
         Text(item.productName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         const SizedBox(height: 12),
@@ -3158,14 +3159,14 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           autofocus: true,
           decoration: InputDecoration(
             prefixText: '৳ ',
-            hintText: 'বিক্রয়মূল্য লিখুন',
+            hintText: 'বিক্রয়মূল্য লিখুন'.tr,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           ),
         ),
       ]),
       actions: [
-        TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')),
-        ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('সেভ'),
+        TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)),
+        ElevatedButton(onPressed: () => Get.back(result: true), child: Text('সেভ'.tr),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white)),
       ],
     ));
@@ -3207,8 +3208,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         ),
       ]),
       actions: [
-        TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')),
-        ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('সেভ'),
+        TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)),
+        ElevatedButton(onPressed: () => Get.back(result: true), child: Text('সেভ'.tr),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white)),
       ],
     ));
@@ -3221,42 +3222,42 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
 
   void _editPaidAmount() async {
     final ctrl = TextEditingController(text: _currentPaid.toStringAsFixed(0));
-    final ok = await Get.dialog<bool>(AlertDialog(title: const Text('জমা সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('আপডেট'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
+    final ok = await Get.dialog<bool>(AlertDialog(title: Text('জমা সম্পাদন'.tr, style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)), ElevatedButton(onPressed: () => Get.back(result: true), child: Text('আপডেট'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
     if (ok == true) { final amt = num.tryParse(ctrl.text.trim()) ?? _currentPaid; await controller.updatePaidAmount(widget.order.id, amt); final nd = (_currentPreviousDue + _savedTotal.toInt() - amt.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentPaid = amt; _paidCtrl.text = amt.toStringAsFixed(0); _currentUserDue = nd; }); }
     ctrl.dispose();
   }
 
   void _editPreviousDue() async {
     final ctrl = TextEditingController(text: _currentPreviousDue.toString());
-    final ok = await Get.dialog<bool>(AlertDialog(title: const Text('পূর্বের বাকি সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('সেভ'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
+    final ok = await Get.dialog<bool>(AlertDialog(title: Text('পূর্বের বাকি সম্পাদন'.tr, style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)), ElevatedButton(onPressed: () => Get.back(result: true), child: Text('সেভ'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
     if (ok == true) { final v = int.tryParse(ctrl.text.trim()) ?? _currentPreviousDue; await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'previousDue': v}); final nd = (v + _savedTotal.toInt() - _currentPaid.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentPreviousDue = v; _currentUserDue = nd; }); }
     ctrl.dispose();
   }
 
   void _editDiscount() async {
     final ctrl = TextEditingController(text: _currentDiscountAmount.toStringAsFixed(0));
-    final ok = await Get.dialog<bool>(AlertDialog(title: const Text('ডিসকাউন্ট সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('আপডেট'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
+    final ok = await Get.dialog<bool>(AlertDialog(title: Text('ডিসকাউন্ট সম্পাদন'.tr, style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)), ElevatedButton(onPressed: () => Get.back(result: true), child: Text('আপডেট'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
     if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? _currentDiscountAmount; await controller.saveDiscountAmount(widget.order.id, v); final nd = (_currentPreviousDue + _savedTotal.toInt() - _currentPaid.toInt() - v.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentDiscountAmount = v; _currentUserDue = nd; }); }
     ctrl.dispose();
   }
 
   void _editDeductionAmount() async {
     final ctrl = TextEditingController(text: _currentDeductionAmount.toStringAsFixed(0));
-    final ok = await Get.dialog<bool>(AlertDialog(title: const Text('রিপ্লেস বাবদ সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('আপডেট'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED), foregroundColor: Colors.white))]));
+    final ok = await Get.dialog<bool>(AlertDialog(title: Text('রিপ্লেস বাবদ সম্পাদন'.tr, style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)), ElevatedButton(onPressed: () => Get.back(result: true), child: Text('আপডেট'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED), foregroundColor: Colors.white))]));
     if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? 0; await controller.saveDeductionAmount(widget.order.id, v); setState(() => _currentDeductionAmount = v); }
     ctrl.dispose();
   }
 
   void _editReturnAmount() async {
     final ctrl = TextEditingController(text: _currentReturnAmount.toStringAsFixed(0));
-    final ok = await Get.dialog<bool>(AlertDialog(title: const Text('ফেরত বাদ সম্পাদন', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('আপডেট'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6), foregroundColor: Colors.white))]));
+    final ok = await Get.dialog<bool>(AlertDialog(title: Text('ফেরত বাদ সম্পাদন'.tr, style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)), ElevatedButton(onPressed: () => Get.back(result: true), child: Text('আপডেট'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6), foregroundColor: Colors.white))]));
     if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? 0; await controller.saveReturnAmount(widget.order.id, v); setState(() => _currentReturnAmount = v); }
     ctrl.dispose();
   }
 
   void _editLocalMemo() async {
     final ctrl = TextEditingController(text: _currentLocalMemo);
-    final ok = await Get.dialog<bool>(AlertDialog(title: const Text('লোকাল মেমো', style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(hintText: 'যেমন: 233', prefixText: '#', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')), ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('সেভ'), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
+    final ok = await Get.dialog<bool>(AlertDialog(title: Text('লোকাল মেমো'.tr, style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(hintText: 'যেমন: 233'.tr, prefixText: '#', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)), ElevatedButton(onPressed: () => Get.back(result: true), child: Text('সেভ'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
     if (ok == true) { final val = ctrl.text.trim(); await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'localMemo': val.isNotEmpty ? val : FieldValue.delete()}); setState(() => _currentLocalMemo = val); }
     ctrl.dispose();
   }
@@ -3344,8 +3345,8 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     final type = item['resolutionType'] ?? '';
     
     final ok = await _confirm(
-      'রিপ্লেস সরাবেন?',
-      '"$name" × $qty রিপ্লেস আইটেম সরিয়ে দিতে চান?',
+      'রিপ্লেস সরাবেন?'.tr,
+      '"$name" × $qty ${'রিপ্লেস আইটেম সরিয়ে দিতে চান'.tr}?',
     );
     if (ok != true) return;
 
@@ -3391,12 +3392,12 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       await controller.updateReplaceItemsLocally(widget.order.id, newList);
       setState(() => _currentReplaceItems = newList);
 
-      Get.snackbar('সফল', 'রিপ্লেস আইটেম সরানো হয়েছে',
+      Get.snackbar('সফল'.tr, 'রিপ্লেস আইটেম সরানো হয়েছে'.tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF16A34A),
           colorText: Colors.white);
     } catch (e) {
-      Get.snackbar('ত্রুটি', 'সরানো যায়নি: $e',
+      Get.snackbar('ত্রুটি'.tr, '${'সরানো যায়নি'.tr}: $e',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white);
@@ -3424,15 +3425,15 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               Container(width: 40, height: 4, decoration: BoxDecoration(color: Theme.of(context).colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 12),
               Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [
-                Expanded(child: Text('রিপ্লেস প্রডাক্ট যোগ', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
-                if (sel != null) TextButton.icon(onPressed: () => sheetSt(() { sel = null; res = 'replace_given'; qty = 1; dedC.clear(); }), icon: const Icon(Icons.arrow_back_rounded, size: 16), label: const Text('তালিকায় ফিরুন', style: TextStyle(fontSize: 12)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact)),
+                Expanded(child: Text('রিপ্লেস প্রডাক্ট যোগ'.tr, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+                if (sel != null) TextButton.icon(onPressed: () => sheetSt(() { sel = null; res = 'replace_given'; qty = 1; dedC.clear(); }), icon: const Icon(Icons.arrow_back_rounded, size: 16), label: Text('তালিকায় ফিরুন'.tr, style: TextStyle(fontSize: 12)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact)),
               ])),
               const SizedBox(height: 10),
               if (sel == null) ...[
-                Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(onChanged: (v) => sheetSt(() => q = v.trim().toLowerCase()), decoration: InputDecoration(hintText: 'নাম বা কোড দিয়ে খুঁজুন...', prefixIcon: const Icon(Icons.search_rounded, size: 20), filled: true, fillColor: Theme.of(context).colorScheme.surfaceContainerHigh, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(vertical: 11, horizontal: 14)))),
+                Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(onChanged: (v) => sheetSt(() => q = v.trim().toLowerCase()), decoration: InputDecoration(hintText: 'নাম বা কোড দিয়ে খুঁজুন...'.tr, prefixIcon: const Icon(Icons.search_rounded, size: 20), filled: true, fillColor: Theme.of(context).colorScheme.surfaceContainerHigh, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(vertical: 11, horizontal: 14)))),
                 const SizedBox(height: 8),
                 const Divider(height: 1),
-                Expanded(child: _loadingProducts ? const Center(child: CircularProgressIndicator()) : displayed.isEmpty ? const Center(child: Text('কোনো প্রডাক্ট পাওয়া যায়নি')) : ListView.separated(controller: scrollCtrl, itemCount: displayed.length, separatorBuilder: (_, __) => const Divider(height: 1), itemBuilder: (_, i) {
+                Expanded(child: _loadingProducts ? const Center(child: CircularProgressIndicator()) : displayed.isEmpty ? Center(child: Text('কোনো প্রডাক্ট পাওয়া যায়নি'.tr)) : ListView.separated(controller: scrollCtrl, itemCount: displayed.length, separatorBuilder: (_, __) => const Divider(height: 1), itemBuilder: (_, i) {
                   final p = displayed[i];
                   return InkWell(onTap: () => sheetSt(() { sel = p; res = 'replace_given'; qty = 1; dedC.text = p.wholesalePrice.toStringAsFixed(0); }), child: Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 10), child: Row(children: [
                     ClipRRect(borderRadius: BorderRadius.circular(8), child: p.images.isNotEmpty ? Image.network(p.images.first, width: 46, height: 46, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _imgPlaceholder(46, Theme.of(context).colorScheme)) : _imgPlaceholder(46, Theme.of(context).colorScheme)),
@@ -3457,7 +3458,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     ])),
                   ])),
                   const SizedBox(height: 20),
-                  Text('পরিমাণ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  Text('পরিমাণ'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                   const SizedBox(height: 8),
                   Row(children: [
                     _qtyBtnPurple(Icons.remove_rounded, () { if (qty > 1) sheetSt(() => qty--); }),
@@ -3467,29 +3468,29 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     _qtyBtnPurple(Icons.add_rounded, () => sheetSt(() => qty++)),
                   ]),
                   const SizedBox(height: 20),
-                  Text('রিপ্লেস স্ট্যাটাস', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                  const SizedBox(height: 8),
+                  Text('রিপ্লেস স্ট্যাটাস'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: res,
-                    decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
-                    items: const [
-                      DropdownMenuItem(value: 'replace_given', child: Text('রিপ্লেস দিতে হবে', style: TextStyle(fontSize: 13))),
-                      DropdownMenuItem(value: 'product_replace', child: Text('রিপ্লেস নেওয়া হল', style: TextStyle(fontSize: 13))),
-                      DropdownMenuItem(value: 'money_deduct', child: Text('টাকা কাটা', style: TextStyle(fontSize: 13))),
+                    decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
+                    items: [
+                      DropdownMenuItem(value: 'replace_given', child: Text('রিপ্লেস দিতে হবে'.tr, style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 'product_replace', child: Text('রিপ্লেস নেওয়া হল'.tr, style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 'money_deduct', child: Text('টাকা কাটা'.tr, style: TextStyle(fontSize: 13))),
                     ],
                     onChanged: (v) => sheetSt(() { res = v!; if (res == 'money_deduct') dedC.text = sel!.wholesalePrice.toStringAsFixed(0); }),
                   ),
                   if (res == 'money_deduct') ...[
                     const SizedBox(height: 16),
-                    Text('টাকার পরিমাণ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    Text('টাকার পরিমাণ'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 8),
-                    TextField(controller: dedC, keyboardType: TextInputType.number, decoration: InputDecoration(prefixText: '৳ ', hintText: 'টাকার পরিমাণ লিখুন', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12))),
+                    TextField(controller: dedC, keyboardType: TextInputType.number, decoration: InputDecoration(prefixText: '৳ ', hintText: 'টাকার পরিমাণ লিখুন'.tr, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12))),
                   ],
                   const SizedBox(height: 24),
                   SizedBox(width: double.infinity, child: ElevatedButton.icon(
                     onPressed: () async {
                       if (_currentUserId.isEmpty) {
-                        Get.snackbar('ত্রুটি', 'আগে ক্রেতা নির্বাচন করুন', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                        Get.snackbar('ত্রুটি'.tr, 'আগে ক্রেতা নির্বাচন করুন'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
                         return;
                       }
                       final ded = res == 'money_deduct' ? (int.tryParse(dedC.text.trim()) ?? sel!.wholesalePrice.toInt()) : 0;
@@ -3502,19 +3503,19 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                         if (res != 'replace_given') {
                           AdminReplaceController rc;
                           try { rc = Get.find<AdminReplaceController>(); } catch (_) { rc = Get.put(AdminReplaceController()); }
-                          await rc.addCustomerIn(productId: sel!.id, productName: sel!.name, quantity: qty, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: res, deductionAmount: ded * qty, note: 'অর্ডার #${widget.order.id} — রিপ্লেস', date: DateTime.now());
+                          await rc.addCustomerIn(productId: sel!.id, productName: sel!.name, quantity: qty, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: res, deductionAmount: ded * qty, note: '${'অর্ডার'.tr} #${widget.order.id} — ${'রিপ্লেস'.tr}', date: DateTime.now());
                           await rc.fetchEntries(force: true);
                         }
                         final newList = [..._currentReplaceItems, replaceItem];
                         await controller.updateReplaceItemsLocally(widget.order.id, newList);
                         setState(() => _currentReplaceItems = newList);
                         Navigator.pop(ctx);
-                        Get.snackbar('সফল', 'রিপ্লেস প্রডাক্ট যোগ হয়েছে', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
+                        Get.snackbar('সফল'.tr, 'রিপ্লেস প্রডাক্ট যোগ হয়েছে'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
                       } catch (e) {
-                        Get.snackbar('ত্রুটি', 'যোগ হয়নি: $e', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                        Get.snackbar('ত্রুটি'.tr, '${'যোগ হয়নি'.tr}: $e', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
                       }
                     },
-                    icon: const Icon(Icons.add_rounded), label: const Text('যোগ করুন'),
+                    icon: const Icon(Icons.add_rounded), label: Text('যোগ করুন'.tr),
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                   )),
                   const SizedBox(height: 16),
@@ -3558,12 +3559,12 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               const SizedBox(height: 10),
               Container(width: 40, height: 4, decoration: BoxDecoration(color: Theme.of(context).colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
               const SizedBox(height: 12),
-              Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text('ক্রেতা পরিবর্তন', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text('ক্রেতা পরিবর্তন'.tr, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
               const SizedBox(height: 10),
-              Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(onChanged: (v) => sheetSt(() => q = v.trim().toLowerCase()), decoration: InputDecoration(hintText: 'নাম বা ফোন দিয়ে খুঁজুন...', prefixIcon: const Icon(Icons.search_rounded, size: 20), filled: true, fillColor: Theme.of(context).colorScheme.surfaceContainerHigh, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(vertical: 11, horizontal: 14)))),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: TextField(onChanged: (v) => sheetSt(() => q = v.trim().toLowerCase()), decoration: InputDecoration(hintText: 'নাম বা ফোন দিয়ে খুঁজুন...'.tr, prefixIcon: const Icon(Icons.search_rounded, size: 20), filled: true, fillColor: Theme.of(context).colorScheme.surfaceContainerHigh, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), contentPadding: const EdgeInsets.symmetric(vertical: 11, horizontal: 14)))),
               const SizedBox(height: 8),
               const Divider(height: 1),
-              Expanded(child: loading ? const Center(child: CircularProgressIndicator()) : filtered.isEmpty ? const Center(child: Text('কোনো ক্রেতা পাওয়া যায়নি')) : ListView.separated(controller: scrollCtrl, itemCount: filtered.length, separatorBuilder: (_, __) => const Divider(height: 1), itemBuilder: (_, i) {
+              Expanded(child: loading ? const Center(child: CircularProgressIndicator()) : filtered.isEmpty ? Center(child: Text('কোনো ক্রেতা পাওয়া যায়নি'.tr)) : ListView.separated(controller: scrollCtrl, itemCount: filtered.length, separatorBuilder: (_, __) => const Divider(height: 1), itemBuilder: (_, i) {
                 final u = filtered[i];
                 return ListTile(
                   leading: CircleAvatar(backgroundColor: const Color(0xFF2563EB).withAlpha(20), child: Text((u['shopName'] ?? '?')[0].toUpperCase(), style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w700))),
@@ -3595,9 +3596,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                           _currentUserDue = newDue;
                         });
                       Navigator.pop(ctx);
-                      Get.snackbar('সফল', 'ক্রেতা পরিবর্তন হয়েছে', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
+                      Get.snackbar('সফল'.tr, 'ক্রেতা পরিবর্তন হয়েছে'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
                     } catch (e) {
-                      Get.snackbar('ত্রুটি', 'ক্রেতা পরিবর্তন হয়নি', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                      Get.snackbar('ত্রুটি'.tr, 'ক্রেতা পরিবর্তন হয়নি'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
                     }
                   },
                 );
@@ -3610,11 +3611,11 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   }
 
   String _statusLabel(String s) => {
-        'pending': 'Pending',
-        'approved': 'Approved',
-        'dispatched': 'Dispatched',
-        'delivered': 'Delivered',
-        'cancelled': 'বাতিল',
+        'pending': 'Pending'.tr,
+        'approved': 'Approved'.tr,
+        'dispatched': 'Dispatched'.tr,
+        'delivered': 'Delivered'.tr,
+        'cancelled': 'বাতিল'.tr,
       }[s] ??
       (s.capitalizeFirst ?? s);
 

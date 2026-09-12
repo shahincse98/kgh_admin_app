@@ -5,15 +5,16 @@ import '../../user/controller/user_controller.dart';
 import '../../user/model/user_model.dart';
 import '../../../widgets/call_button.dart';
 import '../../../widgets/responsive.dart';
+import '../../../localization/domain_labels.dart';
 
 // Visit status options
-const _visitStatuses = [
-  ('pending', 'অপেক্ষারত', Icons.hourglass_empty_rounded),
-  ('visited', 'ভিজিট সম্পন্ন', Icons.check_circle_rounded),
-  ('ordered', 'অর্ডার সম্পন্ন', Icons.shopping_bag_rounded),
-  ('order_later', 'অর্ডার পরে দিবে', Icons.schedule_rounded),
-  ('shop_closed', 'দোকান বন্ধ', Icons.store_mall_directory_outlined),
-  ('no_order', 'অর্ডার দিবেনা', Icons.remove_shopping_cart_rounded),
+List<(String, String, IconData)> get _visitStatuses => [
+  ('pending', 'অপেক্ষারত'.tr, Icons.hourglass_empty_rounded),
+  ('visited', 'ভিজিট সম্পন্ন'.tr, Icons.check_circle_rounded),
+  ('ordered', 'অর্ডার সম্পন্ন'.tr, Icons.shopping_bag_rounded),
+  ('order_later', 'অর্ডার পরে দিবে'.tr, Icons.schedule_rounded),
+  ('shop_closed', 'দোকান বন্ধ'.tr, Icons.store_mall_directory_outlined),
+  ('no_order', 'অর্ডার দিবেনা'.tr, Icons.remove_shopping_cart_rounded),
 ];
 
 Color _visitColor(String status) {
@@ -48,13 +49,13 @@ class SrMyCustomersView extends StatelessWidget {
         backgroundColor: scheme.surfaceContainerLowest,
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          title: const Text('ইউজার তালিকা',
+          title: Text('ইউজার তালিকা'.tr,
               style: TextStyle(fontWeight: FontWeight.w800)),
-          bottom: const TabBar(
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'সকল ইউজার'),
-              Tab(text: 'নির্ধারিত দোকান'),
-              Tab(text: 'কল তালিকা'),
+              Tab(text: 'সকল ইউজার'.tr),
+              Tab(text: 'নির্ধারিত দোকান'.tr),
+              Tab(text: 'কল তালিকা'.tr),
             ],
           ),
         ),
@@ -69,7 +70,7 @@ class SrMyCustomersView extends StatelessWidget {
               _CustomerList(
                 users: ctrl.callContacts,
                 emptyIcon: Icons.phone_missed_rounded,
-                emptyMsg: 'কোনো কল তালিকা নেই',
+                emptyMsg: 'কোনো কল তালিকা নেই'.tr,
                 scheme: scheme,
               ),
             ],
@@ -100,7 +101,7 @@ class _AssignedShopList extends StatelessWidget {
               Icon(Icons.store_mall_directory_rounded,
                   size: 56, color: scheme.onSurface.withAlpha(60)),
               const SizedBox(height: 12),
-              Text('কোনো দোকান নির্ধারিত নেই',
+              Text('কোনো দোকান নির্ধারিত নেই'.tr,
                   style: TextStyle(color: scheme.onSurface.withAlpha(120))),
             ],
           ),
@@ -193,20 +194,20 @@ class _AssignedShopCard extends StatelessWidget {
                   ),
                   PopupMenuButton<String>(
                     icon: const Icon(Icons.more_vert_rounded),
-                    tooltip: 'অপশন',
+                    tooltip: 'অপশন'.tr,
                     onSelected: (val) async {
                       if (val == 'remove') {
                         final ok = await Get.dialog<bool>(AlertDialog(
-                          title: const Text('তালিকা থেকে বাদ দিবেন?'),
+                          title: Text('তালিকা থেকে বাদ দিবেন?'.tr),
                           content: Text(
-                              '"${user.shopName.isNotEmpty ? user.shopName : user.proprietorName}" ভিজিট তালিকা থেকে বাদ দিতে চান?'),
+                              '"${user.shopName.isNotEmpty ? user.shopName : user.proprietorName}" ${'ভিজিট তালিকা থেকে বাদ দিতে চান'.tr}?'),
                           actions: [
                             TextButton(
                                 onPressed: () => Get.back(result: false),
-                                child: const Text('না')),
+                                child: Text('না'.tr)),
                             TextButton(
                                 onPressed: () => Get.back(result: true),
-                                child: const Text('হ্যাঁ',
+                                child: Text('হ্যাঁ'.tr,
                                     style: TextStyle(color: Colors.red))),
                           ],
                         ));
@@ -217,9 +218,9 @@ class _AssignedShopCard extends StatelessWidget {
                     },
                     itemBuilder: (_) => [
                       const PopupMenuDivider(),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'pending',
-                        child: Text('— স্ট্যাটাস স্থির করুন —',
+                        child: Text('— স্ট্যাটাস স্থির করুন —'.tr,
                             style:
                                 TextStyle(fontSize: 12, color: Colors.grey)),
                         enabled: false,
@@ -242,7 +243,7 @@ class _AssignedShopCard extends StatelessWidget {
                             Icon(Icons.remove_circle_outline_rounded,
                                 size: 16, color: Colors.red.shade400),
                             const SizedBox(width: 8),
-                            Text('তালিকা থেকে বাদ দিন',
+                            Text('তালিকা থেকে বাদ দিন'.tr,
                                 style:
                                     TextStyle(color: Colors.red.shade400)),
                           ],
@@ -289,7 +290,7 @@ class _AssignedShopCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text('আজকের ভিজিট',
+                    Text('আজকের ভিজিট'.tr,
                         style: TextStyle(
                             fontSize: 11,
                             color: scheme.onSurface.withAlpha(120))),
@@ -339,7 +340,7 @@ class _SearchableUserListState extends State<_SearchableUserList> {
             onChanged: (v) =>
                 setState(() => _query = v.trim().toLowerCase()),
             decoration: InputDecoration(
-              hintText: 'নাম / ফোন দিয়ে খুঁজুন…',
+              hintText: 'নাম / ফোন দিয়ে খুঁজুন…'.tr,
               prefixIcon: const Icon(Icons.search_rounded),
               filled: true,
               fillColor: scheme.surfaceContainerHigh,
@@ -372,7 +373,7 @@ class _SearchableUserListState extends State<_SearchableUserList> {
 
             if (users.isEmpty) {
               return Center(
-                child: Text('কোনো ইউজার পাওয়া যায়নি',
+                child: Text('কোনো ইউজার পাওয়া যায়নি'.tr,
                     style: TextStyle(
                         color: scheme.onSurface.withAlpha(120))),
               );
@@ -514,7 +515,7 @@ class _UserCard extends StatelessWidget {
                   color: scheme.primaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(user.deliveryDay,
+                child: Text(DomainLabels.weekday(user.deliveryDay),
                     style: TextStyle(
                         fontSize: 11,
                         color: scheme.onPrimaryContainer,

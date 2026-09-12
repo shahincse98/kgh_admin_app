@@ -71,7 +71,7 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_rounded),
-            tooltip: 'সম্পাদনা',
+            tooltip: 'সম্পাদনা'.tr,
             onPressed: _openEdit,
           ),
           IconButton(
@@ -104,7 +104,7 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
                                 size: 18, color: cs.primary),
                             const SizedBox(width: 6),
                             Text(
-                              'ক্রয় ইতিহাস',
+                              'ক্রয় ইতিহাস'.tr,
                               style: Theme.of(context)
                                   .textTheme
                                   .titleMedium
@@ -130,10 +130,10 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
                       Icon(Icons.error_outline_rounded,
                           size: 48, color: cs.error),
                       const SizedBox(height: 8),
-                      const Text('লোড করতে সমস্যা হয়েছে'),
+                      Text('লোড করতে সমস্যা হয়েছে'.tr),
                       TextButton(
                           onPressed: _loadHistory,
-                          child: const Text('আবার চেষ্টা করুন')),
+                          child: Text('আবার চেষ্টা করুন'.tr)),
                     ],
                   ),
                 ),
@@ -147,7 +147,7 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
                       Icon(Icons.shopping_cart_outlined,
                           size: 56, color: cs.outlineVariant),
                       const SizedBox(height: 12),
-                      Text('এই সাপ্লাইয়ারের কোনো ক্রয় নেই',
+                      Text('এই সাপ্লাইয়ারের কোনো ক্রয় নেই'.tr,
                           style: TextStyle(color: cs.onSurfaceVariant)),
                     ],
                   ),
@@ -249,7 +249,7 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
         Expanded(
             child: _statCard(
           '${_history.length}',
-          'মোট ক্রয়',
+          'মোট ক্রয়'.tr,
           Icons.receipt_long_rounded,
           cs.primary,
           cs,
@@ -258,7 +258,7 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
         Expanded(
             child: _statCard(
           '৳ ${_fmt.format(total.toInt())}',
-          'মোট পরিমাণ',
+          'মোট পরিমাণ'.tr,
           Icons.payments_rounded,
           const Color(0xFF16A34A),
           cs,
@@ -337,7 +337,7 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
                     color: Colors.orange.shade50,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text('${list.length}টি entry',
+                  child: Text('${list.length}${'টি'.tr} entry',
                       style: TextStyle(
                           fontSize: 11, color: Colors.orange.shade700)),
                 ),
@@ -407,7 +407,7 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
                     style: const TextStyle(
                         fontWeight: FontWeight.w600, fontSize: 13)),
                 Text(
-                  '${e.quantity}টি × ৳ ${_fmt.format(e.unitPrice.toInt())} = ৳ ${_fmt.format(e.totalAmount.toInt())}',
+                  '${e.quantity}${'টি'.tr} × ৳ ${_fmt.format(e.unitPrice.toInt())} = ৳ ${_fmt.format(e.totalAmount.toInt())}',
                   style:
                       TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
                 ),
@@ -463,7 +463,7 @@ class _SupplierFormState extends State<_SupplierForm> {
     final shopName = _shopCtrl.text.trim();
     if (shopName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('দোকানের নাম আবশ্যিক')));
+          SnackBar(content: Text('দোকানের নাম আবশ্যিক'.tr)));
       return;
     }
     setState(() => _saving = true);
@@ -484,7 +484,7 @@ class _SupplierFormState extends State<_SupplierForm> {
       );
       widget.onSaved(updated);
       if (mounted) Navigator.of(context).pop();
-      Get.snackbar('আপডেট হয়েছে', '"$shopName" সফলভাবে আপডেট হয়েছে',
+      Get.snackbar('আপডেট হয়েছে'.tr, '"$shopName" ${'সফলভাবে আপডেট হয়েছে'.tr}',
           snackPosition: SnackPosition.BOTTOM);
     } catch (_) {
       setState(() => _saving = false);
@@ -515,7 +515,7 @@ class _SupplierFormState extends State<_SupplierForm> {
                 Icon(Icons.edit_rounded, color: scheme.primary),
                 const SizedBox(width: 10),
                 Expanded(
-                    child: Text('সাপ্লাইয়ার সম্পাদনা',
+                    child: Text('সাপ্লাইয়ার সম্পাদনা'.tr,
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
@@ -532,14 +532,14 @@ class _SupplierFormState extends State<_SupplierForm> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Column(
                 children: [
-                  _tf(_shopCtrl, 'দোকানের নাম *', Icons.storefront_rounded),
+                  _tf(_shopCtrl, 'দোকানের নাম *'.tr, Icons.storefront_rounded),
                   const SizedBox(height: 12),
-                  _tf(_ownerCtrl, 'মালিকের নাম', Icons.person_rounded),
+                  _tf(_ownerCtrl, 'মালিকের নাম'.tr, Icons.person_rounded),
                   const SizedBox(height: 12),
-                  _tf(_phoneCtrl, 'ফোন নম্বর', Icons.phone_rounded,
+                  _tf(_phoneCtrl, 'ফোন নম্বর'.tr, Icons.phone_rounded,
                       keyboardType: TextInputType.phone),
                   const SizedBox(height: 12),
-                  _tf(_addressCtrl, 'ঠিকানা', Icons.location_on_rounded,
+                  _tf(_addressCtrl, 'ঠিকানা'.tr, Icons.location_on_rounded,
                       maxLines: 2),
                   const SizedBox(height: 20),
                   SizedBox(
@@ -554,7 +554,7 @@ class _SupplierFormState extends State<_SupplierForm> {
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.save_rounded),
-                      label: const Text('আপডেট করুন'),
+                      label: Text('আপডেট করুন'.tr),
                     ),
                   ),
                   const SizedBox(height: 8),

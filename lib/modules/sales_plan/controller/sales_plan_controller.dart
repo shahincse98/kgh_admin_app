@@ -104,8 +104,8 @@ class SalesPlanController extends GetxController {
     } catch (e) {
       planItems.clear();
       Get.snackbar(
-        'ত্রুটি',
-        'ডেটা লোড হয়নি। পুনরায় চেষ্টা করুন।',
+        'ত্রুটি'.tr,
+        'ডেটা লোড হয়নি। পুনরায় চেষ্টা করুন।'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade400,
         colorText: Colors.white,

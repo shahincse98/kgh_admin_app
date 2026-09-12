@@ -8,6 +8,10 @@ abstract class AppRoutes {
   static const stockIn = '/stock-in';
   static const stockInHistory = '/stock-in/history';
   static const products = '/products';
+  static const productForm = '/products/new';
+  static const stockManagement = '/products/stock';
+  static const stockSnapshots = '/products/snapshots';
+  static const replaceRequests = '/products/replace-requests';
   static const users = '/users';
   static const finance = '/finance';
   static const expenses = '/expenses';
@@ -21,4 +25,5 @@ abstract class AppRoutes {
   static const suppliers = '/suppliers';
   static const supplierDetail = '/suppliers/detail';
   static const replaceManagement = '/replace';
+  static const settings = '/settings';
 }

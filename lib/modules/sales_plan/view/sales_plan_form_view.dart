@@ -68,16 +68,16 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
 
   DateTime get _periodEnd => _type == 'monthly'
       ? DateTime(_selectedMonth.year, _selectedMonth.month + 1)
-      : _weekStart.add(const Duration(days: 7));
+      : _weekStart.add(Duration(days: 7));
 
   String get _periodLabel {
     if (_type == 'weekly') {
-      final end = _weekStart.add(const Duration(days: 6));
+      final end = _weekStart.add(Duration(days: 6));
       return '${_d(_weekStart)} – ${_d(end)}';
     }
-    const months = [
-      'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-      'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+    final months = [
+      'জানুয়ারি'.tr, 'ফেব্রুয়ারি'.tr, 'মার্চ'.tr, 'এপ্রিল'.tr, 'মে'.tr, 'জুন'.tr,
+      'জুলাই'.tr, 'আগস্ট'.tr, 'সেপ্টেম্বর'.tr, 'অক্টোবর'.tr, 'নভেম্বর'.tr, 'ডিসেম্বর'.tr
     ];
     return '${months[_selectedMonth.month - 1]} ${_selectedMonth.year}';
   }
@@ -105,7 +105,7 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('নতুন পরিকল্পনা'),
+        title: Text('নতুন পরিকল্পনা'.tr),
         actions: [
           Obx(() => Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -117,7 +117,7 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
                           child: CircularProgressIndicator(
                               strokeWidth: 2))
                       : const Icon(Icons.save_rounded, size: 18),
-                  label: const Text('সেভ'),
+                  label: Text('সেভ'.tr),
                   onPressed: _saving.value ? null : _save,
                 ),
               )),
@@ -128,31 +128,31 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _section('মৌলিক তথ্য', cs),
+            _section('মৌলিক তথ্য'.tr, cs),
 
             // Title
             TextField(
               controller: _titleCtrl,
               decoration: InputDecoration(
-                labelText: 'পরিকল্পনার শিরোনাম',
-                hintText: 'যেমন: মে মাসের লক্ষ্যমাত্রা',
+                labelText: 'পরিকল্পনার শিরোনাম'.tr,
+                hintText: 'যেমন: মে মাসের লক্ষ্যমাত্রা'.tr,
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10)),
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
 
             // Type selector
-            _section('ধরন', cs),
+            _section('ধরন'.tr, cs),
             SegmentedButton<String>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                     value: 'monthly',
-                    label: Text('মাসিক'),
+                    label: Text('মাসিক'.tr),
                     icon: Icon(Icons.calendar_month_rounded, size: 16)),
                 ButtonSegment(
                     value: 'weekly',
-                    label: Text('সাপ্তাহিক'),
+                    label: Text('সাপ্তাহিক'.tr),
                     icon: Icon(Icons.calendar_view_week_rounded,
                         size: 16)),
               ],
@@ -163,16 +163,16 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
             const SizedBox(height: 12),
 
             // Period picker
-            _section('সময়কাল', cs),
+            _section('সময়কাল'.tr, cs),
             if (_type == 'monthly') _monthPicker(cs),
             if (_type == 'weekly') _weekPicker(cs),
 
             // SR assignment
-            _section('দায়িত্বপ্রাপ্ত SR', cs),
+            _section('দায়িত্বপ্রাপ্ত SR'.tr, cs),
             _srPicker(cs),
 
             // Products
-            _section('প্রডাক্ট ও লক্ষ্যমাত্রা', cs),
+            _section('প্রডাক্ট ও লক্ষ্যমাত্রা'.tr, cs),
             _productAddRow(cs),
             const SizedBox(height: 10),
             Obx(() => _items.isEmpty
@@ -183,7 +183,7 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Center(
-                      child: Text('কোনো প্রডাক্ট যোগ করা হয়নি',
+                      child: Text('কোনো প্রডাক্ট যোগ করা হয়নি'.tr,
                           style: TextStyle(color: cs.onSurfaceVariant)),
                     ),
                   )
@@ -227,8 +227,8 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
       return DateTime(now.year, now.month - i);
     });
     final monthNames = [
-      'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
-      'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+      'জানুয়ারি'.tr, 'ফেব্রুয়ারি'.tr, 'মার্চ'.tr, 'এপ্রিল'.tr, 'মে'.tr, 'জুন'.tr,
+      'জুলাই'.tr, 'আগস্ট'.tr, 'সেপ্টেম্বর'.tr, 'অক্টোবর'.tr, 'নভেম্বর'.tr, 'ডিসেম্বর'.tr
     ];
 
     return Wrap(
@@ -312,9 +312,9 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
           prefixIcon: const Icon(Icons.person_pin_circle_rounded),
         ),
         items: [
-          const DropdownMenuItem(
+          DropdownMenuItem(
             value: 'all',
-            child: Text('সকল SR (সামগ্রিক)'),
+            child: Text('সকল SR (সামগ্রিক)'.tr),
           ),
           ..._ctrl.srList.map((sr) => DropdownMenuItem(
                 value: sr.id,
@@ -368,7 +368,7 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
               controller: textController,
               focusNode: focusNode,
               decoration: InputDecoration(
-                labelText: 'প্রডাক্ট খুঁজুন...',
+                labelText: 'প্রডাক্ট খুঁজুন...'.tr,
                 prefixIcon: const Icon(Icons.search_rounded),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10)),
@@ -410,7 +410,7 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
                 controller: _qtyCtrl,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: 'লক্ষ্যমাত্রা (টি)',
+                  labelText: 'লক্ষ্যমাত্রা (টি)'.tr,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
@@ -420,7 +420,7 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
             Expanded(
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.add_rounded),
-                label: const Text('প্রডাক্ট যোগ করুন'),
+                label: Text('প্রডাক্ট যোগ করুন'.tr),
                 onPressed: _addItem,
               ),
             ),
@@ -433,14 +433,14 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
   void _addItem() {
     final prod = _selectedProduct;
     if (prod == null) {
-      Get.snackbar('ত্রুটি', 'প্রথমে একটি প্রডাক্ট সিলেক্ট করুন',
+      Get.snackbar('ত্রুটি'.tr, 'প্রথমে একটি প্রডাক্ট সিলেক্ট করুন'.tr,
           backgroundColor: Colors.orange,
           colorText: Colors.white);
       return;
     }
     final qty = int.tryParse(_qtyCtrl.text) ?? 0;
     if (qty <= 0) {
-      Get.snackbar('ত্রুটি', 'লক্ষ্যমাত্রা ০-এর বেশি হতে হবে',
+      Get.snackbar('ত্রুটি'.tr, 'লক্ষ্যমাত্রা ০-এর বেশি হতে হবে'.tr,
           backgroundColor: Colors.orange,
           colorText: Colors.white);
       return;
@@ -484,7 +484,7 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
               color: cs.primaryContainer.withAlpha(80),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text('${item.targetQty} টি',
+            child: Text('${item.targetQty} ${'টি'.tr}',
                 style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
@@ -504,7 +504,7 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
 
   Future<void> _save() async {
     if (_items.isEmpty) {
-      Get.snackbar('ত্রুটি', 'অন্তত একটি প্রডাক্ট যোগ করুন',
+      Get.snackbar('ত্রুটি'.tr, 'অন্তত একটি প্রডাক্ট যোগ করুন'.tr,
           backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
@@ -528,7 +528,7 @@ class _SalesPlanFormViewState extends State<SalesPlanFormView> {
       );
       await _ctrl.savePlan(plan);
       Get.back();
-      Get.snackbar('সফল', '"$title" পরিকল্পনা সেভ হয়েছে',
+      Get.snackbar('সফল'.tr, '"$title" ${'পরিকল্পনা সেভ হয়েছে'.tr}',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green,
           colorText: Colors.white);

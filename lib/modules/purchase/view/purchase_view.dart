@@ -10,6 +10,7 @@ import '../../supplier/controller/supplier_controller.dart';
 import '../../supplier/model/supplier_model.dart';
 import '../../supplier/view/supplier_list_view.dart';
 import '../../../widgets/responsive.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class PurchaseView extends GetView<PurchaseController> {
   const PurchaseView({super.key});
@@ -23,12 +24,13 @@ class PurchaseView extends GetView<PurchaseController> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        drawer: appDrawerFor(context),
         appBar: AppBar(
-          title: const Text('Stock Purchase Ledger'),
-          bottom: const TabBar(
+          title: Text('Stock Purchase Ledger'.tr),
+          bottom: TabBar(
             tabs: [
-              Tab(icon: Icon(Icons.receipt_long_rounded, size: 18), text: 'Purchase Ledger'),
-              Tab(icon: Icon(Icons.shopping_bag_rounded, size: 18), text: 'সংগ্রহ তালিকা'),
+              Tab(icon: Icon(Icons.receipt_long_rounded, size: 18), text: 'Purchase Ledger'.tr),
+              Tab(icon: Icon(Icons.shopping_bag_rounded, size: 18), text: 'সংগ্রহ তালিকা'.tr),
             ],
           ),
           actions: [
@@ -52,7 +54,7 @@ class PurchaseView extends GetView<PurchaseController> {
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () => _showAddSheet(context),
           icon: const Icon(Icons.add),
-          label: const Text('Purchase যোগ করুন'),
+          label: Text('Purchase যোগ করুন'.tr),
         ),
       ),
     );
@@ -73,7 +75,7 @@ class PurchaseView extends GetView<PurchaseController> {
                 onRefresh: controller.loadEntries,
                 child: controller.entries.isEmpty
                     ? ListView(
-                        children: const [
+                        children: [
                           SizedBox(height: 80),
                           Center(
                             child: Column(
@@ -82,7 +84,7 @@ class PurchaseView extends GetView<PurchaseController> {
                                 Icon(Icons.shopping_cart_outlined,
                                     size: 56, color: Colors.grey),
                                 SizedBox(height: 12),
-                                Text('এই মাসে কোনো purchase নেই',
+                                Text('এই মাসে কোনো purchase নেই'.tr,
                                     style: TextStyle(color: Colors.grey)),
                               ],
                             ),
@@ -162,7 +164,7 @@ class PurchaseView extends GetView<PurchaseController> {
                 const Icon(Icons.error_outline_rounded,
                     size: 48, color: Colors.red),
                 const SizedBox(height: 12),
-                const Text('লোড করতে সমস্যা হয়েছে',
+                Text('লোড করতে সমস্যা হয়েছে'.tr,
                     style: TextStyle(
                         fontWeight: FontWeight.w700, fontSize: 15)),
                 const SizedBox(height: 8),
@@ -175,7 +177,7 @@ class PurchaseView extends GetView<PurchaseController> {
                 ElevatedButton.icon(
                   onPressed: () => controller.computeShortage(force: true),
                   icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('আবার চেষ্টা করুন'),
+                  label: Text('আবার চেষ্টা করুন'.tr),
                 ),
               ],
             ),
@@ -205,8 +207,8 @@ class PurchaseView extends GetView<PurchaseController> {
                       const SizedBox(height: 12),
                       Text(
                         controller.approvedOrderCount.value == 0
-                            ? 'কোনো approved অর্ডার নেই'
-                            : 'সব প্রডাক্ট স্টকে আছে — শর্ট নেই!',
+                            ? 'কোনো approved অর্ডার নেই'.tr
+                            : 'সব প্রডাক্ট স্টকে আছে — শর্ট নেই!'.tr,
                         style: TextStyle(
                             color: scheme.onSurface.withAlpha(120)),
                       ),
@@ -252,11 +254,11 @@ class PurchaseView extends GetView<PurchaseController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('সংগ্রহ করা লাগবে',
+                      Text('সংগ্রহ করা লাগবে'.tr,
                           style: TextStyle(
                               fontSize: 12, color: Colors.grey)),
                       Text(
-                        '$shortCount টি প্রডাক্ট — $totalShortQty টি',
+                        '$shortCount ${'টি প্রডাক্ট'.tr} — $totalShortQty ${'টি'.tr}',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -282,13 +284,13 @@ class PurchaseView extends GetView<PurchaseController> {
                       size: 16, color: Color(0xFF2563EB)),
                   const SizedBox(width: 8),
                   Text(
-                    'Approved অর্ডার: $approved টি',
+                    'Approved ${'অর্ডার'.tr}: $approved ${'টি'.tr}',
                     style: const TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                   const Spacer(),
                   Text(
-                    'তারিখ: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
+                    '${'তারিখ'.tr}: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
                     style: TextStyle(
                         fontSize: 12, color: scheme.onSurface.withAlpha(140)),
                   ),
@@ -310,15 +312,15 @@ class PurchaseView extends GetView<PurchaseController> {
               await Clipboard.setData(
                   ClipboardData(text: controller.shortageAsText));
               Get.snackbar(
-                'কপি হয়েছে',
-                'সংগ্রহ তালিকা ক্লিপবোর্ডে কপি হয়েছে',
+                'কপি হয়েছে'.tr,
+                'সংগ্রহ তালিকা ক্লিপবোর্ডে কপি হয়েছে'.tr,
                 snackPosition: SnackPosition.BOTTOM,
                 backgroundColor: const Color(0xFF0891B2),
                 colorText: Colors.white,
               );
             },
             icon: const Icon(Icons.copy_rounded, size: 18),
-            label: const Text('তালিকা কপি করুন'),
+            label: Text('তালিকা কপি করুন'.tr),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
@@ -336,19 +338,19 @@ class PurchaseView extends GetView<PurchaseController> {
                   i < controller.shortageList.length;
                   i++) {
                 final item = controller.shortageList[i];
-                buf.writeln('${item.displayName} — ${item.shortQty} টি');
+                buf.writeln('${item.displayName} — ${item.shortQty} ${'টি'.tr}');
               }
               await Clipboard.setData(ClipboardData(text: buf.toString()));
               Get.snackbar(
-                'কপি হয়েছে',
-                'সংক্ষিপ্ত তালিকা কপি হয়েছে',
+                'কপি হয়েছে'.tr,
+                'সংক্ষিপ্ত তালিকা কপি হয়েছে'.tr,
                 snackPosition: SnackPosition.BOTTOM,
                 backgroundColor: const Color(0xFF0891B2),
                 colorText: Colors.white,
               );
             },
             icon: const Icon(Icons.list_rounded, size: 18),
-            label: const Text('সংক্ষিপ্ত কপি'),
+            label: Text('সংক্ষিপ্ত কপি'.tr),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
@@ -407,11 +409,11 @@ class PurchaseView extends GetView<PurchaseController> {
                     spacing: 6,
                     children: [
                       _shortageBadge(
-                          'অর্ডার: ${item.orderedQty}', const Color(0xFF2563EB)),
+                          '${'অর্ডার'.tr}: ${item.orderedQty}', const Color(0xFF2563EB)),
                       _shortageBadge(
-                          'স্টক: ${item.stockQty}', const Color(0xFF16A34A)),
+                          '${'স্টক'.tr}: ${item.stockQty}', const Color(0xFF16A34A)),
                       _shortageBadge(
-                          '${item.orderCount} অর্ডারে', const Color(0xFF6366F1)),
+                          '${item.orderCount} ${'অর্ডারে'.tr}', const Color(0xFF6366F1)),
                     ],
                   ),
                 ],
@@ -428,7 +430,7 @@ class PurchaseView extends GetView<PurchaseController> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('শর্ট',
+                  Text('শর্ট'.tr,
                       style: TextStyle(
                           fontSize: 10, color: Color(0xFFDC2626))),
                   Text(
@@ -472,7 +474,7 @@ class PurchaseView extends GetView<PurchaseController> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('মাসের মোট কেনা',
+                Text('মাসের মোট কেনা'.tr,
                     style: Theme.of(context).textTheme.bodySmall),
                 Text(
                   '৳ ${_fmt.format(controller.monthTotal.toInt())}',
@@ -567,7 +569,7 @@ class PurchaseView extends GetView<PurchaseController> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '${list.length}টি item',
+                    '${list.length}${'টি'.tr} item',
                     style: TextStyle(
                         fontSize: 11,
                         color: Colors.orange.shade700,
@@ -652,7 +654,7 @@ class PurchaseView extends GetView<PurchaseController> {
                     style: const TextStyle(
                         fontWeight: FontWeight.w600, fontSize: 13)),
                 Text(
-                  '${e.quantity}টি × ৳${_fmt.format(e.unitPrice.toInt())}'
+                  '${e.quantity}${'টি'.tr} × ৳${_fmt.format(e.unitPrice.toInt())}'
                   '${e.supplier.isNotEmpty ? ' | ${e.supplier}' : ''}',
                   style: TextStyle(
                       fontSize: 11, color: Colors.grey.shade600),
@@ -687,16 +689,16 @@ class PurchaseView extends GetView<PurchaseController> {
 
   Future<void> _confirmDelete(PurchaseEntryModel e) async {
     final ok = await Get.dialog<bool>(AlertDialog(
-      title: const Text('Purchase entry মুছবেন?'),
+      title: Text('Purchase entry মুছবেন?'.tr),
       content: Text(
-          '${e.productName} — ${e.quantity}টি × ৳${e.unitPrice.toInt()}'),
+          '${e.productName} — ${e.quantity}${'টি'.tr} × ৳${e.unitPrice.toInt()}'),
       actions: [
         TextButton(
             onPressed: () => Get.back(result: false),
-            child: const Text('না')),
+            child: Text('না'.tr)),
         TextButton(
             onPressed: () => Get.back(result: true),
-            child: const Text('হ্যাঁ',
+            child: Text('হ্যাঁ'.tr,
                 style: TextStyle(color: Colors.red))),
       ],
     ));
@@ -846,8 +848,8 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
 
   Future<void> _save() async {
     if (_cart.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('কমপক্ষে একটি প্রডাক্ট যোগ করুন')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('কমপক্ষে একটি প্রডাক্ট যোগ করুন'.tr)));
       return;
     }
     // sync text fields into qty/price
@@ -911,14 +913,14 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Purchase যোগ করুন',
+                        'Purchase যোগ করুন'.tr,
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       Text(
-                        '${_cart.length}টি প্রডাক্ট | মোট: ৳ ${_fmt.format(_grandTotal.toInt())}',
+                        '${_cart.length}${'টি প্রডাক্ট'.tr} | ${'মোট'.tr}: ৳ ${_fmt.format(_grandTotal.toInt())}',
                         style: TextStyle(
                             fontSize: 12,
                             color: _cart.isEmpty
@@ -1053,7 +1055,7 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                                     ],
                                   )
                                 : Text(
-                                    'সাপ্লাইয়ার বেছে নিন',
+                                    'সাপ্লাইয়ার বেছে নিন'.tr,
                                     style: TextStyle(
                                         fontSize: 13,
                                         color: scheme.onSurfaceVariant),
@@ -1081,7 +1083,7 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                     controller: _searchCtrl,
                     onChanged: _onSearchChanged,
                     decoration: InputDecoration(
-                      hintText: 'প্রডাক্ট সার্চ করুন...',
+                      hintText: 'প্রডাক্ট সার্চ করুন...'.tr,
                       prefixIcon: const Icon(Icons.search_rounded),
                       suffixIcon: _searchCtrl.text.isNotEmpty
                           ? IconButton(
@@ -1183,8 +1185,8 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                                           ),
                                           Text(
                                             inCart
-                                                ? '✓ কার্টে আছে'
-                                                : 'স্টক: ${p.stock}',
+                                                ? '✓ কার্টে আছে'.tr
+                                                : '${'স্টক'.tr}: ${p.stock}',
                                             style: TextStyle(
                                                 fontSize: 11,
                                                 color: inCart
@@ -1218,7 +1220,7 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                             color: scheme.outlineVariant
                                 .withAlpha(80)),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -1226,7 +1228,7 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                                 size: 36, color: Colors.grey),
                             SizedBox(height: 8),
                             Text(
-                              'উপরে সার্চ করে প্রডাক্ট যোগ করুন',
+                              'উপরে সার্চ করে প্রডাক্ট যোগ করুন'.tr,
                               style: TextStyle(color: Colors.grey),
                             ),
                           ],
@@ -1235,7 +1237,7 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                     )
                   else ...[
                     Text(
-                      'যোগ করা প্রডাক্টসমূহ',
+                      'যোগ করা প্রডাক্টসমূহ'.tr,
                       style: Theme.of(context)
                           .textTheme
                           .labelLarge
@@ -1260,7 +1262,7 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                             MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'মোট (${_cart.length}টি)',
+                            '${'মোট'.tr} (${_cart.length}${'টি'.tr})',
                             style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14),
@@ -1297,8 +1299,8 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                                   color: Colors.white))
                           : const Icon(Icons.save_rounded),
                       label: Text(_saving
-                          ? 'সেভ হচ্ছে...'
-                          : 'সব Purchase সংরক্ষণ করুন (${_cart.length}টি)'),
+                          ? 'সেভ হচ্ছে...'.tr
+                          : '${'সব'.tr} Purchase ${'সংরক্ষণ করুন'.tr} (${_cart.length}${'টি'.tr})'),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1439,7 +1441,7 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                             decimal: true),
                     style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
-                      labelText: '৳ মূল্য',
+                      labelText: '৳ মূল্য'.tr,
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 10),
@@ -1459,7 +1461,7 @@ class _PurchaseAddSheetState extends State<_PurchaseAddSheet> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text('মোট',
+                    Text('মোট'.tr,
                         style: TextStyle(
                             fontSize: 10, color: Colors.grey)),
                     Text(

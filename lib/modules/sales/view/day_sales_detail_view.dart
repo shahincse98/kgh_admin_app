@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../../widgets/call_button.dart';
+import 'package:get/get.dart';
+import '../../../localization/domain_labels.dart';
 
 class DaySalesDetailView extends StatefulWidget {
   final DateTime date;
@@ -18,7 +20,8 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
   final _timeFmt = DateFormat('h:mm a');
 
   List<Map<String, dynamic>> _orders = [];
-  List<Map<String, dynamic>> _expenses = [];
+  List<Map<String, dynamic>> _allExpenses = [];
+  List<Map<String, dynamic>> _allSrDeposits = [];
   Map<String, num> _productCostById = {};
   int _orderCount = 0;
   double _srHand = 0;
@@ -34,27 +37,58 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
   double _totalPreviousDue = 0;
   double _totalNewDue = 0;
   double _totalExpenses = 0;
-  List<Map<String, dynamic>> _srDeposits = [];
   double _totalSrDeposits = 0;
   bool _loading = true;
+
+  DateTime _fromDate = DateTime.now();
+  DateTime _toDate = DateTime.now();
+  String _selectedExpenseCategory = 'সব';
+  String _selectedDepositMethod = 'সব';
+
+  final _expenseCategories = const ['সব', 'বাইকের তেল', 'পরিবহন ভাড়া', 'দোকান খরচ', 'বাইক সার্ভিসিং', 'অন্যান্য'];
+  final _depositMethods = const ['সব', 'ব্যাংক', 'বিকাশ', 'হাতে'];
+
+  List<Map<String, dynamic>> get _filteredExpenses {
+    if (_selectedExpenseCategory == 'সব') return _allExpenses;
+    return _allExpenses.where((e) {
+      final cat = (e['category'] ?? '').toString().trim();
+      return cat == _selectedExpenseCategory;
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> get _filteredDeposits {
+    if (_selectedDepositMethod == 'সব') return _allSrDeposits;
+    return _allSrDeposits.where((d) {
+      final method = (d['method'] ?? '').toString().trim();
+      return method == _selectedDepositMethod;
+    }).toList();
+  }
+
+  double get _filteredExpensesTotal =>
+      _filteredExpenses.fold(0.0, (s, e) => s + ((e['amount'] as num?)?.toDouble() ?? 0));
+
+  double get _filteredDepositsTotal =>
+      _filteredDeposits.fold(0.0, (s, d) => s + ((d['amount'] as num?)?.toDouble() ?? 0));
 
   @override
   void initState() {
     super.initState();
+    final d = widget.date;
+    _fromDate = DateTime(d.year, d.month, d.day);
+    _toDate = DateTime(d.year, d.month, d.day, 23, 59, 59);
     _loadData();
   }
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
     try {
-      final d = widget.date;
-      final dayStart = DateTime(d.year, d.month, d.day);
-      final dayEnd = DateTime(d.year, d.month, d.day, 23, 59, 59);
+      final dayStart = DateTime(_fromDate.year, _fromDate.month, _fromDate.day);
+      final dayEnd = DateTime(_toDate.year, _toDate.month, _toDate.day, 23, 59, 59);
 
       await _loadProductCosts();
 
-      final queryStart = DateTime(d.year - 1, d.month, d.day);
-      final queryEnd = DateTime(d.year + 1, d.month, d.day);
+      final queryStart = DateTime(_fromDate.year - 1, _fromDate.month, _fromDate.day);
+      final queryEnd = DateTime(_toDate.year + 1, _toDate.month, _toDate.day);
       final snap = await _db
           .collection('orders')
           .where('status', isEqualTo: 'delivered')
@@ -200,18 +234,18 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           .where('date', isLessThanOrEqualTo: Timestamp.fromDate(dayEnd))
           .get();
 
-      _expenses = eSnap.docs.map((d) {
+      _allExpenses = eSnap.docs.map((d) {
         final data = d.data();
         return <String, dynamic>{...data, 'id': d.id};
       }).toList();
-      _expenses.sort((a, b) {
+      _allExpenses.sort((a, b) {
         final aT = a['date'] as Timestamp?;
         final bT = b['date'] as Timestamp?;
         if (aT == null || bT == null) return 0;
         return bT.compareTo(aT);
       });
 
-      _totalExpenses = _expenses.fold(0.0, (s, e) => s + ((e['amount'] as num?)?.toDouble() ?? 0));
+      _totalExpenses = _allExpenses.fold(0.0, (s, e) => s + ((e['amount'] as num?)?.toDouble() ?? 0));
 
       final dSnap = await _db
           .collection('sr_deposits')
@@ -219,17 +253,17 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           .where('date', isLessThanOrEqualTo: Timestamp.fromDate(dayEnd))
           .get();
 
-      _srDeposits = dSnap.docs.map((d) {
+      _allSrDeposits = dSnap.docs.map((d) {
         final data = d.data();
         return <String, dynamic>{...data, 'id': d.id};
       }).toList();
-      _srDeposits.sort((a, b) {
+      _allSrDeposits.sort((a, b) {
         final aT = a['date'] as Timestamp?;
         final bT = b['date'] as Timestamp?;
         if (aT == null || bT == null) return 0;
         return bT.compareTo(aT);
       });
-      _totalSrDeposits = _srDeposits.fold(0.0, (s, d) => s + ((d['amount'] as num?)?.toDouble() ?? 0));
+      _totalSrDeposits = _allSrDeposits.fold(0.0, (s, d) => s + ((d['amount'] as num?)?.toDouble() ?? 0));
     } catch (e) { debugPrint('DaySalesDetailView loadData error: $e'); }
     setState(() => _loading = false);
   }
@@ -253,24 +287,24 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('নতুন খরচ যোগ', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: Text('নতুন খরচ যোগ'.tr, style: TextStyle(fontWeight: FontWeight.w800)),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(
               controller: amountCtrl,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               autofocus: true,
-              decoration: const InputDecoration(labelText: 'টাকার পরিমাণ', prefixText: '৳ ', border: OutlineInputBorder()),
+              decoration: InputDecoration(labelText: 'টাকার পরিমাণ'.tr, prefixText: '৳ ', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
-            TextField(controller: catCtrl, decoration: const InputDecoration(labelText: 'খাত (যেমন: কাগজ, কলম)', border: OutlineInputBorder())),
+            TextField(controller: catCtrl, decoration: InputDecoration(labelText: 'খাত (যেমন: কাগজ, কলম)'.tr, border: OutlineInputBorder())),
             const SizedBox(height: 12),
-            TextField(controller: noteCtrl, maxLines: 2, decoration: const InputDecoration(labelText: 'বিবরণ', border: OutlineInputBorder())),
+            TextField(controller: noteCtrl, maxLines: 2, decoration: InputDecoration(labelText: 'বিবরণ'.tr, border: OutlineInputBorder())),
           ]),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('বাতিল')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white), child: const Text('যোগ করুন')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('বাতিল'.tr)),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white), child: Text('যোগ করুন'.tr)),
         ],
       ),
     );
@@ -283,7 +317,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
         'amount': amount.toDouble(),
         'category': category.isNotEmpty ? category : 'অন্যান্য',
         'note': note.isNotEmpty ? note : 'খরচ',
-        'date': Timestamp.fromDate(widget.date),
+        'date': Timestamp.fromDate(DateTime(_toDate.year, _toDate.month, _toDate.day)),
         'createdAt': FieldValue.serverTimestamp(),
       });
       _loadData();
@@ -295,10 +329,10 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('খরচ ডিলিট?'), content: const Text('এই খরচ এন্ট্রি মুছে ফেলা হবে।'),
+        title: Text('খরচ ডিলিট?'.tr), content: Text('এই খরচ এন্ট্রি মুছে ফেলা হবে।'.tr),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('না')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white), child: const Text('ডিলিট')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('না'.tr)),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white), child: Text('ডিলিট'.tr)),
         ],
       ),
     );
@@ -317,7 +351,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           title: Row(children: [
             const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF0891B2), size: 20),
             const SizedBox(width: 8),
-            const Text('SR জমা যোগ', style: TextStyle(fontWeight: FontWeight.w800)),
+            Text('SR জমা যোগ'.tr, style: TextStyle(fontWeight: FontWeight.w800)),
           ]),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -325,12 +359,12 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
                 controller: amountCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 autofocus: true,
-                decoration: const InputDecoration(labelText: 'টাকার পরিমাণ', prefixText: '৳ ', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: 'টাকার পরিমাণ'.tr, prefixText: '৳ ', border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: selectedMethod,
-                decoration: const InputDecoration(labelText: 'জমার মাধ্যম', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: 'জমার মাধ্যম'.tr, border: OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(value: 'ব্যাংক', child: Text('ব্যাংক')),
                   DropdownMenuItem(value: 'বিকাশ', child: Text('বিকাশ')),
@@ -339,12 +373,12 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
                 onChanged: (v) => setDialogState(() => selectedMethod = v!),
               ),
               const SizedBox(height: 12),
-              TextField(controller: noteCtrl, maxLines: 2, decoration: const InputDecoration(labelText: 'বিবরণ', border: OutlineInputBorder())),
+              TextField(controller: noteCtrl, maxLines: 2, decoration: InputDecoration(labelText: 'বিবরণ'.tr, border: OutlineInputBorder())),
             ]),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('বাতিল')),
-            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0891B2), foregroundColor: Colors.white), child: const Text('যোগ করুন')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('বাতিল'.tr)),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0891B2), foregroundColor: Colors.white), child: Text('যোগ করুন'.tr)),
           ],
         ),
       ),
@@ -357,7 +391,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
         'amount': amount.toDouble(),
         'method': selectedMethod,
         'note': note.isNotEmpty ? note : 'SR জমা',
-        'date': Timestamp.fromDate(widget.date),
+        'date': Timestamp.fromDate(DateTime(_toDate.year, _toDate.month, _toDate.day)),
         'createdAt': FieldValue.serverTimestamp(),
       });
       _loadData();
@@ -369,10 +403,10 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('জমা ডিলিট?'), content: const Text('এই জমা এন্ট্রি মুছে ফেলা হবে।'),
+        title: Text('জমা ডিলিট?'.tr), content: Text('এই জমা এন্ট্রি মুছে ফেলা হবে।'.tr),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('না')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white), child: const Text('ডিলিট')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('না'.tr)),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white), child: Text('ডিলিট'.tr)),
         ],
       ),
     );
@@ -385,7 +419,16 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_dateFmt.format(widget.date)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('দৈনিক বিবরণ'.tr, style: TextStyle(fontSize: 17)),
+            Text(
+              '${DateFormat('dd MMM').format(_fromDate)} → ${DateFormat('dd MMM').format(_toDate)}',
+              style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withAlpha(160)),
+            ),
+          ],
+        ),
         actions: [IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _loadData)],
       ),
       floatingActionButton: Column(
@@ -394,7 +437,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           FloatingActionButton.extended(
             onPressed: _addDeposit,
             icon: const Icon(Icons.account_balance_wallet_rounded),
-            label: const Text('জমা যোগ'),
+            label: Text('জমা যোগ'.tr),
             backgroundColor: const Color(0xFF0891B2),
             foregroundColor: Colors.white,
           ),
@@ -402,7 +445,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           FloatingActionButton.extended(
             onPressed: _addExpense,
             icon: const Icon(Icons.money_off_rounded),
-            label: const Text('খরচ যোগ'),
+            label: Text('খরচ যোগ'.tr),
             backgroundColor: const Color(0xFFDC2626),
             foregroundColor: Colors.white,
           ),
@@ -415,37 +458,188 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 140),
                 children: [
+                  _dateRangeFilter(scheme),
+                  const SizedBox(height: 16),
                   _summaryCards(scheme),
                   const SizedBox(height: 16),
                   if (_orders.isNotEmpty) ...[
                     _ordersDropdown(scheme),
                   ] else
-                    const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('কোনো অর্ডার নেই', style: TextStyle(color: Colors.grey)))),
+                    Center(child: Padding(padding: EdgeInsets.all(20), child: Text('কোনো অর্ডার নেই'.tr, style: TextStyle(color: Colors.grey)))),
                   const SizedBox(height: 16),
                   _srBalanceCard(scheme),
                   const SizedBox(height: 20),
-                  Row(children: [
-                    const Expanded(child: Text('খরচ', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800))),
-                    Text('মোট: ৳ ${_fmtInt.format(_totalExpenses.toInt())}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFDC2626))),
-                  ]),
+                  _expenseFilterSection(scheme),
                   const SizedBox(height: 8),
-                  if (_expenses.isEmpty)
-                    const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('কোনো খরচ নেই', style: TextStyle(color: Colors.grey))))
+                  if (_filteredExpenses.isEmpty)
+                    Center(child: Padding(padding: EdgeInsets.all(20), child: Text('কোনো খরচ নেই'.tr, style: TextStyle(color: Colors.grey))))
                   else
-                    ..._expenses.map((e) => _expenseCard(scheme, e)),
+                    ..._filteredExpenses.map((e) => _expenseCard(scheme, e)),
                   const SizedBox(height: 20),
-                  Row(children: [
-                    const Expanded(child: Text('SR জমা', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800))),
-                    Text('মোট: ৳ ${_fmtInt.format(_totalSrDeposits.toInt())}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0891B2))),
-                  ]),
+                  _depositFilterSection(scheme),
                   const SizedBox(height: 8),
-                  if (_srDeposits.isEmpty)
-                    const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('কোনো জমা নেই', style: TextStyle(color: Colors.grey))))
+                  if (_filteredDeposits.isEmpty)
+                    Center(child: Padding(padding: EdgeInsets.all(20), child: Text('কোনো জমা নেই'.tr, style: TextStyle(color: Colors.grey))))
                   else
-                    ..._srDeposits.map((d) => _depositCard(scheme, d)),
+                    ..._filteredDeposits.map((d) => _depositCard(scheme, d)),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _dateRangeFilter(ColorScheme scheme) {
+    final df = DateFormat('dd MMM yyyy');
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.date_range_rounded, size: 18, color: Color(0xFF0891B2)),
+                const SizedBox(width: 8),
+                Text('তারিখ রেঞ্জ'.tr, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_today_rounded, size: 16),
+                    label: Text(df.format(_fromDate), style: const TextStyle(fontSize: 12)),
+                    onPressed: () async {
+                      final d = await showDatePicker(
+                        context: context,
+                        initialDate: _fromDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now().add(const Duration(days: 1)),
+                      );
+                      if (d != null) {
+                        setState(() {
+                          _fromDate = DateTime(d.year, d.month, d.day);
+                          if (_fromDate.isAfter(_toDate)) {
+                            _toDate = DateTime(d.year, d.month, d.day, 23, 59, 59);
+                          }
+                        });
+                        _loadData();
+                      }
+                    },
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.grey),
+                ),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_today_rounded, size: 16),
+                    label: Text(df.format(_toDate), style: const TextStyle(fontSize: 12)),
+                    onPressed: () async {
+                      final d = await showDatePicker(
+                        context: context,
+                        initialDate: _toDate,
+                        firstDate: _fromDate,
+                        lastDate: DateTime.now().add(const Duration(days: 1)),
+                      );
+                      if (d != null) {
+                        setState(() => _toDate = DateTime(d.year, d.month, d.day, 23, 59, 59));
+                        _loadData();
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _expenseFilterSection(ColorScheme scheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text('খরচ'.tr, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800))),
+            Text(
+              '${'মোট'.tr}: ৳ ${_fmtInt.format(_filteredExpensesTotal.toInt())}',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFFDC2626)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: _selectedExpenseCategory,
+                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFFDC2626)),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFFDC2626)),
+                dropdownColor: scheme.surface,
+                items: _expenseCategories.map((cat) {
+                  return DropdownMenuItem<String>(
+                    value: cat,
+                    child: Text(DomainLabels.filterOption(cat), style: TextStyle(color: cat == 'সব' ? Colors.grey.shade700 : const Color(0xFFDC2626))),
+                  );
+                }).toList(),
+                onChanged: (v) => setState(() => _selectedExpenseCategory = v ?? 'সব'),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _depositFilterSection(ColorScheme scheme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text('SR জমা'.tr, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800))),
+            Text(
+              '${'মোট'.tr}: ৳ ${_fmtInt.format(_filteredDepositsTotal.toInt())}',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0891B2)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: _selectedDepositMethod,
+                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF0891B2)),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0891B2)),
+                dropdownColor: scheme.surface,
+                items: _depositMethods.map((method) {
+                  return DropdownMenuItem<String>(
+                    value: method,
+                    child: Text(DomainLabels.filterOption(method), style: TextStyle(color: method == 'সব' ? Colors.grey.shade700 : const Color(0xFF0891B2))),
+                  );
+                }).toList(),
+                onChanged: (v) => setState(() => _selectedDepositMethod = v ?? 'সব'),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -455,23 +649,23 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
     final netProfit = _totalNetSales - _totalPurchaseCost - _totalExpenses;
     final profitRate = _totalNetSales > 0 ? ((_totalNetSales - _totalPurchaseCost) / _totalNetSales * 100) : 0.0;
     return Wrap(spacing: 10, runSpacing: 10, children: [
-      _card('মোট অর্ডার', '$_orderCount টি', Icons.receipt_long_rounded, const Color(0xFF0891B2)),
-      _card('Gross বিক্রি', '৳ ${_fmtInt.format(_totalGross.toInt())}', Icons.shopping_cart_rounded, const Color(0xFF0891B2)),
-      _card('পূর্বের বাকি', '৳ ${_fmtInt.format(_totalPreviousDue.toInt())}', Icons.history_rounded, const Color(0xFFD97706)),
-      _card('মোট দেনা', '৳ ${_fmtInt.format(totalDue.toInt())}', Icons.account_balance_rounded, const Color(0xFF0891B2)),
-      if (_totalDeduction > 0) _card('রিপ্লেস বাবদ', '৳ ${_fmtInt.format(_totalDeduction.toInt())}', Icons.swap_horiz_rounded, const Color(0xFF8B5CF6)),
-      if (_totalReturn > 0) _card('ফেরত বাদ', '৳ ${_fmtInt.format(_totalReturn.toInt())}', Icons.keyboard_return_rounded, const Color(0xFF8B5CF6)),
-      if (_totalDiscount > 0) _card('ডিসকাউন্ট', '৳ ${_fmtInt.format(_totalDiscount.toInt())}', Icons.discount_rounded, const Color(0xFFD97706)),
-      _card('নেট বিক্রি', '৳ ${_fmtInt.format(_totalNetSales.toInt())}', Icons.trending_up_rounded, const Color(0xFF16A34A)),
-      _card('জমা: SR হাতে', '৳ ${_fmtInt.format(_srHand.toInt())}', Icons.person_pin_rounded, const Color(0xFF7C3AED)),
-      _card('বিকাশ/অন্যান্য', '৳ ${_fmtInt.format((_bkash + _others).toInt())}', Icons.account_balance_wallet_rounded, const Color(0xFFD97706)),
-      _card('মোট জমা', '৳ ${_fmtInt.format(totalCash.toInt())}', Icons.payments_rounded, const Color(0xFF16A34A)),
-      if (_adjustments > 0) _card('অ্যাডজাস্টমেন্ট', '৳ ${_fmtInt.format(_adjustments.toInt())}', Icons.tune_rounded, const Color(0xFF8B5CF6)),
-      _card('নতুন বাকি', '৳ ${_fmtInt.format(_totalNewDue.toInt())}', Icons.hourglass_bottom_rounded, _totalNewDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)),
-      _card('ক্রয় মূল্য', '৳ ${_fmtInt.format(_totalPurchaseCost.toInt())}', Icons.shopping_bag_rounded, const Color(0xFFD97706)),
-      _card('নিট লাভ', '৳ ${_fmtInt.format(netProfit.toInt())}', Icons.savings_rounded, netProfit >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
-      _card('লাভের হার', '${profitRate.toStringAsFixed(2)}%', Icons.percent_rounded, const Color(0xFF10B981)),
-      _card('খরচ', '৳ ${_fmtInt.format(_totalExpenses.toInt())}', Icons.money_off_rounded, const Color(0xFFDC2626)),
+      _card('মোট অর্ডার'.tr, '$_orderCount ${'টি'.tr}', Icons.receipt_long_rounded, const Color(0xFF0891B2)),
+      _card('Gross বিক্রি'.tr, '৳ ${_fmtInt.format(_totalGross.toInt())}', Icons.shopping_cart_rounded, const Color(0xFF0891B2)),
+      _card('পূর্বের বাকি'.tr, '৳ ${_fmtInt.format(_totalPreviousDue.toInt())}', Icons.history_rounded, const Color(0xFFD97706)),
+      _card('মোট দেনা'.tr, '৳ ${_fmtInt.format(totalDue.toInt())}', Icons.account_balance_rounded, const Color(0xFF0891B2)),
+      if (_totalDeduction > 0) _card('রিপ্লেস বাবদ'.tr, '৳ ${_fmtInt.format(_totalDeduction.toInt())}', Icons.swap_horiz_rounded, const Color(0xFF8B5CF6)),
+      if (_totalReturn > 0) _card('ফেরত বাদ'.tr, '৳ ${_fmtInt.format(_totalReturn.toInt())}', Icons.keyboard_return_rounded, const Color(0xFF8B5CF6)),
+      if (_totalDiscount > 0) _card('ডিসকাউন্ট'.tr, '৳ ${_fmtInt.format(_totalDiscount.toInt())}', Icons.discount_rounded, const Color(0xFFD97706)),
+      _card('নেট বিক্রি'.tr, '৳ ${_fmtInt.format(_totalNetSales.toInt())}', Icons.trending_up_rounded, const Color(0xFF16A34A)),
+      _card('জমা: SR হাতে'.tr, '৳ ${_fmtInt.format(_srHand.toInt())}', Icons.person_pin_rounded, const Color(0xFF7C3AED)),
+      _card('বিকাশ/অন্যান্য'.tr, '৳ ${_fmtInt.format((_bkash + _others).toInt())}', Icons.account_balance_wallet_rounded, const Color(0xFFD97706)),
+      _card('মোট জমা'.tr, '৳ ${_fmtInt.format(totalCash.toInt())}', Icons.payments_rounded, const Color(0xFF16A34A)),
+      if (_adjustments > 0) _card('অ্যাডজাস্টমেন্ট'.tr, '৳ ${_fmtInt.format(_adjustments.toInt())}', Icons.tune_rounded, const Color(0xFF8B5CF6)),
+      _card('নতুন বাকি'.tr, '৳ ${_fmtInt.format(_totalNewDue.toInt())}', Icons.hourglass_bottom_rounded, _totalNewDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A)),
+      _card('ক্রয় মূল্য'.tr, '৳ ${_fmtInt.format(_totalPurchaseCost.toInt())}', Icons.shopping_bag_rounded, const Color(0xFFD97706)),
+      _card('নিট লাভ'.tr, '৳ ${_fmtInt.format(netProfit.toInt())}', Icons.savings_rounded, netProfit >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+      _card('লাভের হার'.tr, '${profitRate.toStringAsFixed(2)}%', Icons.percent_rounded, const Color(0xFF10B981)),
+      _card('খরচ'.tr, '৳ ${_fmtInt.format(_totalExpenses.toInt())}', Icons.money_off_rounded, const Color(0xFFDC2626)),
     ]);
   }
 
@@ -500,7 +694,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
         title: Row(children: [
           const Icon(Icons.receipt_long_rounded, size: 18, color: Color(0xFF0891B2)),
           const SizedBox(width: 8),
-          Text('অর্ডার সমূহ (${_orders.length}টি)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+          Text('${'অর্ডার সমূহ'.tr} (${_orders.length}${'টি'.tr})', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
           const Spacer(),
           Text('৳ ${_fmtInt.format(_totalNetSales.toInt())}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0891B2))),
         ]),
@@ -539,7 +733,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           Row(children: [
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text((o['shopName'] ?? 'Unknown').toString(), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+                Text((o['shopName'] ?? 'Unknown'.tr).toString(), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
                 if ((o['shopPhone'] ?? '').toString().isNotEmpty)
                   Text((o['shopPhone'] ?? '').toString(), style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ]),
@@ -571,7 +765,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
             if (items.length > 3)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text('+${items.length - 3}টি প্রডাক্ট', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(120))),
+                child: Text('+${items.length - 3}${'টি প্রডাক্ট'.tr}', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(120))),
               ),
           ],
           const SizedBox(height: 4),
@@ -585,7 +779,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
                   children: visiblePayments.map((p) => Row(children: [
                     const Icon(Icons.circle, size: 6, color: Color(0xFF7C3AED)),
                     const SizedBox(width: 6),
-                    Expanded(child: Text('${p['method'] ?? 'জমা'}: ৳${_fmtInt.format((p['amount'] as num?)?.toInt() ?? 0)}',
+                    Expanded(child: Text('${p['method'] == null ? 'জমা'.tr : DomainLabels.paymentMethod(p['method'].toString())}: ৳${_fmtInt.format((p['amount'] as num?)?.toInt() ?? 0)}',
                         style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w600))),
                   ])).toList(),
                 );
@@ -597,24 +791,24 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
               return Row(children: [
                 const Icon(Icons.circle, size: 6, color: Color(0xFF7C3AED)),
                 const SizedBox(width: 6),
-                Expanded(child: Text('${method.isNotEmpty ? method : "জমা"}: ৳${_fmtInt.format(paidAmount.toInt())}',
+                Expanded(child: Text('${method.isNotEmpty ? method : "জমা".tr}: ৳${_fmtInt.format(paidAmount.toInt())}',
                     style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w600))),
               ]);
             }
-            return const Text('কোনো পেমেন্ট নেই', style: TextStyle(fontSize: 11, color: Colors.grey));
+            return Text('কোনো পেমেন্ট নেই'.tr, style: TextStyle(fontSize: 11, color: Colors.grey));
           }),
           if (deduction > 0 || returnAmt > 0 || discount > 0) ...[
             const SizedBox(height: 2),
             Row(children: [
               if (deduction > 0) _tag('রিপ্লেস বাদ: ৳${_fmtInt.format(deduction.toInt())}', const Color(0xFFDC2626)),
-              if (returnAmt > 0) _tag('ফেরত বাদ: ৳${_fmtInt.format(returnAmt.toInt())}', const Color(0xFF8B5CF6)),
-              if (discount > 0) _tag('ডিসকাউন্ট: ৳${_fmtInt.format(discount.toInt())}', const Color(0xFFD97706)),
+              if (returnAmt > 0) _tag('${'ফেরত বাদ'.tr}: ৳${_fmtInt.format(returnAmt.toInt())}', const Color(0xFF8B5CF6)),
+              if (discount > 0) _tag('${'ডিসকাউন্ট'.tr}: ৳${_fmtInt.format(discount.toInt())}', const Color(0xFFD97706)),
             ]),
           ],
           if (newDue > 0)
             Padding(
               padding: const EdgeInsets.only(top: 2),
-              child: _tag('নতুন বাকি: ৳${_fmtInt.format(newDue.toInt())}', const Color(0xFFDC2626)),
+              child: _tag('${'নতুন বাকি'.tr}: ৳${_fmtInt.format(newDue.toInt())}', const Color(0xFFDC2626)),
             ),
           Container(
             margin: const EdgeInsets.only(top: 4),
@@ -624,7 +818,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(children: [
-              Text('নেট: ৳${_fmtInt.format(orderNet.toInt())}', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(150))),
+              Text('${'নেট'.tr}: ৳${_fmtInt.format(orderNet.toInt())}', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(150))),
               const SizedBox(width: 8),
               Text('ক্রয়: ৳${_fmtInt.format(purchaseCost.toInt())}', style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(150))),
               const SizedBox(width: 8),
@@ -702,21 +896,21 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           Row(children: [
             const Icon(Icons.flag_rounded, color: Color(0xFF7C3AED), size: 20),
             const SizedBox(width: 8),
-            const Text('SR ব্যালেন্স', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF7C3AED))),
+            Text('SR ব্যালেন্স'.tr, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF7C3AED))),
           ]),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: _balanceRow('SR হাতে টাকা', _srHand, const Color(0xFF7C3AED)),
+                child: _balanceRow('SR হাতে টাকা'.tr, _srHand, const Color(0xFF7C3AED)),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _balanceRow('মোট খরচ', _totalExpenses, const Color(0xFFDC2626)),
+                child: _balanceRow('মোট খরচ'.tr, _totalExpenses, const Color(0xFFDC2626)),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: _balanceRow('মোট জমা', _totalSrDeposits, const Color(0xFF0891B2)),
+                child: _balanceRow('মোট জমা'.tr, _totalSrDeposits, const Color(0xFF0891B2)),
               ),
             ],
           ),
@@ -724,7 +918,7 @@ class _DaySalesDetailViewState extends State<DaySalesDetailView> {
           const Divider(height: 1),
           const SizedBox(height: 8),
           Row(children: [
-            Text(srOwes ? 'SR কাছে বাকি:' : 'SR পাওনা:', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+            Text(srOwes ? 'SR কাছে বাকি:'.tr : 'SR পাওনা:'.tr, style: const TextStyle(fontSize: 13, color: Colors.grey)),
             const SizedBox(width: 8),
             Text('৳ ${_fmtInt.format(balanceWithSr.abs().toInt())}',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: srOwes ? const Color(0xFF7C3AED) : const Color(0xFFDC2626))),

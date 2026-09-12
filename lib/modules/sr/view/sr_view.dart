@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controller/sr_controller.dart';
 import '../model/sr_payment_model.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class SrView extends GetView<SrController> {
   const SrView({super.key});
@@ -15,12 +16,13 @@ class SrView extends GetView<SrController> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
-        title: const Text('SR Performance'),
+        title: Text('SR Performance'.tr),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: 'Refresh'.tr,
             onPressed: controller.loadData,
           ),
         ],
@@ -41,7 +43,7 @@ class SrView extends GetView<SrController> {
               _balanceCard(context, scheme),
               const SizedBox(height: 14),
               Text(
-                'পেমেন্ট ইতিহাস',
+                'পেমেন্ট ইতিহাস'.tr,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -49,10 +51,10 @@ class SrView extends GetView<SrController> {
               ),
               const SizedBox(height: 8),
               if (controller.payments.isEmpty)
-                const SizedBox(
+                SizedBox(
                   height: 80,
                   child: Center(
-                    child: Text('কোনো পেমেন্ট নেই',
+                    child: Text('কোনো পেমেন্ট নেই'.tr,
                         style: TextStyle(color: Colors.grey)),
                   ),
                 )
@@ -67,7 +69,7 @@ class SrView extends GetView<SrController> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showPaymentDialog(context),
         icon: const Icon(Icons.payments_rounded),
-        label: const Text('পেমেন্ট রেকর্ড'),
+        label: Text('পেমেন্ট রেকর্ড'.tr),
       ),
     );
   }
@@ -118,37 +120,37 @@ class SrView extends GetView<SrController> {
         childAspectRatio: 1.5,
         children: [
           _kpiCard(
-            'ডেলিভারি',
+            'ডেলিভারি'.tr,
             controller.totalDeliveries.value.toString(),
             Icons.local_shipping_rounded,
             const Color(0xFF0EA5E9),
           ),
           _kpiCard(
-            'বিক্রয়',
+            'বিক্রয়'.tr,
             '৳ ${_fmt.format(controller.totalRevenue.value.toInt())}',
             Icons.payments_rounded,
             const Color(0xFF10B981),
           ),
           _kpiCard(
-            'কমিশন (${controller.commissionPercent.value.toStringAsFixed(1)}%)',
+            '${'কমিশন'.tr} (${controller.commissionPercent.value.toStringAsFixed(1)}%)',
             '৳ ${_fmt.format(controller.commissionDue.value.toInt())}',
             Icons.percent_rounded,
             const Color(0xFF6366F1),
           ),
           _kpiCard(
-            'বেতন',
+            'বেতন'.tr,
             '৳ ${_fmt.format(controller.monthlyFixedSalary.value.toInt())}',
             Icons.badge_rounded,
             const Color(0xFFF59E0B),
           ),
           _kpiCard(
-            'মোট প্রাপ্য',
+            'মোট প্রাপ্য'.tr,
             '৳ ${_fmt.format(controller.totalDue.value.toInt())}',
             Icons.account_balance_wallet_rounded,
             const Color(0xFF0891B2),
           ),
           _kpiCard(
-            'পরিশোধিত',
+            'পরিশোধিত'.tr,
             '৳ ${_fmt.format(controller.totalPaid.value.toInt())}',
             Icons.check_circle_rounded,
             const Color(0xFF22C55E),
@@ -191,9 +193,9 @@ class SrView extends GetView<SrController> {
         : Icons.warning_amber_rounded;
     final label = isPaid
         ? (balance < 0
-            ? 'অতিরিক্ত পরিশোধিত: ৳${_fmt.format((-balance).toInt())}'
-            : 'সম্পূর্ণ পরিশোধিত')
-        : 'বাকি আছে: ৳${_fmt.format(balance.toInt())}';
+            ? '${'অতিরিক্ত পরিশোধিত'.tr}: ৳${_fmt.format((-balance).toInt())}'
+            : 'সম্পূর্ণ পরিশোধিত'.tr)
+        : '${'বাকি আছে'.tr}: ৳${_fmt.format(balance.toInt())}';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -209,7 +211,7 @@ class SrView extends GetView<SrController> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('এই মাসের হিসাব',
+              Text('এই মাসের হিসাব'.tr,
                   style: TextStyle(
                       fontWeight: FontWeight.w600, color: color)),
               Text(label,
@@ -260,7 +262,7 @@ class SrView extends GetView<SrController> {
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline_rounded,
               size: 20, color: Colors.red),
-          tooltip: 'মুছুন',
+          tooltip: 'মুছুন'.tr,
           onPressed: () => _confirmDeletePayment(context, p),
         ),
       ),
@@ -271,15 +273,15 @@ class SrView extends GetView<SrController> {
       BuildContext context, SrPaymentModel p) async {
     final ok = await Get.dialog<bool>(
       AlertDialog(
-        title: const Text('পেমেন্ট মুছবেন?'),
+        title: Text('পেমেন্ট মুছবেন?'.tr),
         content: Text('৳${p.amount.toInt()} — ${p.note.isNotEmpty ? p.note : 'কোনো বিবরণ নেই'}'),
         actions: [
           TextButton(
               onPressed: () => Get.back(result: false),
-              child: const Text('না')),
+              child: Text('না'.tr)),
           TextButton(
               onPressed: () => Get.back(result: true),
-              child: const Text('হ্যাঁ',
+              child: Text('হ্যাঁ'.tr,
                   style: TextStyle(color: Colors.red))),
         ],
       ),
@@ -294,7 +296,7 @@ class SrView extends GetView<SrController> {
 
     await Get.dialog(
       AlertDialog(
-        title: const Text('পেমেন্ট রেকর্ড করুন'),
+        title: Text('পেমেন্ট রেকর্ড করুন'.tr),
         content: Form(
           key: formKey,
           child: Column(
@@ -316,7 +318,7 @@ class SrView extends GetView<SrController> {
                           size: 16, color: Colors.orange),
                       const SizedBox(width: 8),
                       Text(
-                        'বাকি: ৳${_fmt.format(bal.toInt())}',
+                        '${'বাকি'.tr}: ৳${_fmt.format(bal.toInt())}',
                         style: const TextStyle(
                             fontSize: 13, color: Colors.orange),
                       ),
@@ -330,18 +332,18 @@ class SrView extends GetView<SrController> {
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly
                 ],
-                decoration: const InputDecoration(
-                    labelText: 'পরিমাণ (৳)'),
+                decoration: InputDecoration(
+                    labelText: 'পরিমাণ (৳)'.tr),
                 validator: (v) =>
                     (v == null || v.isEmpty || int.tryParse(v) == null)
-                        ? 'পরিমাণ লিখুন'
+                        ? 'পরিমাণ লিখুন'.tr
                         : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: noteCtrl,
-                decoration: const InputDecoration(
-                    labelText: 'বিবরণ (ঐচ্ছিক)'),
+                decoration: InputDecoration(
+                    labelText: 'বিবরণ (ঐচ্ছিক)'.tr),
               ),
             ],
           ),
@@ -349,7 +351,7 @@ class SrView extends GetView<SrController> {
         actions: [
           TextButton(
               onPressed: () => Get.back(),
-              child: const Text('বাতিল')),
+              child: Text('বাতিল'.tr)),
           ElevatedButton(
             onPressed: () async {
               if (!formKey.currentState!.validate()) return;
@@ -359,7 +361,7 @@ class SrView extends GetView<SrController> {
                 note: noteCtrl.text.trim(),
               );
             },
-            child: const Text('সংরক্ষণ'),
+            child: Text('সংরক্ষণ'.tr),
           ),
         ],
       ),

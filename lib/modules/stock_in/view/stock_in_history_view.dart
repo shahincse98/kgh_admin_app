@@ -5,6 +5,7 @@ import '../controller/stock_in_controller.dart';
 import '../../product/controller/product_controller.dart';
 import 'stock_in_detail_view.dart';
 import '../../../widgets/responsive.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class StockInHistoryView extends GetView<StockInController> {
   const StockInHistoryView({super.key});
@@ -17,23 +18,32 @@ class StockInHistoryView extends GetView<StockInController> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      drawer: appDrawerFor(context),
       backgroundColor: scheme.surfaceContainerLowest,
       appBar: AppBar(
-        title: Obx(() => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('স্টক ইন ইতিহাস',
-                    style: TextStyle(fontWeight: FontWeight.w800)),
-                Text('${controller.filteredGroups.length} টি এন্ট্রি',
-                    style: TextStyle(
-                        fontSize: 12, color: scheme.onSurface.withAlpha(160))),
-              ],
-            )),
+        title: Obx(
+          () => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'স্টক ইন ইতিহাস'.tr,
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              Text(
+                '${controller.filteredGroups.length} ${'টি এন্ট্রি'.tr}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: scheme.onSurface.withAlpha(160),
+                ),
+              ),
+            ],
+          ),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list_rounded),
-            tooltip: 'ফিল্টার',
+            tooltip: 'ফিল্টার'.tr,
             onPressed: () => _showFilterSheet(scheme),
           ),
         ],
@@ -62,12 +72,18 @@ class StockInHistoryView extends GetView<StockInController> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.inventory_2_outlined,
-                            size: 56, color: scheme.onSurface.withAlpha(60)),
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 56,
+                          color: scheme.onSurface.withAlpha(60),
+                        ),
                         const SizedBox(height: 12),
-                        Text('কোনো এন্ট্রি পাওয়া যায়নি',
-                            style: TextStyle(
-                                color: scheme.onSurface.withAlpha(120))),
+                        Text(
+                          'কোনো এন্ট্রি পাওয়া যায়নি'.tr,
+                          style: TextStyle(
+                            color: scheme.onSurface.withAlpha(120),
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -94,20 +110,26 @@ class StockInHistoryView extends GetView<StockInController> {
       child: TextField(
         onChanged: (v) => controller.searchText.value = v,
         decoration: InputDecoration(
-          hintText: 'প্রডাক্ট নাম, সোর্স বা নোট দিয়ে খুঁজুন…',
+          hintText: 'প্রডাক্ট নাম, সোর্স বা নোট দিয়ে খুঁজুন…'.tr,
           prefixIcon: const Icon(Icons.search_rounded),
-          suffixIcon: Obx(() => controller.searchText.value.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear_rounded),
-                  onPressed: () => controller.searchText.value = '',
-                )
-              : const SizedBox.shrink()),
+          suffixIcon: Obx(
+            () => controller.searchText.value.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear_rounded),
+                    onPressed: () => controller.searchText.value = '',
+                  )
+                : const SizedBox.shrink(),
+          ),
           filled: true,
           fillColor: scheme.surfaceContainerHigh,
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 12,
+            horizontal: 16,
+          ),
         ),
       ),
     );
@@ -124,21 +146,31 @@ class StockInHistoryView extends GetView<StockInController> {
         child: ListView(
           scrollDirection: Axis.horizontal,
           children: [
-            _dateChip('আজ', todayDate, todayDate),
+            _dateChip('আজ'.tr, todayDate, todayDate),
             const SizedBox(width: 6),
-            _dateChip('গতকাল', todayDate.subtract(const Duration(days: 1)),
-                todayDate.subtract(const Duration(days: 1))),
+            _dateChip(
+              'গতকাল'.tr,
+              todayDate.subtract(const Duration(days: 1)),
+              todayDate.subtract(const Duration(days: 1)),
+            ),
             const SizedBox(width: 6),
-            _dateChip('সপ্তাহ',
-                todayDate.subtract(const Duration(days: 7)), todayDate),
+            _dateChip(
+              'সপ্তাহ'.tr,
+              todayDate.subtract(const Duration(days: 7)),
+              todayDate,
+            ),
             const SizedBox(width: 6),
-            _dateChip('মাস', DateTime(today.year, today.month, 1), todayDate),
+            _dateChip(
+              'মাস'.tr,
+              DateTime(today.year, today.month, 1),
+              todayDate,
+            ),
             const SizedBox(width: 6),
-            _dateChip('সব', null, null),
+            _dateChip('সব'.tr, null, null),
             const SizedBox(width: 6),
             ActionChip(
               avatar: const Icon(Icons.calendar_today_rounded, size: 16),
-              label: const Text('কাস্টম', style: TextStyle(fontSize: 11)),
+              label: Text('কাস্টম'.tr, style: TextStyle(fontSize: 11)),
               onPressed: () async {
                 final p = await showDatePicker(
                   context: ctx,
@@ -160,21 +192,23 @@ class StockInHistoryView extends GetView<StockInController> {
 
   Widget _dateChip(String label, DateTime? from, DateTime? to) {
     return Obx(() {
-      final active = controller.fromDate.value == from &&
-          controller.toDate.value == to;
+      final active =
+          controller.fromDate.value == from && controller.toDate.value == to;
       return ChoiceChip(
-        label: Text(label,
-            style: TextStyle(
-                fontSize: 11,
-                fontWeight: active ? FontWeight.w700 : FontWeight.normal)),
+        label: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: active ? FontWeight.w700 : FontWeight.normal,
+          ),
+        ),
         selected: active,
         onSelected: (_) {
           controller.fromDate.value = from;
           controller.toDate.value = to;
         },
         selectedColor: const Color(0xFF16A34A).withAlpha(30),
-        labelStyle:
-            TextStyle(color: active ? const Color(0xFF16A34A) : null),
+        labelStyle: TextStyle(color: active ? const Color(0xFF16A34A) : null),
         side: active ? const BorderSide(color: Color(0xFF16A34A)) : null,
         visualDensity: VisualDensity.compact,
       );
@@ -190,16 +224,20 @@ class StockInHistoryView extends GetView<StockInController> {
         final to = controller.toDate.value;
         final l =
             '${from != null ? _dayFmt.format(from) : 'শুরু'} → ${to != null ? _dayFmt.format(to) : 'শেষ'}';
-        chips.add(_chip(l, () {
-          controller.fromDate.value = null;
-          controller.toDate.value = null;
-        }));
+        chips.add(
+          _chip(l, () {
+            controller.fromDate.value = null;
+            controller.toDate.value = null;
+          }),
+        );
       }
       if (controller.selectedProductId.value.isNotEmpty) {
-        chips.add(_chip(controller.selectedProductName.value, () {
-          controller.selectedProductId.value = '';
-          controller.selectedProductName.value = '';
-        }));
+        chips.add(
+          _chip(controller.selectedProductName.value, () {
+            controller.selectedProductId.value = '';
+            controller.selectedProductName.value = '';
+          }),
+        );
       }
       if (chips.isEmpty) return const SizedBox.shrink();
       return Padding(
@@ -235,20 +273,33 @@ class StockInHistoryView extends GetView<StockInController> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFF16A34A).withAlpha(40)),
         ),
-        child: Row(children: [
-          const Icon(Icons.inventory_2_rounded,
-              size: 16, color: Color(0xFF16A34A)),
-          const SizedBox(width: 6),
-          Expanded(
-              child: Text(pname,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w800))),
-          Text('$totalQty pcs • ${filtered.length} এন্ট্রি',
+        child: Row(
+          children: [
+            const Icon(
+              Icons.inventory_2_rounded,
+              size: 16,
+              color: Color(0xFF16A34A),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                pname,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Text(
+              '$totalQty pcs • ${filtered.length} ${'এন্ট্রি'.tr}',
               style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF16A34A),
-                  fontWeight: FontWeight.w600)),
-        ]),
+                fontSize: 11,
+                color: Color(0xFF16A34A),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       );
     });
   }
@@ -272,159 +323,208 @@ class StockInHistoryView extends GetView<StockInController> {
       context: ctx,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setSt) {
-
-        return DraggableScrollableSheet(
-          initialChildSize: 0.55,
-          maxChildSize: 0.9,
-          builder: (_, sc) => Container(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: SingleChildScrollView(
-              controller: sc,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Center(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) {
+          return DraggableScrollableSheet(
+            initialChildSize: 0.55,
+            maxChildSize: 0.9,
+            builder: (_, sc) => Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: SingleChildScrollView(
+                controller: sc,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
                       child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                              color: scheme.outlineVariant,
-                              borderRadius: BorderRadius.circular(2)))),
-                  const SizedBox(height: 16),
-                  const Text('ফিল্টার',
-                      style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 16),
-                  const Text('তারিখ রেঞ্জ',
-                      style: TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Row(children: [
-                    Expanded(
-                        child: OutlinedButton.icon(
-                      icon: const Icon(Icons.calendar_today_rounded, size: 16),
-                      label: Text(tempFrom != null
-                          ? _dayFmt.format(tempFrom!)
-                          : 'শুরু'),
-                      onPressed: () async {
-                        final d = await showDatePicker(
-                          context: ctx,
-                          initialDate: tempFrom ?? DateTime.now(),
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now(),
-                        );
-                        if (d != null) setSt(() => tempFrom = d);
-                      },
-                    )),
-                    const SizedBox(width: 8),
-                    Expanded(
-                        child: OutlinedButton.icon(
-                      icon: const Icon(Icons.calendar_today_rounded, size: 16),
-                      label: Text(
-                          tempTo != null ? _dayFmt.format(tempTo!) : 'শেষ'),
-                      onPressed: () async {
-                        final d = await showDatePicker(
-                          context: ctx,
-                          initialDate: tempTo ?? DateTime.now(),
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now(),
-                        );
-                        if (d != null) setSt(() => tempTo = d);
-                      },
-                    )),
-                  ]),
-                  const SizedBox(height: 20),
-                  const Text('প্রডাক্ট',
-                      style: TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: searchCtrl,
-                    decoration: InputDecoration(
-                      hintText: 'প্রডাক্ট খুঁজুন…',
-                      prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                    ),
-                    onChanged: (_) => setSt(() {}),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 180,
-                    child: ListView(controller: scrollCtrl, children: [
-                      ...products.where((p) {
-                        final q =
-                            searchCtrl.text.trim().toLowerCase();
-                        if (q.isEmpty) return true;
-                        final name = (p.name ?? '').toString();
-                        final code = (p.productCode ?? '').toString();
-                        return name.toLowerCase().contains(q) ||
-                            code.toLowerCase().contains(q);
-                      }).take(30).map((p) {
-                        final pid = (p.id ?? '').toString();
-                        final pname = (p.name ?? '').toString();
-                        return ListTile(
-                          dense: true,
-                          leading: Icon(
-                            tempProductId == pid
-                                ? Icons.radio_button_checked_rounded
-                                : Icons.radio_button_off_rounded,
-                            size: 18,
-                            color: tempProductId == pid
-                                ? const Color(0xFF16A34A)
-                                : Colors.grey,
-                          ),
-                          title: Text(pname, style: const TextStyle(fontSize: 13)),
-                          onTap: () => setSt(() {
-                            tempProductId = pid;
-                            tempProductName = pname;
-                          }),
-                        );
-                      }),
-                    ]),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(children: [
-                    Expanded(
-                        child: OutlinedButton(
-                      onPressed: () {
-                        setSt(() {
-                          tempFrom = null;
-                          tempTo = null;
-                          tempProductId = '';
-                          tempProductName = '';
-                        });
-                      },
-                      child: const Text('ক্লিয়ার'),
-                    )),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: ElevatedButton(
-                      onPressed: () {
-                        controller.fromDate.value = tempFrom;
-                        controller.toDate.value = tempTo;
-                        controller.selectedProductId.value = tempProductId;
-                        controller.selectedProductName.value = tempProductName;
-                        Navigator.pop(ctx);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF16A34A),
-                        foregroundColor: Colors.white,
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: scheme.outlineVariant,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
-                      child: const Text('প্রয়োগ'),
-                    )),
-                  ]),
-                ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'ফিল্টার'.tr,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'তারিখ রেঞ্জ'.tr,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(
+                              Icons.calendar_today_rounded,
+                              size: 16,
+                            ),
+                            label: Text(
+                              tempFrom != null
+                                  ? _dayFmt.format(tempFrom!)
+                                  : 'শুরু'.tr,
+                            ),
+                            onPressed: () async {
+                              final d = await showDatePicker(
+                                context: ctx,
+                                initialDate: tempFrom ?? DateTime.now(),
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime.now(),
+                              );
+                              if (d != null) setSt(() => tempFrom = d);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(
+                              Icons.calendar_today_rounded,
+                              size: 16,
+                            ),
+                            label: Text(
+                              tempTo != null
+                                  ? _dayFmt.format(tempTo!)
+                                  : 'শেষ'.tr,
+                            ),
+                            onPressed: () async {
+                              final d = await showDatePicker(
+                                context: ctx,
+                                initialDate: tempTo ?? DateTime.now(),
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime.now(),
+                              );
+                              if (d != null) setSt(() => tempTo = d);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'প্রডাক্ট'.tr,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: searchCtrl,
+                      decoration: InputDecoration(
+                        hintText: 'প্রডাক্ট খুঁজুন…'.tr,
+                        prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                      ),
+                      onChanged: (_) => setSt(() {}),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 180,
+                      child: ListView(
+                        controller: scrollCtrl,
+                        children: [
+                          ...products
+                              .where((p) {
+                                final q = searchCtrl.text.trim().toLowerCase();
+                                if (q.isEmpty) return true;
+                                final name = (p.name ?? '').toString();
+                                final code = (p.productCode ?? '').toString();
+                                return name.toLowerCase().contains(q) ||
+                                    code.toLowerCase().contains(q);
+                              })
+                              .take(30)
+                              .map((p) {
+                                final pid = (p.id ?? '').toString();
+                                final pname = (p.name ?? '').toString();
+                                return ListTile(
+                                  dense: true,
+                                  leading: Icon(
+                                    tempProductId == pid
+                                        ? Icons.radio_button_checked_rounded
+                                        : Icons.radio_button_off_rounded,
+                                    size: 18,
+                                    color: tempProductId == pid
+                                        ? const Color(0xFF16A34A)
+                                        : Colors.grey,
+                                  ),
+                                  title: Text(
+                                    pname,
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  onTap: () => setSt(() {
+                                    tempProductId = pid;
+                                    tempProductName = pname;
+                                  }),
+                                );
+                              }),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setSt(() {
+                                tempFrom = null;
+                                tempTo = null;
+                                tempProductId = '';
+                                tempProductName = '';
+                              });
+                            },
+                            child: Text('ক্লিয়ার'.tr),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              controller.fromDate.value = tempFrom;
+                              controller.toDate.value = tempTo;
+                              controller.selectedProductId.value =
+                                  tempProductId;
+                              controller.selectedProductName.value =
+                                  tempProductName;
+                              Navigator.pop(ctx);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF16A34A),
+                              foregroundColor: Colors.white,
+                            ),
+                            child: Text('প্রয়োগ'.tr),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      }),
+          );
+        },
+      ),
     );
   }
 
@@ -441,21 +541,27 @@ class StockInHistoryView extends GetView<StockInController> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.account_balance_wallet_rounded,
-                color: Color(0xFF16A34A), size: 20),
+            const Icon(
+              Icons.account_balance_wallet_rounded,
+              color: Color(0xFF16A34A),
+              size: 20,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('মোট কেনা',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF166534))),
+                  Text(
+                    'মোট কেনা'.tr,
+                    style: TextStyle(fontSize: 11, color: Color(0xFF166534)),
+                  ),
                   Text(
                     '৳ ${_fmt.format(controller.totalPurchaseValue.toInt())}',
                     style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF16A34A)),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF16A34A),
+                    ),
                   ),
                 ],
               ),
@@ -463,15 +569,21 @@ class StockInHistoryView extends GetView<StockInController> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text('${controller.totalEntries} এন্ট্রি',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF166534))),
-                Text('${controller.totalQuantity} pcs',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: scheme.onSurface.withAlpha(140))),
+                Text(
+                  '${controller.totalEntries} ${'এন্ট্রি'.tr}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF166534),
+                  ),
+                ),
+                Text(
+                  '${controller.totalQuantity} pcs',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: scheme.onSurface.withAlpha(140),
+                  ),
+                ),
               ],
             ),
           ],
@@ -495,140 +607,180 @@ class StockInHistoryView extends GetView<StockInController> {
           await Get.to(() => StockInDetailView(group: group));
           controller.fetchEntries();
         },
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                width: 56,
-                color: const Color(0xFF16A34A).withAlpha(15),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(dayFmt.format(group.date),
-                        style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF16A34A))),
-                    Text(monFmt.format(group.date).toUpperCase(),
-                        style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF16A34A))),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+        // বাঁ পাশের সবুজ তারিখ-ব্লকটি Stack দিয়ে আঁকা হয়, ফলে IntrinsicHeight
+        // লাগে না। IntrinsicHeight মাপার সময় লেখা কয় লাইনে মুড়বে তার হিসাব
+        // প্রকৃত লেআউটের সাথে মেলে না, তাই সরু স্ক্রিনে কার্ড উপচে পড়ত।
+        child: Stack(
+          children: [
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 56,
+              child: ColoredBox(color: const Color(0xFF16A34A).withAlpha(15)),
+            ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 56,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Row(
-                        children: [
-                          if (group.source.isNotEmpty)
-                            Flexible(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0891B2).withAlpha(18),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.location_on_rounded,
-                                        size: 12, color: Color(0xFF0891B2)),
-                                    const SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(group.source,
-                                          style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF0891B2)),
-                                          overflow: TextOverflow.ellipsis),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          else
-                            Text(dateFmt.format(group.date),
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: scheme.onSurface.withAlpha(140))),
-                          const Spacer(),
-                          Text(
-                            '৳ ${_fmt.format(group.totalValue.toInt())}',
-                            style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF16A34A)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(Icons.inventory_2_rounded,
-                              size: 14,
-                              color: scheme.onSurface.withAlpha(120)),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${group.entries.length} প্রডাক্ট • ${group.totalQty} pcs',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: scheme.onSurface.withAlpha(180)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
                       Text(
-                        group.entries
-                                .take(3)
-                                .map((e) => e.productName)
-                                .join(', ') +
-                            (group.entries.length > 3
-                                ? ' +${group.entries.length - 3} more'
-                                : ''),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: scheme.onSurface.withAlpha(140)),
-                      ),
-                      if (group.note.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(Icons.note_rounded,
-                                size: 12,
-                                color: scheme.onSurface.withAlpha(100)),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(group.note,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color:
-                                          scheme.onSurface.withAlpha(120))),
-                            ),
-                          ],
+                        dayFmt.format(group.date),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF16A34A),
                         ),
-                      ],
+                      ),
+                      Text(
+                        monFmt.format(group.date).toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF16A34A),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-              const Padding(
-                padding: EdgeInsets.only(right: 4),
-                child: Icon(Icons.chevron_right_rounded, color: Colors.grey),
-              ),
-            ],
-          ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            if (group.source.isNotEmpty)
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF0891B2,
+                                    ).withAlpha(18),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.location_on_rounded,
+                                        size: 12,
+                                        color: Color(0xFF0891B2),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          group.source,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF0891B2),
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            else
+                              Text(
+                                dateFmt.format(group.date),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: scheme.onSurface.withAlpha(140),
+                                ),
+                              ),
+                            const Spacer(),
+                            Text(
+                              '৳ ${_fmt.format(group.totalValue.toInt())}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF16A34A),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.inventory_2_rounded,
+                              size: 14,
+                              color: scheme.onSurface.withAlpha(120),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${group.entries.length} ${'প্রডাক্ট'.tr} • ${group.totalQty} pcs',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: scheme.onSurface.withAlpha(180),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          group.entries
+                                  .take(3)
+                                  .map((e) => e.productName)
+                                  .join(', ') +
+                              (group.entries.length > 3
+                                  ? ' +${group.entries.length - 3} more'
+                                  : ''),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: scheme.onSurface.withAlpha(140),
+                          ),
+                        ),
+                        if (group.note.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.note_rounded,
+                                size: 12,
+                                color: scheme.onSurface.withAlpha(100),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  group.note,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: scheme.onSurface.withAlpha(120),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(right: 4),
+                  child: Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

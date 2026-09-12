@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../routes/app_routes.dart';
 import '../controller/finance_controller.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class FinanceView extends GetView<FinanceController> {
   const FinanceView({super.key});
@@ -15,16 +16,17 @@ class FinanceView extends GetView<FinanceController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
-        title: const Text('Finance & Analytics'),
+        title: Text('Finance & Analytics'.tr),
         actions: [
           IconButton(
-            tooltip: 'Settings',
+            tooltip: 'Settings'.tr,
             onPressed: () => _openSettingsDialog(context),
             icon: const Icon(Icons.tune_rounded),
           ),
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: 'Refresh'.tr,
             onPressed: controller.refreshAnalytics,
             icon: const Icon(Icons.refresh_rounded),
           ),
@@ -44,19 +46,19 @@ class FinanceView extends GetView<FinanceController> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   // ── Stock Valuation Section ──
-                  _sectionHeader(context, 'স্টক মূল্যায়ন (বর্তমান)',
+                  _sectionHeader(context, 'স্টক মূল্যায়ন (বর্তমান)'.tr,
                       Icons.inventory_2_rounded),
                   const SizedBox(height: 10),
                   _stockValuationRow(context, w),
                     const SizedBox(height: 14),
-                    _sectionHeader(context, 'রিপ্লেস স্টক মূল্যায়ন (বর্তমান)',
+                    _sectionHeader(context, 'রিপ্লেস স্টক মূল্যায়ন (বর্তমান)'.tr,
                       Icons.swap_horiz_rounded),
                     const SizedBox(height: 10),
                     _replaceValuationRow(context, w),
                   const SizedBox(height: 20),
 
                   // ── Period filter ──
-                  _sectionHeader(context, 'Period Filter', Icons.date_range_rounded),
+                  _sectionHeader(context, 'Period Filter'.tr, Icons.date_range_rounded),
                   const SizedBox(height: 8),
                   _rangeSelector(context),
                   const SizedBox(height: 14),
@@ -70,24 +72,24 @@ class FinanceView extends GetView<FinanceController> {
                     mainAxisSpacing: 10,
                     childAspectRatio: 1.7,
                     children: [
-                      _kpiCard('মোট বিক্রি', controller.totalSales.value,
+                      _kpiCard('মোট বিক্রি'.tr, controller.totalSales.value,
                           const Color(0xFF0284C7)),
-                      _kpiCard('ক্রয় মূল্য (COGS)',
+                      _kpiCard('ক্রয় মূল্য (COGS)'.tr,
                           controller.totalCost.value,
                           const Color(0xFFEA580C)),
-                      _kpiCard('মোট লাভ (Gross)',
+                      _kpiCard('মোট লাভ (Gross)'.tr,
                           controller.grossProfit.value,
                           const Color(0xFF16A34A)),
-                      _kpiCard('বেতন বরাদ্দ',
+                      _kpiCard('বেতন বরাদ্দ'.tr,
                           controller.salaryAllocated.value,
                           const Color(0xFFDC2626)),
-                      _kpiCard('মোট খরচ', controller.totalExpenses.value,
+                      _kpiCard('মোট খরচ'.tr, controller.totalExpenses.value,
                           const Color(0xFFD97706)),
-                      _kpiCard('স্টক কেনা (Purchase In)',
+                      _kpiCard('স্টক কেনা (Purchase In)'.tr,
                           controller.totalPurchased.value,
                           const Color(0xFF0891B2)),
                       // Gross margin %
-                      _pctCard('Gross Margin %',
+                      _pctCard('Gross Margin %'.tr,
                           controller.grossMarginPct.value,
                           const Color(0xFF16A34A)),
                       // Delivered orders count
@@ -97,7 +99,7 @@ class FinanceView extends GetView<FinanceController> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Delivered Orders',
+                              Text('Delivered Orders'.tr,
                                   style: TextStyle(
                                       color: Colors.grey, fontSize: 12)),
                               const Spacer(),
@@ -125,27 +127,27 @@ class FinanceView extends GetView<FinanceController> {
                   const SizedBox(height: 20),
 
                   // ── Day-wise Ledger ──
-                  _sectionHeader(context, 'দিনওয়ারি Purchase vs Sales',
+                  _sectionHeader(context, 'দিনওয়ারি Purchase vs Sales'.tr,
                       Icons.compare_arrows_rounded),
                   const SizedBox(height: 10),
                   if (controller.dayLedger.isEmpty)
-                    _emptyCard('এই period এ কোনো purchase/sales নেই')
+                    _emptyCard('এই period এ কোনো purchase/sales নেই'.tr)
                   else
                     ...controller.dayLedger.map(_dayLedgerTile),
                   const SizedBox(height: 20),
 
                   // ── Order-wise Profit ──
-                  _sectionHeader(context, 'Order-wise Profit (Delivered)',
+                  _sectionHeader(context, 'Order-wise Profit (Delivered)'.tr,
                       Icons.receipt_long_rounded),
                   const SizedBox(height: 10),
                   if (controller.orderRows.isEmpty)
-                    _emptyCard('এই period এ delivered order নেই')
+                    _emptyCard('এই period এ delivered order নেই'.tr)
                   else
                     ...controller.orderRows.map(_orderProfitTile),
                   const SizedBox(height: 16),
                   Text(
-                    'লাভ গণনা: শুধুমাত্র delivered orders | '
-                    'COGS = purchasePrice × qty',
+                    'লাভ গণনা: শুধুমাত্র delivered orders | COGS = purchasePrice × qty'
+                        .tr,
                     style: Theme.of(context)
                         .textTheme
                         .bodySmall
@@ -169,16 +171,16 @@ class FinanceView extends GetView<FinanceController> {
     final profit = saleVal - capital;
 
     final cards = [
-      _stockCard(context, 'কেনা দামে স্টক', capital,
-          'মোট কেনা মূল্য × স্টক পরিমাণ',
+      _stockCard(context, 'কেনা দামে স্টক'.tr, capital,
+          'মোট কেনা মূল্য × স্টক পরিমাণ'.tr,
           const Color(0xFF0891B2), Icons.shopping_cart_rounded),
-      _stockCard(context, 'বিক্রয় মূল্যে স্টক', saleVal,
-          'মোট wholesale মূল্য × স্টক পরিমাণ',
+      _stockCard(context, 'বিক্রয় মূল্যে স্টক'.tr, saleVal,
+          'মোট wholesale মূল্য × স্টক পরিমাণ'.tr,
           const Color(0xFF0284C7), Icons.sell_rounded),
-      _stockCard(context, 'সম্ভাব্য লাভ', profit,
-          'বিক্রয় মূল্য − ক্রয় মূল্য',
+      _stockCard(context, 'সম্ভাব্য লাভ'.tr, profit,
+          'বিক্রয় মূল্য − ক্রয় মূল্য'.tr,
           const Color(0xFF16A34A), Icons.trending_up_rounded),
-      _stockPctCard(context, 'গড় লাভের হার', margin),
+      _stockPctCard(context, 'গড় লাভের হার'.tr, margin),
     ];
 
     if (width >= 800) {
@@ -242,21 +244,21 @@ class FinanceView extends GetView<FinanceController> {
     final cards = [
       _replaceCard(
         context,
-        'At Shop রিপ্লেস',
+        'At Shop রিপ্লেস'.tr,
         controller.replaceAtShopWholesaleValue.value,
         controller.replaceAtShopRetailValue.value,
         const Color(0xFF0EA5E9),
       ),
       _replaceCard(
         context,
-        'Supplier রিপ্লেস',
+        'Supplier রিপ্লেস'.tr,
         controller.replaceSupplierWholesaleValue.value,
         controller.replaceSupplierRetailValue.value,
         const Color(0xFFF97316),
       ),
       _replaceCard(
         context,
-        'মোট রিপ্লেস',
+        'মোট রিপ্লেস'.tr,
         controller.replaceTotalWholesaleValue.value,
         controller.replaceTotalRetailValue.value,
         const Color(0xFF16A34A),
@@ -316,13 +318,13 @@ class FinanceView extends GetView<FinanceController> {
               ],
             ),
             const SizedBox(height: 10),
-            Text('পাইকারি মূল্য: ৳ ${_fmt(wholesale)}',
+            Text('${'পাইকারি মূল্য'.tr}: ৳ ${_fmt(wholesale)}',
                 style: TextStyle(
                     fontSize: 13,
                     color: color,
                     fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            Text('খুচরা মূল্য: ৳ ${_fmt(retail)}',
+            Text('${'খুচরা মূল্য'.tr}: ৳ ${_fmt(retail)}',
                 style: const TextStyle(
                     fontSize: 13, fontWeight: FontWeight.w700)),
           ],
@@ -361,7 +363,7 @@ class FinanceView extends GetView<FinanceController> {
                       fontWeight: FontWeight.w800,
                       color: color),
                 ),
-                Text('wholesale − cost পার্থক্য',
+                Text('wholesale − cost পার্থক্য'.tr,
                     style: TextStyle(
                         fontSize: 10, color: Colors.grey.shade500)),
               ],
@@ -389,17 +391,17 @@ class FinanceView extends GetView<FinanceController> {
             runSpacing: 6,
             children: [
               ChoiceChip(
-                label: const Text('আজকে'),
+                label: Text('আজকে'.tr),
                 selected: sel == FinanceRange.today,
                 onSelected: (_) => controller.setRange(FinanceRange.today),
               ),
               ChoiceChip(
-                label: const Text('এই সপ্তাহ'),
+                label: Text('এই সপ্তাহ'.tr),
                 selected: sel == FinanceRange.week,
                 onSelected: (_) => controller.setRange(FinanceRange.week),
               ),
               ChoiceChip(
-                label: const Text('এই মাস'),
+                label: Text('এই মাস'.tr),
                 selected: sel == FinanceRange.month,
                 onSelected: (_) =>
                     controller.setRange(FinanceRange.month),
@@ -409,7 +411,7 @@ class FinanceView extends GetView<FinanceController> {
                 label: Text(
                   sel == FinanceRange.custom && customStart != null
                       ? '${df.format(customStart)} → ${customEnd != null ? df.format(customEnd) : '?'}'
-                      : 'Custom range',
+                      : 'Custom range'.tr,
                   style: const TextStyle(fontSize: 12),
                 ),
                 backgroundColor: sel == FinanceRange.custom
@@ -436,8 +438,8 @@ class FinanceView extends GetView<FinanceController> {
                   start: controller.customStart.value!,
                   end: controller.customEnd.value!)
               : null,
-      helpText: 'Date Range বেছে নিন',
-      saveText: 'Apply',
+      helpText: 'Date Range বেছে নিন'.tr,
+      saveText: 'Apply'.tr,
     );
     if (range != null) {
       controller.setCustomRange(range.start, range.end);
@@ -472,7 +474,7 @@ class FinanceView extends GetView<FinanceController> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('চূড়ান্ত নিট লাভ (খরচ বাদে)',
+              Text('চূড়ান্ত নিট লাভ (খরচ বাদে)'.tr,
                   style: TextStyle(
                       fontWeight: FontWeight.w600, color: color)),
               Text(
@@ -493,10 +495,10 @@ class FinanceView extends GetView<FinanceController> {
 
   Widget _navRow(BuildContext context) {
     final btns = [
-      ('Expense Ledger', Icons.receipt_long_rounded, AppRoutes.expenses),
-      ('SR Performance', Icons.person_pin_circle_rounded, AppRoutes.sr),
-      ('Purchase Ledger', Icons.shopping_cart_rounded, AppRoutes.purchases),
-      ('Sales', Icons.bar_chart_rounded, AppRoutes.sales),
+      ('Expense Ledger'.tr, Icons.receipt_long_rounded, AppRoutes.expenses),
+      ('SR Performance'.tr, Icons.person_pin_circle_rounded, AppRoutes.sr),
+      ('Purchase Ledger'.tr, Icons.shopping_cart_rounded, AppRoutes.purchases),
+      ('Sales'.tr, Icons.bar_chart_rounded, AppRoutes.sales),
     ];
     return Wrap(
       spacing: 8,
@@ -615,9 +617,9 @@ class FinanceView extends GetView<FinanceController> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    _miniPill('কেনা', row.purchased, Colors.blue.shade700),
+                    _miniPill('কেনা'.tr, row.purchased, Colors.blue.shade700),
                     const SizedBox(width: 8),
-                    _miniPill('বিক্রি', row.sold, Colors.green.shade700),
+                    _miniPill('বিক্রি'.tr, row.sold, Colors.green.shade700),
                   ],
                 ),
               ],
@@ -626,7 +628,7 @@ class FinanceView extends GetView<FinanceController> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text('নেট',
+                Text('নেট'.tr,
                     style: TextStyle(
                         fontSize: 11, color: Colors.grey.shade600)),
                 Text(
@@ -673,7 +675,7 @@ class FinanceView extends GetView<FinanceController> {
               children: [
                 Expanded(
                   child: Text(
-                    row.shopName.isEmpty ? 'Unknown Shop' : row.shopName,
+                    row.shopName.isEmpty ? 'Unknown Shop'.tr : row.shopName,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
@@ -690,9 +692,9 @@ class FinanceView extends GetView<FinanceController> {
               spacing: 8,
               runSpacing: 6,
               children: [
-                _pill('Sales', row.revenue, const Color(0xFF0284C7)),
-                _pill('Cost', row.cost, const Color(0xFFEA580C)),
-                _pill('Gross', row.gross, const Color(0xFF16A34A)),
+                _pill('Sales'.tr, row.revenue, const Color(0xFF0284C7)),
+                _pill('Cost'.tr, row.cost, const Color(0xFFEA580C)),
+                _pill('Gross'.tr, row.gross, const Color(0xFF16A34A)),
               ],
             ),
           ],
@@ -726,7 +728,7 @@ class FinanceView extends GetView<FinanceController> {
 
     await Get.dialog(
       AlertDialog(
-        title: const Text('Finance Settings'),
+        title: Text('Finance Settings'.tr),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -734,14 +736,14 @@ class FinanceView extends GetView<FinanceController> {
               controller: salaryCtrl,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                  labelText: 'SR মাসিক ফিক্সড বেতন'),
+              decoration: InputDecoration(
+                  labelText: 'SR মাসিক ফিক্সড বেতন'.tr),
             ),
           ],
         ),
         actions: [
           TextButton(
-              onPressed: () => Get.back(), child: const Text('Cancel')),
+              onPressed: () => Get.back(), child: Text('Cancel'.tr)),
           ElevatedButton(
             onPressed: () async {
               final s = double.tryParse(salaryCtrl.text.trim()) ??
@@ -749,7 +751,7 @@ class FinanceView extends GetView<FinanceController> {
               await controller.saveSettings(salary: s);
               Get.back();
             },
-            child: const Text('Save'),
+            child: Text('Save'.tr),
           ),
         ],
       ),

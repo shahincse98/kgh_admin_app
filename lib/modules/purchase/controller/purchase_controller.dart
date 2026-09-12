@@ -313,20 +313,20 @@ class PurchaseController extends GetxController {
 
   /// Builds a plain-text copy of the shortage list.
   String get shortageAsText {
-    if (shortageList.isEmpty) return 'কোনো শর্ট প্রডাক্ট নেই';
+    if (shortageList.isEmpty) return 'কোনো শর্ট প্রডাক্ট নেই'.tr;
     final now = DateTime.now();
     final dateStr =
         '${now.day}/${now.month}/${now.year}';
     final buf = StringBuffer();
-    buf.writeln('সংগ্রহ তালিকা — $dateStr');
-    buf.writeln('Approved অর্ডার: $approvedOrderCount টি');
-    buf.writeln('শর্ট প্রডাক্ট: ${shortageList.length} টি');
+    buf.writeln('${'সংগ্রহ তালিকা'.tr} — $dateStr');
+    buf.writeln('Approved ${'অর্ডার'.tr}: $approvedOrderCount ${'টি'.tr}');
+    buf.writeln('${'শর্ট প্রডাক্ট'.tr}: ${shortageList.length} ${'টি'.tr}');
     buf.writeln('─────────────────────────────');
     for (var i = 0; i < shortageList.length; i++) {
       final item = shortageList[i];
       buf.writeln(
-          '${i + 1}. ${item.displayName} — ${item.shortQty} টি'
-          ' (অর্ডার: ${item.orderedQty}, স্টক: ${item.stockQty})');
+          '${i + 1}. ${item.displayName} — ${item.shortQty} ${'টি'.tr}'
+          ' (${'অর্ডার'.tr}: ${item.orderedQty}, ${'স্টক'.tr}: ${item.stockQty})');
     }
     return buf.toString();
   }

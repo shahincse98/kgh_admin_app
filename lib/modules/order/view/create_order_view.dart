@@ -9,6 +9,7 @@ import '../../product/model/product_model.dart';
 import '../controller/create_order_controller.dart';
 import '../controller/order_controller.dart';
 import '../../../widgets/responsive.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class CreateOrderView extends StatelessWidget {
   const CreateOrderView({super.key});
@@ -26,13 +27,14 @@ class CreateOrderView extends StatelessWidget {
         return true;
       },
       child: Scaffold(
+        drawer: appDrawerFor(context),
         backgroundColor: scheme.surfaceContainerLowest,
         appBar: AppBar(
           title: Obx(() {
-            const titles = [
-              'কাস্টমার নির্বাচন করুন',
-              'পণ্য যোগ করুন',
-              'অর্ডার নিশ্চিত করুন',
+            final titles = [
+              'কাস্টমার নির্বাচন করুন'.tr,
+              'পণ্য যোগ করুন'.tr,
+              'অর্ডার নিশ্চিত করুন'.tr,
             ];
             return Text(
               titles[ctrl.currentStep.value],
@@ -99,7 +101,7 @@ class _CustomerStep extends StatelessWidget {
           child: TextField(
             onChanged: (v) => ctrl.customerSearch.value = v,
             decoration: InputDecoration(
-              hintText: 'Shop নাম, মালিক বা ফোন দিয়ে খুঁজুন…',
+              hintText: 'Shop নাম, মালিক বা ফোন দিয়ে খুঁজুন…'.tr,
               prefixIcon: const Icon(Icons.search_rounded),
               filled: true,
               fillColor: scheme.surfaceContainerHigh,
@@ -128,7 +130,7 @@ class _CustomerStep extends StatelessWidget {
             }
             if (users.isEmpty) {
               return Center(
-                child: Text('কোনো কাস্টমার পাওয়া যায়নি',
+                child: Text('কোনো কাস্টমার পাওয়া যায়নি'.tr,
                     style: TextStyle(
                         color: scheme.onSurface.withAlpha(120))),
               );
@@ -250,7 +252,7 @@ class _ProductStep extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'কাস্টমার: ${cust.shopName.isNotEmpty ? cust.shopName : cust.proprietorName}',
+                    '${'কাস্টমার'.tr}: ${cust.shopName.isNotEmpty ? cust.shopName : cust.proprietorName}',
                     style: TextStyle(
                         color: scheme.onPrimaryContainer,
                         fontWeight: FontWeight.w600),
@@ -258,7 +260,7 @@ class _ProductStep extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: () => ctrl.currentStep.value = 0,
-                  child: const Text('পরিবর্তন'),
+                  child: Text('পরিবর্তন'.tr),
                 )
               ],
             ),
@@ -277,7 +279,7 @@ class _ProductStep extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => ctrl.isDueCollection.value = false,
                     icon: Icon(Icons.shopping_cart_rounded, size: 16, color: !ctrl.isDueCollection.value ? scheme.primary : scheme.onSurfaceVariant),
-                    label: Text('পণ্য যোগ', style: TextStyle(fontSize: 12, color: !ctrl.isDueCollection.value ? scheme.primary : scheme.onSurfaceVariant)),
+                    label: Text('পণ্য যোগ'.tr, style: TextStyle(fontSize: 12, color: !ctrl.isDueCollection.value ? scheme.primary : scheme.onSurfaceVariant)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       side: BorderSide(color: !ctrl.isDueCollection.value ? scheme.primary : scheme.outlineVariant),
@@ -290,7 +292,7 @@ class _ProductStep extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => ctrl.isDueCollection.value = true,
                     icon: Icon(Icons.account_balance_wallet_rounded, size: 16, color: ctrl.isDueCollection.value ? const Color(0xFF16A34A) : scheme.onSurfaceVariant),
-                    label: Text('বাকি জমা', style: TextStyle(fontSize: 12, color: ctrl.isDueCollection.value ? const Color(0xFF16A34A) : scheme.onSurfaceVariant)),
+                    label: Text('বাকি জমা'.tr, style: TextStyle(fontSize: 12, color: ctrl.isDueCollection.value ? const Color(0xFF16A34A) : scheme.onSurfaceVariant)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       side: BorderSide(color: ctrl.isDueCollection.value ? const Color(0xFF16A34A) : scheme.outlineVariant),
@@ -326,19 +328,19 @@ class _ProductStep extends StatelessWidget {
                           Row(children: [
                             const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF16A34A), size: 20),
                             const SizedBox(width: 8),
-                            const Text('বাকি জমা', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF16A34A))),
+                            Text('বাকি জমা'.tr, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF16A34A))),
                           ]),
                           const SizedBox(height: 6),
                           Obx(() {
                             final cust = ctrl.selectedCustomer.value;
                             final due = cust?.totalDue ?? 0;
-                            return Text('বর্তমান বাকি: ৳${fmt.format(due)}', style: TextStyle(fontSize: 13, color: due > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A), fontWeight: FontWeight.w600));
+                            return Text('${'বর্তমান বাকি'.tr}: ৳${fmt.format(due)}', style: TextStyle(fontSize: 13, color: due > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A), fontWeight: FontWeight.w600));
                           }),
                         ],
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text('জমা পরিমাণ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    Text('জমা পরিমাণ'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
                     TextField(
                       controller: ctrl.dueCollectionAmountCtrl,
@@ -346,13 +348,13 @@ class _ProductStep extends StatelessWidget {
                       autofocus: true,
                       decoration: InputDecoration(
                         prefixText: '৳ ',
-                        hintText: 'টাকার পরিমাণ লিখুন',
+                        hintText: 'টাকার পরিমাণ লিখুন'.tr,
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text('পেমেন্ট মাধ্যম', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    Text('পেমেন্ট মাধ্যম'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
                     Obx(() {
                       return DropdownButtonFormField<String>(
@@ -372,7 +374,7 @@ class _ProductStep extends StatelessWidget {
                       );
                     }),
                     const SizedBox(height: 16),
-                    const Text('তারিখ', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                    Text('তারিখ'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
                     Obx(() {
                       return InkWell(
@@ -420,13 +422,13 @@ class _ProductStep extends StatelessWidget {
                                   Get.find<OrderController>().fetchOrders();
                                   ctrl.reset();
                                   Get.back();
-                                  Get.snackbar('সফল', 'বাকি জমা হয়েছে', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
+                                  Get.snackbar('সফল'.tr, 'বাকি জমা হয়েছে'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
                                 }
                               },
                               icon: ctrl.submitting.value
                                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                                   : const Icon(Icons.check_rounded),
-                              label: Text(ctrl.submitting.value ? 'সাবমিট হচ্ছে…' : 'বাকি জমা করুন'),
+                              label: Text(ctrl.submitting.value ? 'সাবমিট হচ্ছে…'.tr : 'বাকি জমা করুন'.tr),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF16A34A),
                                 foregroundColor: Colors.white,
@@ -437,7 +439,7 @@ class _ProductStep extends StatelessWidget {
                           ),
                           if (amount > due && due > 0) ...[
                             const SizedBox(height: 8),
-                            Text('বাকির চেয়ে বেশি টাকা দেওয়া যাবে না', style: TextStyle(fontSize: 12, color: Colors.red.shade400)),
+                            Text('বাকির চেয়ে বেশি টাকা দেওয়া যাবে না'.tr, style: TextStyle(fontSize: 12, color: Colors.red.shade400)),
                           ],
                         ],
                       );
@@ -457,7 +459,7 @@ class _ProductStep extends StatelessWidget {
                   child: TextField(
                     onChanged: (v) => ctrl.productSearch.value = v,
                     decoration: InputDecoration(
-                      hintText: 'পণ্যের নাম বা কোড দিয়ে খুঁজুন…',
+                      hintText: 'পণ্যের নাম বা কোড দিয়ে খুঁজুন…'.tr,
                       prefixIcon: const Icon(Icons.search_rounded),
                       filled: true,
                       fillColor: scheme.surfaceContainerHigh,
@@ -489,7 +491,7 @@ class _ProductStep extends StatelessWidget {
                     }
                     if (products.isEmpty) {
                       return Center(
-                        child: Text('কোনো পণ্য পাওয়া যায়নি',
+                        child: Text('কোনো পণ্য পাওয়া যায়নি'.tr,
                             style: TextStyle(
                                 color: scheme.onSurface.withAlpha(120))),
                       );
@@ -574,8 +576,8 @@ class _ProductTile extends StatelessWidget {
                     color: const Color(0xFF6366F1),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text(
-                    'ইন্টার্নাল',
+                  child: Text(
+                    'ইন্টার্নাল'.tr,
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 9,
@@ -635,7 +637,7 @@ class _ProductTile extends StatelessWidget {
                   onPressed: () => ctrl.addToCart(product),
                   icon: Icon(Icons.add_shopping_cart_rounded,
                       color: scheme.primary),
-                  tooltip: 'কার্টে যোগ করুন',
+                  tooltip: 'কার্টে যোগ করুন'.tr,
                 ),
         ),
       );
@@ -700,7 +702,7 @@ class _ReviewStep extends StatelessWidget {
 
             // ── Customer card ────────────────────────────────────────────────
 
-            _sectionTitle('কাস্টমার তথ্য', scheme),
+            _sectionTitle('কাস্টমার তথ্য'.tr, scheme),
             const SizedBox(height: 8),
             Card(
               child: ListTile(
@@ -719,7 +721,7 @@ class _ReviewStep extends StatelessWidget {
                     '${cust?.proprietorName ?? ''}  •  ${cust?.phone ?? ''}'),
                 trailing: TextButton(
                   onPressed: () => ctrl.currentStep.value = 0,
-                  child: const Text('পরিবর্তন'),
+                  child: Text('পরিবর্তন'.tr),
                 ),
               ),
             ),
@@ -731,11 +733,11 @@ class _ReviewStep extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _sectionTitle('পণ্যের তালিকা', scheme),
+                _sectionTitle('পণ্যের তালিকা'.tr, scheme),
                 TextButton.icon(
                   onPressed: () => ctrl.currentStep.value = 1,
                   icon: const Icon(Icons.edit_rounded, size: 16),
-                  label: const Text('সম্পাদনা'),
+                  label: Text('সম্পাদনা'.tr),
                 ),
               ],
             ),
@@ -770,7 +772,7 @@ class _ReviewStep extends StatelessWidget {
 
             // ── Payment ──────────────────────────────────────────────────────
 
-            _sectionTitle('পেমেন্ট', scheme),
+            _sectionTitle('পেমেন্ট'.tr, scheme),
             const SizedBox(height: 8),
             Card(
               child: Padding(
@@ -780,7 +782,7 @@ class _ReviewStep extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('মোট পরিমাণ',
+                        Text('মোট পরিমাণ'.tr,
                             style: TextStyle(fontSize: 15)),
                         Text(
                           '৳ ${fmt.format(ctrl.cartTotal)}',
@@ -797,7 +799,7 @@ class _ReviewStep extends StatelessWidget {
                       keyboardType: const TextInputType.numberWithOptions(
                           decimal: true),
                       decoration: InputDecoration(
-                        labelText: 'নগদ প্রদান (ঐচ্ছিক)',
+                        labelText: 'নগদ প্রদান (ঐচ্ছিক)'.tr,
                         prefixText: '৳ ',
                         filled: true,
                         fillColor: scheme.surfaceContainerHigh,
@@ -845,8 +847,8 @@ class _ReviewStep extends StatelessWidget {
                           ctrl.reset();
                           Get.back();
                           Get.snackbar(
-                            'সফল!',
-                            'অর্ডার সফলভাবে তৈরি হয়েছে',
+                            'সফল!'.tr,
+                            'অর্ডার সফলভাবে তৈরি হয়েছে'.tr,
                             snackPosition: SnackPosition.BOTTOM,
                             backgroundColor: const Color(0xFF10B981),
                             colorText: Colors.white,
@@ -863,8 +865,8 @@ class _ReviewStep extends StatelessWidget {
                       )
                     : const Icon(Icons.check_circle_rounded),
                 label: Text(ctrl.submitting.value
-                    ? 'সাবমিট হচ্ছে…'
-                    : 'অর্ডার কনফার্ম করুন'),
+                    ? 'সাবমিট হচ্ছে…'.tr
+                    : 'অর্ডার কনফার্ম করুন'.tr),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: scheme.primary,
                   foregroundColor: scheme.onPrimary,
@@ -943,7 +945,7 @@ class CreateOrderFab extends StatelessWidget {
             ],
           ),
           label: Text(
-            count == 0 ? 'কোনো পণ্য নেই' : '৳ ${fmt.format(total)} — পরবর্তী',
+            count == 0 ? 'কোনো পণ্য নেই'.tr : '৳ ${fmt.format(total)} — ${'পরবর্তী'.tr}',
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           backgroundColor: count == 0

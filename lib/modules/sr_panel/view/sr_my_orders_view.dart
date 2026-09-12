@@ -8,6 +8,7 @@ import '../../order/view/order_details_view.dart';
 import 'sr_panel_shell.dart';
 import '../../../widgets/call_button.dart';
 import '../../../widgets/responsive.dart';
+import '../../../localization/domain_labels.dart';
 
 class SrMyOrdersView extends StatefulWidget {
   const SrMyOrdersView({super.key});
@@ -113,7 +114,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
         onPressed: () =>
             Get.find<SrNavController>(tag: 'sr_nav').tabIndex.value = 1,
         icon: const Icon(Icons.add_shopping_cart_rounded),
-        label: const Text('নতুন অর্ডার',
+        label: Text('নতুন অর্ডার'.tr,
             style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       appBar: AppBar(
@@ -122,10 +123,10 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('অর্ডার সমূহ',
+                Text('অর্ডার সমূহ'.tr,
                     style: TextStyle(fontWeight: FontWeight.w800)),
                 Text(
-                  '${_orderCtrl.orders.length} টি অর্ডার',
+                  '${_orderCtrl.orders.length} ${'টি অর্ডার'.tr}',
                   style: TextStyle(
                       fontSize: 12,
                       color: scheme.onSurface.withAlpha(160)),
@@ -134,7 +135,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
             )),
         actions: [
           IconButton(
-            tooltip: 'রিফ্রেশ',
+            tooltip: 'রিফ্রেশ'.tr,
             onPressed: () {
               _orderCtrl.lastDoc = null;
               _orderCtrl.hasMore.value = true;
@@ -150,11 +151,11 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
             child: Row(
               children: [
-                _tabChip('সব অর্ডার', 0, scheme),
+                _tabChip('সব অর্ডার'.tr, 0, scheme),
                 const SizedBox(width: 8),
-                _tabChip('আমার কাটা', 1, scheme),
+                _tabChip('আমার কাটা'.tr, 1, scheme),
                 const SizedBox(width: 8),
-                _tabChip('নির্ধারিত ডেলিভারি', 2, scheme,
+                _tabChip('নির্ধারিত ডেলিভারি'.tr, 2, scheme,
                     icon: Icons.local_shipping_rounded),
               ],
             ),
@@ -186,8 +187,8 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
                       const SizedBox(height: 12),
                       Text(
                         _tabIdx == 2
-                            ? 'কোনো নির্ধারিত ডেলিভারি নেই'
-                            : 'কোনো অর্ডার পাওয়া যায়নি',
+                            ? 'কোনো নির্ধারিত ডেলিভারি নেই'.tr
+                            : 'কোনো অর্ডার পাওয়া যায়নি'.tr,
                         style: TextStyle(
                             fontSize: 16,
                             color: scheme.onSurface.withAlpha(120)),
@@ -221,7 +222,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
                           ],
                         )),
                     if (_orderCtrl.loading.value)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.all(16),
                         child: Center(child: CircularProgressIndicator()),
                       ),
@@ -239,13 +240,13 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
 
   Widget _searchBar(ColorScheme scheme) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      padding: EdgeInsets.fromLTRB(12, 10, 12, 6),
       child: TextField(
         controller: _searchCtrl,
         onChanged: (v) => setState(() => _searchQuery = v),
         decoration: InputDecoration(
-          hintText: 'Shop নাম, ফোন নং বা Order ID দিয়ে খুঁজুন…',
-          prefixIcon: const Icon(Icons.search_rounded),
+          hintText: 'Shop নাম, ফোন নং বা Order ID দিয়ে খুঁজুন…'.tr,
+          prefixIcon: Icon(Icons.search_rounded),
           filled: true,
           fillColor: scheme.surfaceContainerHigh,
           border: OutlineInputBorder(
@@ -253,7 +254,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
             borderSide: BorderSide.none,
           ),
           contentPadding:
-              const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         ),
       ),
     );
@@ -262,12 +263,12 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
   // ── Status chips ───────────────────────────────────────────────
 
   Widget _statusChips() {
-    const filters = [
-      ('all', 'সব'),
-      ('pending', 'Pending'),
-      ('approved', 'Approved'),
-      ('delivered', 'Delivered'),
-      ('cancelled', 'বাতিল'),
+    final filters = [
+      ('all', 'সব'.tr),
+      ('pending', 'Pending'.tr),
+      ('approved', 'Approved'.tr),
+      ('delivered', 'Delivered'.tr),
+      ('cancelled', 'Cancelled'.tr),
     ];
     return SizedBox(
       height: 44,
@@ -454,7 +455,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
                                               BorderRadius.circular(6),
                                         ),
                                         child: Text(
-                                          'আমার',
+                                          'আমার'.tr,
                                           style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.w700,
@@ -464,7 +465,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
                                     Expanded(
                                       child: Text(
                                         order.shopName.isEmpty
-                                            ? 'Unknown Shop'
+                                            ? 'Unknown Shop'.tr
                                             : order.shopName,
                                         style: const TextStyle(
                                             fontWeight: FontWeight.w800,
@@ -512,7 +513,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
                           _chip(Icons.tag_rounded, '#${order.id}', scheme),
                           _chip(Icons.schedule_rounded, time, scheme),
                           _chip(Icons.shopping_bag_outlined,
-                              '${order.items.length} পণ্য', scheme),
+                              DomainLabels.productCount(order.items.length), scheme),
                           if (order.userPhone.isNotEmpty)
                             GestureDetector(
                               onTap: () => launchPhone(order.userPhone),
@@ -522,7 +523,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
                           if (order.userDue > 0)
                             _chip(
                               Icons.account_balance_wallet_outlined,
-                              'বাকি: ৳${_fmt.format(order.userDue)}',
+                              '${'বাকি'.tr}: ৳${_fmt.format(order.userDue)}',
                               scheme,
                               labelColor: const Color(0xFFDC2626),
                             ),
@@ -530,10 +531,10 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
                             _chip(
                               Icons.local_shipping_rounded,
                               isToday
-                                  ? 'আজকের ডেলিভারি'
+                                  ? 'আজকের ডেলিভারি'.tr
                                   : isPast
-                                      ? 'মিস: ${DateFormat('dd MMM').format(delivDate)}'
-                                      : 'ডেলিভারি: ${DateFormat('dd MMM').format(delivDate)}',
+                                      ? '${'মিস'.tr}: ${DateFormat('dd MMM').format(delivDate)}'
+                                      : '${'ডেলিভারি'.tr}: ${DateFormat('dd MMM').format(delivDate)}',
                               scheme,
                               labelColor: isToday
                                   ? const Color(0xFF0891B2)
@@ -599,10 +600,10 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
 
   Widget _statusBadge(String status, Color color) {
     final label = {
-          'pending': 'Pending',
-          'approved': 'Approved',
-          'delivered': 'Delivered',
-          'cancelled': 'Cancelled',
+          'pending': 'Pending'.tr,
+          'approved': 'Approved'.tr,
+          'delivered': 'Delivered'.tr,
+          'cancelled': 'Cancelled'.tr,
         }[status] ??
         (status.capitalizeFirst ?? status);
     return Container(

@@ -10,6 +10,7 @@ import '../model/user_replace_model.dart';
 import 'order_details_view.dart';
 import '../../../widgets/call_button.dart';
 import '../../../widgets/responsive.dart';
+import '../../../localization/domain_labels.dart';
 
 class UserDetailsView extends StatefulWidget {
   final UserModel user;
@@ -88,7 +89,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
           return FloatingActionButton.extended(
             onPressed: () => _showAddReplaceDialog(context),
             icon: const Icon(Icons.add),
-            label: const Text('Replace যোগ করুন'),
+            label: Text('Replace যোগ করুন'.tr),
           );
         },
       ),
@@ -116,10 +117,10 @@ class _UserDetailsViewState extends State<UserDetailsView>
         ),
         const SizedBox(height: 8),
         if (orders.isEmpty)
-          const Card(
+          Card(
             child: Padding(
               padding: EdgeInsets.all(16),
-              child: Text('কোনো order নেই', style: TextStyle(color: Colors.grey)),
+              child: Text('কোনো order নেই'.tr, style: TextStyle(color: Colors.grey)),
             ),
           )
         else
@@ -144,15 +145,15 @@ class _UserDetailsViewState extends State<UserDetailsView>
 
   Widget _replacesTab() {
     if (replaces.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.swap_horiz_rounded, size: 56, color: Colors.grey),
             SizedBox(height: 12),
-            Text('কোনো replace নেই', style: TextStyle(color: Colors.grey)),
+            Text('কোনো replace নেই'.tr, style: TextStyle(color: Colors.grey)),
             SizedBox(height: 8),
-            Text('নিচের + বাটনে ক্লিক করে যোগ করুন',
+            Text('নিচের + বাটনে ক্লিক করে যোগ করুন'.tr,
                 style: TextStyle(color: Colors.grey, fontSize: 12)),
           ],
         ),
@@ -182,7 +183,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('পরিমাণ: ${r.quantity}টি'),
+                Text('${'পরিমাণ'.tr}: ${r.quantity}${'টি'.tr}'),
                 if (r.note.isNotEmpty) Text(r.note),
                 Text(_fmt(r.date),
                     style: const TextStyle(fontSize: 11, color: Colors.grey)),
@@ -220,7 +221,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
             ),
             Text('Email: ${u.email}'),
             Text('Address: ${u.address}'),
-            Text('Delivery: ${u.deliveryDay}'),
+            Text('${'Delivery'.tr}: ${DomainLabels.weekday(u.deliveryDay)}'),
             const SizedBox(height: 4),
             Row(
               children: [
@@ -240,13 +241,13 @@ class _UserDetailsViewState extends State<UserDetailsView>
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.red.withAlpha(60)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.edit_rounded,
                             size: 14, color: Colors.red),
                         SizedBox(width: 4),
-                        Text('এডিট',
+                        Text('এডিট'.tr,
                             style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.red,
@@ -265,16 +266,16 @@ class _UserDetailsViewState extends State<UserDetailsView>
 
   Future<void> _confirmDeleteReplace(UserReplaceModel r) async {
     final ok = await Get.dialog<bool>(AlertDialog(
-      title: const Text('Replace মুছবেন?'),
-      content: Text('${r.productName} — ${r.quantity}টি'),
+      title: Text('Replace মুছবেন?'.tr),
+      content: Text('${r.productName} — ${r.quantity}${'টি'.tr}'),
       actions: [
         TextButton(
             onPressed: () => Get.back(result: false),
-            child: const Text('না')),
+            child: Text('না'.tr)),
         TextButton(
             onPressed: () => Get.back(result: true),
             child:
-                const Text('হ্যাঁ', style: TextStyle(color: Colors.red))),
+                Text('হ্যাঁ'.tr, style: TextStyle(color: Colors.red))),
       ],
     ));
     if (ok != true) return;
@@ -290,34 +291,34 @@ class _UserDetailsViewState extends State<UserDetailsView>
 
     final ok = await Get.dialog<bool>(
       AlertDialog(
-        title: const Text('বাকি পাওনা সম্পাদনা'),
+        title: Text('বাকি পাওনা সম্পাদনা'.tr),
         content: Form(
           key: formKey,
           child: TextFormField(
             controller: ctrl,
             keyboardType: TextInputType.number,
             autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'পরিমাণ',
+            decoration: InputDecoration(
+              labelText: 'পরিমাণ'.tr,
               prefixText: '৳ ',
               border: OutlineInputBorder(),
             ),
             validator: (v) =>
                 (int.tryParse(v?.trim() ?? '') == null)
-                    ? 'সঠিক সংখ্যা লিখুন'
+                    ? 'সঠিক সংখ্যা লিখুন'.tr
                     : null,
           ),
         ),
         actions: [
           TextButton(
               onPressed: () => Get.back(result: false),
-              child: const Text('বাতিল')),
+              child: Text('বাতিল'.tr)),
           ElevatedButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
               Get.back(result: true);
             },
-            child: const Text('সংরক্ষণ'),
+            child: Text('সংরক্ষণ'.tr),
           ),
         ],
       ),
@@ -342,7 +343,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
 
     await Get.dialog(
       AlertDialog(
-        title: const Text('Replace যোগ করুন'),
+        title: Text('Replace যোগ করুন'.tr),
         content: SizedBox(
           width: 440,
           child: SingleChildScrollView(
@@ -353,7 +354,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Product picker ──
-                  const Text('প্রডাক্ট *',
+                  Text('প্রডাক্ট *'.tr,
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -399,7 +400,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
                                           fontWeight: FontWeight.w700,
                                           fontSize: 13)),
                                   Text(
-                                      'স্টক: ${p.stock} | ৳${p.wholesalePrice}',
+                                      '${'স্টক'.tr}: ${p.stock} | ৳${p.wholesalePrice}',
                                       style: const TextStyle(
                                           fontSize: 11,
                                           color: Colors.grey)),
@@ -427,8 +428,8 @@ class _UserDetailsViewState extends State<UserDetailsView>
                             Expanded(
                               child: TextField(
                                 controller: searchCtrl,
-                                decoration: const InputDecoration(
-                                  hintText: 'প্রডাক্ট খুঁজুন...',
+                                decoration: InputDecoration(
+                                  hintText: 'প্রডাক্ট খুঁজুন...'.tr,
                                   prefixIcon:
                                       Icon(Icons.search_rounded, size: 18),
                                   isDense: true,
@@ -443,7 +444,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
                             ),
                             const SizedBox(width: 8),
                             Tooltip(
-                              message: 'Browse',
+                              message: 'Browse'.tr,
                               child: OutlinedButton(
                                 onPressed: () =>
                                     _showProductBrowseSheet(
@@ -526,7 +527,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
                                                   fontSize: 13)),
                                         ),
                                         Text(
-                                          'স্টক: ${p.stock}',
+                                          '${'স্টক'.tr}: ${p.stock}',
                                           style: TextStyle(
                                             fontSize: 11,
                                             color: p.stock > 0
@@ -552,20 +553,20 @@ class _UserDetailsViewState extends State<UserDetailsView>
                   TextFormField(
                     controller: quantityCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                        labelText: 'পরিমাণ *',
+                    decoration: InputDecoration(
+                        labelText: 'পরিমাণ *'.tr,
                         border: OutlineInputBorder()),
                     validator: (v) =>
                         (int.tryParse(v ?? '') == null ||
                                 int.parse(v!) < 1)
-                            ? 'সঠিক সংখ্যা লিখুন'
+                            ? 'সঠিক সংখ্যা লিখুন'.tr
                             : null,
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
                     controller: noteCtrl,
-                    decoration: const InputDecoration(
-                        labelText: 'বিবরণ (ঐচ্ছিক)',
+                    decoration: InputDecoration(
+                        labelText: 'বিবরণ (ঐচ্ছিক)'.tr,
                         border: OutlineInputBorder()),
                   ),
                   const SizedBox(height: 10),
@@ -575,7 +576,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.calendar_today_rounded),
                         title: Text(_fmt(dateObs.value)),
-                        subtitle: const Text('তারিখ'),
+                        subtitle: Text('তারিখ'.tr),
                         onTap: () async {
                           final picked = await showDatePicker(
                             context: context,
@@ -594,13 +595,13 @@ class _UserDetailsViewState extends State<UserDetailsView>
         actions: [
           TextButton(
               onPressed: () => Get.back(),
-              child: const Text('বাতিল')),
+              child: Text('বাতিল'.tr)),
           ElevatedButton(
             onPressed: () async {
               if (selectedProduct.value == null) {
                 Get.snackbar(
-                  'প্রডাক্ট নির্বাচন করুন',
-                  'একটি প্রডাক্ট বেছে নিন',
+                  'প্রডাক্ট নির্বাচন করুন'.tr,
+                  'একটি প্রডাক্ট বেছে নিন'.tr,
                   snackPosition: SnackPosition.BOTTOM,
                   backgroundColor: Colors.red,
                   colorText: Colors.white,
@@ -623,7 +624,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
                   await controller.fetchUserReplaces(widget.user.id);
               if (mounted) setState(() => replaces = fresh);
             },
-            child: const Text('সংরক্ষণ'),
+            child: Text('সংরক্ষণ'.tr),
           ),
         ],
       ),
@@ -663,7 +664,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
                       const EdgeInsets.fromLTRB(16, 12, 16, 8),
                   child: Row(
                     children: [
-                      const Text('প্রডাক্ট বেছে নিন',
+                      Text('প্রডাক্ট বেছে নিন'.tr,
                           style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 16)),
@@ -680,8 +681,8 @@ class _UserDetailsViewState extends State<UserDetailsView>
                   child: TextField(
                     onChanged: (v) =>
                         sheetSearch.value = v.toLowerCase(),
-                    decoration: const InputDecoration(
-                      hintText: 'খুঁজুন...',
+                    decoration: InputDecoration(
+                      hintText: 'খুঁজুন...'.tr,
                       prefixIcon: Icon(Icons.search_rounded),
                       isDense: true,
                       border: OutlineInputBorder(),
@@ -728,7 +729,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
                               style: const TextStyle(
                                   fontWeight: FontWeight.w600)),
                           subtitle: Text(
-                              '${p.productCategory} | স্টক: ${p.stock}'),
+                              '${p.productCategory} | ${'স্টক'.tr}: ${p.stock}'),
                           trailing: Text('৳${p.wholesalePrice}',
                               style: const TextStyle(
                                   fontWeight: FontWeight.w700)),

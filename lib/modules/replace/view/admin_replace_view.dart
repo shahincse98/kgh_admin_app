@@ -11,6 +11,7 @@ import '../../supplier/model/supplier_model.dart';
 import '../../user/controller/user_controller.dart';
 import '../../user/model/user_model.dart';
 import '../../../widgets/responsive.dart';
+import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class AdminReplaceView extends StatefulWidget {
   const AdminReplaceView({super.key});
@@ -47,18 +48,19 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
+      drawer: appDrawerFor(context),
       appBar: AppBar(
-        title: const Text('Replace Management'),
+        title: Text('Replace Management'.tr),
         bottom: TabBar(
           controller: _tabs,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
-          tabs: const [
-            Tab(icon: Icon(Icons.inventory_2_rounded, size: 18), text: 'At Shop'),
-            Tab(icon: Icon(Icons.person_rounded, size: 18), text: 'Customer'),
-            Tab(icon: Icon(Icons.schedule_rounded, size: 18), text: 'Pending'),
-            Tab(icon: Icon(Icons.local_shipping_rounded, size: 18), text: 'Supplier'),
-            Tab(icon: Icon(Icons.history_rounded, size: 18), text: 'History'),
+          tabs: [
+            Tab(icon: Icon(Icons.inventory_2_rounded, size: 18), text: 'At Shop'.tr),
+            Tab(icon: Icon(Icons.person_rounded, size: 18), text: 'Customer'.tr),
+            Tab(icon: Icon(Icons.schedule_rounded, size: 18), text: 'Pending'.tr),
+            Tab(icon: Icon(Icons.local_shipping_rounded, size: 18), text: 'Supplier'.tr),
+            Tab(icon: Icon(Icons.history_rounded, size: 18), text: 'History'.tr),
           ],
         ),
         actions: [
@@ -96,7 +98,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
             onPressed: () => _showAddAtShopDialog(context),
             backgroundColor: Colors.orange,
             icon: const Icon(Icons.add_rounded),
-            label: const Text('At Shop যোগ করুন'),
+            label: Text('At Shop যোগ করুন'.tr),
           );
         }
         if (_tab.value == 1) {
@@ -104,7 +106,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
             onPressed: () => _showAddCustomerDialog(context),
             backgroundColor: Colors.deepPurple,
             icon: const Icon(Icons.person_add_rounded),
-            label: const Text('Customer Replace'),
+            label: Text('Customer Replace'.tr),
           );
         }
         if (_tab.value == 3) {
@@ -112,7 +114,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
             onPressed: () => _showAddDirectSupplierDialog(context),
             backgroundColor: Colors.blue,
             icon: const Icon(Icons.local_shipping_rounded),
-            label: const Text('Supplier এ যোগ করুন'),
+            label: Text('Supplier এ যোগ করুন'.tr),
           );
         }
         return const SizedBox.shrink();
@@ -130,15 +132,15 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
       }
       final all = _rc.customerEntries;
       if (all.isEmpty) {
-        return _empty(Icons.person_rounded, 'কোনো কাস্টমার রিপ্লেস এন্ট্রি নেই');
+        return _empty(Icons.person_rounded, 'কোনো কাস্টমার রিপ্লেস এন্ট্রি নেই'.tr);
       }
       return Column(
         children: [
           _strip(
             icon: Icons.person_rounded,
             color: Colors.deepPurple,
-            label: '${all.length}টি কাস্টমার রিপ্লেস',
-            right: 'মোট: ${all.fold(0, (s, e) => s + e.quantity)}টি প্রডাক্ট',
+            label: '${all.length}${'টি কাস্টমার রিপ্লেস'.tr}',
+            right: '${'মোট'.tr}: ${all.fold(0, (s, e) => s + e.quantity)}${'টি প্রডাক্ট'.tr}',
           ),
           Expanded(
             child: ListView.separated(
@@ -189,16 +191,16 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
     String statusText;
     if (isDelivered) {
       statusColor = Colors.green;
-      statusText = isMoneyDeduct ? 'টাকা কাটা' : 'রিপ্লেস নেওয়া হল';
+      statusText = isMoneyDeduct ? 'টাকা কাটা'.tr : 'রিপ্লেস নেওয়া হল'.tr;
     } else if (isProductReplace) {
       statusColor = Colors.deepPurple;
-      statusText = 'রিপ্লেস নেওয়া হল';
+      statusText = 'রিপ্লেস নেওয়া হল'.tr;
     } else if (isMoneyDeduct) {
       statusColor = const Color(0xFFDC2626);
-      statusText = 'টাকা কাটা';
+      statusText = 'টাকা কাটা'.tr;
     } else {
       statusColor = Colors.orange;
-      statusText = 'অপেক্ষমাণ';
+      statusText = 'অপেক্ষমাণ'.tr;
     }
 
     return Card(
@@ -216,7 +218,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        e.customerName.isNotEmpty ? e.customerName : 'অজানা কাস্টমার',
+                        e.customerName.isNotEmpty ? e.customerName : 'অজানা কাস্টমার'.tr,
                         style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                       ),
                       if (e.customerPhone.isNotEmpty)
@@ -241,7 +243,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
                   constraints: const BoxConstraints(),
                   icon: const Icon(Icons.delete_outline_rounded, size: 16),
                   color: Colors.red.shade400,
-                  tooltip: 'ডিলিট',
+                  tooltip: 'ডিলিট'.tr,
                   onPressed: () => _confirmDelete(context, e),
                 ),
               ],
@@ -253,7 +255,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('ফেরত দিয়েছে',
+                      Text('ফেরত দিয়েছে'.tr,
                           style: TextStyle(fontSize: 10, color: Colors.grey)),
                       const SizedBox(height: 2),
                       Row(children: [
@@ -337,7 +339,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
       final list = _rc.atShop;
       if (list.isEmpty) {
         return _empty(Icons.inventory_2_rounded,
-            'দোকানে কোনো replace item নেই');
+            'দোকানে কোনো replace item নেই'.tr);
       }
       // Group by product
       final grouped = <String, List<AdminReplaceModel>>{};
@@ -352,8 +354,8 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
           _strip(
             icon: Icons.inventory_2_rounded,
             color: Colors.orange,
-            label: '${grouped.length}টি প্রডাক্ট',
-            right: 'মোট: $totalItemsটি',
+            label: '${grouped.length}${'টি প্রডাক্ট'.tr}',
+            right: '${'মোট'.tr}: $totalItemsটি',
           ),
           Expanded(
             child: ListView.builder(
@@ -458,13 +460,13 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
           Wrap(
             spacing: 4,
             children: [
-              _miniBtn(Icons.edit_rounded, 'Qty', Colors.teal,
+              _miniBtn(Icons.edit_rounded, 'Qty'.tr, Colors.teal,
                   () => _showEditEntryQty(e)),
-              _miniBtn(Icons.local_shipping_rounded, 'Send', Colors.blue,
+              _miniBtn(Icons.local_shipping_rounded, 'Send'.tr, Colors.blue,
                   () => _showSendToSupplierDialog(context, e)),
-              _miniBtn(Icons.build_circle_rounded, 'Done', Colors.green,
+              _miniBtn(Icons.build_circle_rounded, 'Done'.tr, Colors.green,
                   () => _showResolveDialog(context, e)),
-              _miniBtn(Icons.delete_outline_rounded, 'Del', Colors.red,
+              _miniBtn(Icons.delete_outline_rounded, 'Del'.tr, Colors.red,
                   () => _confirmDelete(context, e)),
             ],
           ),
@@ -477,18 +479,18 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
     final qtyCtrl = TextEditingController(text: e.quantity.toString());
     Get.dialog(
       AlertDialog(
-        title: Text('${e.productName} — পরিমাণ', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+        title: Text('${e.productName} — ${'পরিমাণ'.tr}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
         content: TextField(
           controller: qtyCtrl,
           keyboardType: TextInputType.number,
           autofocus: true,
           decoration: InputDecoration(
-            prefixText: 'পরিমাণ: ',
+            prefixText: 'পরিমাণ: '.tr,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('বাতিল')),
+          TextButton(onPressed: () => Get.back(), child: Text('বাতিল'.tr)),
           ElevatedButton(
             onPressed: () async {
               final newQty = int.tryParse(qtyCtrl.text.trim());
@@ -511,7 +513,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
               Get.back();
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
-            child: const Text('আপডেট'),
+            child: Text('আপডেট'.tr),
           ),
         ],
       ),
@@ -559,7 +561,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
 
       if (pending.isEmpty) {
         return _empty(Icons.schedule_rounded,
-            'কোনো পেন্ডিং রিপ্লেস ডেলিভারি নেই');
+            'কোনো পেন্ডিং রিপ্লেস ডেলিভারি নেই'.tr);
       }
 
       // Group by product for summary
@@ -574,8 +576,8 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
           _strip(
             icon: Icons.schedule_rounded,
             color: Colors.deepPurple,
-            label: '${pending.length}টি পেন্ডিং ডেলিভারি',
-            right: 'মোট: ${pending.fold(0, (s, e) => s + e.quantity)}টি',
+            label: '${pending.length}${'টি পেন্ডিং ডেলিভারি'.tr}',
+            right: '${'মোট'.tr}: ${pending.fold(0, (s, e) => s + e.quantity)}${'টি'.tr}',
           ),
           // Product-wise summary
           if (grouped.isNotEmpty)
@@ -592,7 +594,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
                 runSpacing: 4,
                 children: grouped.entries
                     .map((e) => Text(
-                        '${e.key}: ${e.value}টি',
+                        '${e.key}: ${e.value}${'টি'.tr}',
                         style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -629,7 +631,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(e.customerName.isNotEmpty ? e.customerName : 'অজানা কাস্টমার',
+                  Text(e.customerName.isNotEmpty ? e.customerName : 'অজানা কাস্টমার'.tr,
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 14)),
                   if (e.customerPhone.isNotEmpty)
@@ -692,14 +694,14 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
                         border:
                             Border.all(color: Colors.orange.withAlpha(50)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.warning_rounded,
                               size: 12, color: Colors.orange),
                           SizedBox(width: 4),
                           Flexible(
-                            child: Text('রিপ্লেস প্রোডাক্ট নির্ধারিত নয়',
+                            child: Text('রিপ্লেস প্রোডাক্ট নির্ধারিত নয়'.tr,
                                 style: TextStyle(
                                     fontSize: 11, color: Colors.orange)),
                           ),
@@ -726,14 +728,14 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
                 if (hasReplace)
                   _actionChip(
                     Icons.check_circle_rounded,
-                    'দিয়েছি',
+                    'দিয়েছি'.tr,
                     Colors.green,
                     () => _showDeliverDialog(context, e),
                   )
                 else
                   _actionChip(
                     Icons.add_circle_rounded,
-                    'প্রোডাক্ট সেট',
+                    'প্রোডাক্ট সেট'.tr,
                     Colors.deepPurple,
                     () => _showSetResolutionDialog(context, e),
                   ),
@@ -756,15 +758,15 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
       final list = _rc.withSupplier;
       if (list.isEmpty) {
         return _empty(Icons.local_shipping_rounded,
-            'সাপ্লাইয়ারে কোনো আইটেম নেই');
+            'সাপ্লাইয়ারে কোনো আইটেম নেই'.tr);
       }
       return Column(
         children: [
           _strip(
             icon: Icons.local_shipping_rounded,
             color: Colors.blue,
-            label: '${list.length}টি আইটেম সাপ্লাইয়ারে',
-            right: 'মোট: ${list.fold(0, (s, e) => s + e.quantity)}টি',
+            label: '${list.length}${'টি আইটেম সাপ্লাইয়ারে'.tr}',
+            right: '${'মোট'.tr}: ${list.fold(0, (s, e) => s + e.quantity)}${'টি'.tr}',
           ),
           Expanded(
             child: ListView.separated(
@@ -800,7 +802,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
                   _infoRow(Icons.store_rounded, e.supplierName, ''),
                   if (e.sentToSupplierDate != null)
                     _infoRow(Icons.send_rounded,
-                        'পাঠানো: ${_fmtDate(e.sentToSupplierDate!)}', ''),
+                        '${'পাঠানো'.tr}: ${_fmtDate(e.sentToSupplierDate!)}', ''),
                   if (e.customerName.isNotEmpty)
                     _infoRow(
                         Icons.person_outline_rounded, e.customerName, ''),
@@ -818,7 +820,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
                 const SizedBox(height: 6),
                 _actionChip(
                   Icons.call_received_rounded,
-                  'ফেরত পেলাম',
+                  'ফেরত পেলাম'.tr,
                   Colors.green,
                   () => _showResolveDialog(context, e),
                 ),
@@ -841,15 +843,15 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
       final list = _rc.pendingCustomerDelivery;
       if (list.isEmpty) {
         return _empty(Icons.person_pin_rounded,
-            'সব কাস্টমারকে ডেলিভারি দেওয়া হয়েছে');
+            'সব কাস্টমারকে ডেলিভারি দেওয়া হয়েছে'.tr);
       }
       return Column(
         children: [
           _strip(
             icon: Icons.person_pin_rounded,
             color: Colors.deepPurple,
-            label: '${list.length}জন কাস্টমার ডেলিভারি পেন্ডিং',
-            right: 'মোট: ${list.fold(0, (s, e) => s + e.quantity)}টি',
+            label: '${list.length}${'জন কাস্টমার ডেলিভারি পেন্ডিং'.tr}',
+            right: '${'মোট'.tr}: ${list.fold(0, (s, e) => s + e.quantity)}${'টি'.tr}',
           ),
           Expanded(
             child: ListView.separated(
@@ -878,7 +880,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(e.customerName.isNotEmpty ? e.customerName : 'অজানা কাস্টমার',
+                  Text(e.customerName.isNotEmpty ? e.customerName : 'অজানা কাস্টমার'.tr,
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 14)),
                   if (e.customerPhone.isNotEmpty)
@@ -898,7 +900,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
                         const Icon(Icons.arrow_downward_rounded,
                             size: 12, color: Colors.red),
                         const SizedBox(width: 4),
-                        Text('দিয়েছে: ${e.productName}',
+                        Text('${'দিয়েছে'.tr}: ${e.productName}',
                             style: const TextStyle(
                                 fontSize: 11, color: Colors.red)),
                       ],
@@ -944,7 +946,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
                 const SizedBox(height: 6),
                 _actionChip(
                   Icons.check_circle_rounded,
-                  'দিয়েছি',
+                  'দিয়েছি'.tr,
                   Colors.green,
                   () => _showDeliverDialog(context, e),
                 ),
@@ -973,7 +975,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
             b.replaceStock.compareTo(a.replaceStock));
       if (list.isEmpty) {
         return _empty(Icons.inventory_2_rounded,
-            'কোনো রিপ্লেস প্রডাক্ট নেই');
+            'কোনো রিপ্লেস প্রডাক্ট নেই'.tr);
       }
       final totalReplaceStock = list.fold(0, (s, p) => s + p.replaceStock);
       return Column(
@@ -981,8 +983,8 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
           _strip(
             icon: Icons.inventory_2_rounded,
             color: Colors.teal,
-            label: '${list.length} প্রডাক্ট',
-            right: 'মোট: $totalReplaceStockটি',
+            label: '${list.length} ${'প্রডাক্ট'.tr}',
+            right: '${'মোট'.tr}: $totalReplaceStockটি',
           ),
           Expanded(
             child: ListView.separated(
@@ -1047,15 +1049,15 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
               spacing: 6,
               runSpacing: 6,
               children: [
-                _badge('রেগুলার: ${p.stock}', Colors.green),
+                _badge('${'রেগুলার'.tr}: ${p.stock}', Colors.green),
                 if (hasReplaceStock)
-                  _badge('রিপ্লেস স্টক: ${p.replaceStock}', Colors.teal),
+                  _badge('${'রিপ্লেস স্টক'.tr}: ${p.replaceStock}', Colors.teal),
                 // Action buttons
                 const SizedBox(width: 4),
-                _actionChip(Icons.edit_rounded, 'Edit', Colors.teal,
+                _actionChip(Icons.edit_rounded, 'Edit'.tr, Colors.teal,
                     () => _showEditReplaceStock(p)),
                 if (hasReplaceStock)
-                  _actionChip(Icons.delete_outline_rounded, 'Clear', Colors.red,
+                  _actionChip(Icons.delete_outline_rounded, 'Clear'.tr, Colors.red,
                       () => _showClearReplaceStock(p)),
               ],
             ),
@@ -1074,7 +1076,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
         title: Row(children: [
           const Icon(Icons.edit_rounded, color: Colors.teal, size: 20),
           const SizedBox(width: 8),
-          Expanded(child: Text('রিপ্লেস স্টক: ${p.name}',
+          Expanded(child: Text('${'রিপ্লেস স্টক'.tr}: ${p.name}',
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               maxLines: 1, overflow: TextOverflow.ellipsis)),
         ]),
@@ -1082,10 +1084,10 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('বর্তমান রিপ্লেস স্টক: ${p.replaceStock}টি',
+            Text('${'বর্তমান রিপ্লেস স্টক'.tr}: ${p.replaceStock}${'টি'.tr}',
                 style: const TextStyle(fontSize: 13, color: Colors.teal)),
             const SizedBox(height: 10),
-            const Text('পরিমাণ পরিবর্তন (+/-):',
+            Text('পরিমাণ পরিবর্তন (+/-):'.tr,
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
             const SizedBox(height: 4),
             TextField(
@@ -1093,7 +1095,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
               keyboardType: TextInputType.number,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: 'যেমন: 5 (যোগ) বা -3 (বাদ)',
+                hintText: 'যেমন: 5 (যোগ) বা -3 (বাদ)'.tr,
                 filled: true,
                 fillColor: Colors.teal.withAlpha(8),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -1101,27 +1103,27 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
               ),
             ),
             const SizedBox(height: 4),
-            const Text('যোগ করতে +, বাদ দিতে - ব্যবহার করুন',
+            Text('যোগ করতে +, বাদ দিতে - ব্যবহার করুন'.tr,
                 style: TextStyle(fontSize: 10, color: Colors.grey)),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('বাতিল')),
+          TextButton(onPressed: () => Get.back(), child: Text('বাতিল'.tr)),
           ElevatedButton.icon(
             onPressed: () async {
               final delta = int.tryParse(qtyCtrl.text.trim());
               if (delta == null || delta == 0) {
-                Get.snackbar('ত্রুটি', 'সঠিক সংখ্যা লিখুন',
+                Get.snackbar('ত্রুটি'.tr, 'সঠিক সংখ্যা লিখুন'.tr,
                     snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
                 return;
               }
               await _rc.adjustReplaceStock(p.id, delta);
               Get.back();
-              Get.snackbar('আপডেট', 'রিপ্লেস স্টক $delta পরিবর্তন হয়েছে',
+              Get.snackbar('আপডেট'.tr, '${'রিপ্লেস স্টক'.tr} $delta ${'পরিবর্তন হয়েছে'.tr}',
                   snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.teal, colorText: Colors.white);
             },
             icon: const Icon(Icons.check_rounded, size: 16),
-            label: const Text('আপডেট'),
+            label: Text('আপডেট'.tr),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
           ),
         ],
@@ -1134,19 +1136,19 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
   void _showClearReplaceStock(ProductModel p) {
     Get.dialog(
       AlertDialog(
-        title: const Text('রিপ্লেস স্টক ক্লিয়ার করবেন?'),
-        content: Text('"${p.name}" এর ${p.replaceStock}টি রিপ্লেস স্টক ০ করা হবে।'),
+        title: Text('রিপ্লেস স্টক ক্লিয়ার করবেন?'.tr),
+        content: Text('"${p.name}" এর ${p.replaceStock}${'টি রিপ্লেস স্টক ০ করা হবে'.tr}।'),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('না')),
+          TextButton(onPressed: () => Get.back(), child: Text('না'.tr)),
           ElevatedButton.icon(
             onPressed: () async {
               await _rc.adjustReplaceStock(p.id, -p.replaceStock);
               Get.back();
-              Get.snackbar('ক্লিয়ার', 'রিপ্লেস স্টক ০ করা হয়েছে',
+              Get.snackbar('ক্লিয়ার'.tr, 'রিপ্লেস স্টক ০ করা হয়েছে'.tr,
                   snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.teal, colorText: Colors.white);
             },
             icon: const Icon(Icons.check_rounded, size: 16),
-            label: const Text('হ্যাঁ, ক্লিয়ার'),
+            label: Text('হ্যাঁ, ক্লিয়ার'.tr),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
           ),
         ],
@@ -1164,15 +1166,15 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
       }
       final list = _rc.resolved;
       if (list.isEmpty) {
-        return _empty(Icons.history_rounded, 'কোনো ইতিহাস নেই');
+        return _empty(Icons.history_rounded, 'কোনো ইতিহাস নেই'.tr);
       }
       return Column(
         children: [
           _strip(
             icon: Icons.history_rounded,
             color: Colors.grey.shade600,
-            label: 'মোট ${list.length}টি সম্পন্ন',
-            right: '${list.fold(0, (s, e) => s + e.resolvedQty)}টি রিজলভড',
+            label: '${'মোট'.tr} ${list.length}${'টি সম্পন্ন'.tr}',
+            right: '${list.fold(0, (s, e) => s + e.resolvedQty)}${'টি রিজলভড'.tr}',
           ),
           Expanded(
             child: ListView.separated(
@@ -1217,15 +1219,15 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
                         Icons.person_outline_rounded, e.customerName, ''),
                   if (e.resolvedAt != null)
                     _infoRow(Icons.event_available_rounded,
-                        'রিজলভড: ${_fmtDate(e.resolvedAt!)}', ''),
+                        '${'রিজলভড'.tr}: ${_fmtDate(e.resolvedAt!)}', ''),
                   if (e.hasCustomer && e.hasReplaceProduct)
                     _infoRow(
                       e.deliveredToCustomer
                           ? Icons.check_circle_rounded
                           : Icons.schedule_rounded,
                       e.deliveredToCustomer
-                          ? 'কাস্টমারকে দেওয়া হয়েছে'
-                          : 'কাস্টমার ডেলিভারি পেন্ডিং',
+                          ? 'কাস্টমারকে দেওয়া হয়েছে'.tr
+                          : 'কাস্টমার ডেলিভারি পেন্ডিং'.tr,
                       '',
                     ),
                   if (e.note.isNotEmpty)
@@ -1239,7 +1241,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
             const SizedBox(height: 6),
             _actionChip(
               Icons.delete_outline_rounded,
-              'মুছুন',
+              'মুছুন'.tr,
               Colors.red,
               () => _confirmDelete(context, e),
             ),
@@ -1351,12 +1353,12 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
 
   void _confirmDelete(BuildContext context, AdminReplaceModel e) {
     Get.dialog(AlertDialog(
-      title: const Text('মুছে দেবেন?'),
+      title: Text('মুছে দেবেন?'.tr),
       content: Text(
-          '"${e.productName}" এন্ট্রিটি মুছে যাবে।\nreplaceCount আপডেট হবে।'),
+          '"${e.productName}" ${'এন্ট্রিটি মুছে যাবে'.tr}।\nreplaceCount ${'আপডেট হবে'.tr}।'),
       actions: [
         TextButton(
-            onPressed: Get.back, child: const Text('বাতিল')),
+            onPressed: Get.back, child: Text('বাতিল'.tr)),
         ElevatedButton(
           style:
               ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -1364,7 +1366,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
             await _rc.deleteEntry(e);
             Get.back();
           },
-          child: const Text('মুছুন',
+          child: Text('মুছুন'.tr,
               style: TextStyle(color: Colors.white)),
         ),
       ],
@@ -1443,7 +1445,7 @@ class _AdminReplaceViewState extends State<AdminReplaceView>
         color: color.withAlpha(25),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text('${qty}টি',
+      child: Text('${qty}${'টি'.tr}',
           style: TextStyle(
               fontWeight: FontWeight.w800,
               color: color,
@@ -1588,7 +1590,7 @@ class _AddReplaceSheetState extends State<_AddReplaceSheet> {
   Future<void> _save() async {
     if (_product == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('প্রডাক্ট বেছে নিন')));
+          SnackBar(content: Text('প্রডাক্ট বেছে নিন'.tr)));
       return;
     }
     final qty = int.tryParse(_qtyCtrl.text) ?? 1;
@@ -1608,7 +1610,7 @@ class _AddReplaceSheetState extends State<_AddReplaceSheet> {
         date: _date,
       );
       if (mounted) Navigator.of(context).pop();
-      Get.snackbar('যোগ হয়েছে', 'Replace entry সফলভাবে যোগ হয়েছে',
+      Get.snackbar('যোগ হয়েছে'.tr, 'Replace entry সফলভাবে যোগ হয়েছে'.tr,
           snackPosition: SnackPosition.BOTTOM);
     } catch (_) {
       setState(() => _saving = false);
@@ -1625,7 +1627,7 @@ class _AddReplaceSheetState extends State<_AddReplaceSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
-          _sheetHeader('Replace যোগ করুন', Icons.add_circle_rounded,
+          _sheetHeader('Replace যোগ করুন'.tr, Icons.add_circle_rounded,
               scheme.primary),
           const Divider(height: 1),
           Flexible(
@@ -1636,7 +1638,7 @@ class _AddReplaceSheetState extends State<_AddReplaceSheet> {
                   // Defective product (what customer is giving us)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('কাস্টমার কি দিচ্ছে? (সমস্যার প্রডাক্ট)',
+                    child: Text('কাস্টমার কি দিচ্ছে? (সমস্যার প্রডাক্ট)'.tr,
                         style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -1674,7 +1676,7 @@ class _AddReplaceSheetState extends State<_AddReplaceSheet> {
                                     style: TextStyle(
                                         fontWeight: FontWeight.w700,
                                         color: scheme.primary))
-                                : Text('প্রডাক্ট বেছে নিন',
+                                : Text('প্রডাক্ট বেছে নিন'.tr,
                                     style: TextStyle(
                                         color: scheme.onSurfaceVariant)),
                           ),
@@ -1717,7 +1719,7 @@ class _AddReplaceSheetState extends State<_AddReplaceSheet> {
                                         fontWeight: FontWeight.w700,
                                         color: Colors.green))
                                 : Text(
-                                    'কাস্টমার কি পাবে? (ঐচ্ছিক)',
+                                    'কাস্টমার কি পাবে? (ঐচ্ছিক)'.tr,
                                     style: TextStyle(
                                         color: scheme.onSurfaceVariant)),
                           ),
@@ -1772,7 +1774,7 @@ class _AddReplaceSheetState extends State<_AddReplaceSheet> {
                           controller: _qtyCtrl,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            labelText: 'পরিমাণ',
+                            labelText: 'পরিমাণ'.tr,
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10)),
                             contentPadding: const EdgeInsets.symmetric(
@@ -1807,7 +1809,7 @@ class _AddReplaceSheetState extends State<_AddReplaceSheet> {
                                     size: 18,
                                     color: scheme.onSurfaceVariant),
                                 const SizedBox(width: 8),
-                                Text('কাস্টমার বেছে নিন (ঐচ্ছিক)',
+                                Text('কাস্টমার বেছে নিন (ঐচ্ছিক)'.tr,
                                     style: TextStyle(
                                         color: scheme.onSurfaceVariant)),
                               ],
@@ -1845,7 +1847,7 @@ class _AddReplaceSheetState extends State<_AddReplaceSheet> {
                     controller: _noteCtrl,
                     maxLines: 2,
                     decoration: InputDecoration(
-                      labelText: 'নোট (ঐচ্ছিক)',
+                      labelText: 'নোট (ঐচ্ছিক)'.tr,
                       prefixIcon: const Icon(Icons.note_alt_outlined,
                           size: 18),
                       border: OutlineInputBorder(
@@ -1868,7 +1870,7 @@ class _AddReplaceSheetState extends State<_AddReplaceSheet> {
                                   strokeWidth: 2,
                                   color: Colors.white))
                           : const Icon(Icons.save_rounded),
-                      label: const Text('সংরক্ষণ করুন'),
+                      label: Text('সংরক্ষণ করুন'.tr),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1927,7 +1929,7 @@ class _SendToSupplierSheetState extends State<_SendToSupplierSheet> {
   Future<void> _save() async {
     if (_supplier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('সাপ্লাইয়ার বেছে নিন')));
+          SnackBar(content: Text('সাপ্লাইয়ার বেছে নিন'.tr)));
       return;
     }
     setState(() => _saving = true);
@@ -1939,8 +1941,8 @@ class _SendToSupplierSheetState extends State<_SendToSupplierSheet> {
         note: _noteCtrl.text.trim(),
       );
       if (mounted) Navigator.of(context).pop();
-      Get.snackbar('পাঠানো হয়েছে',
-          '"${widget.entry.productName}" সাপ্লাইয়ারে পাঠানো হয়েছে',
+      Get.snackbar('পাঠানো হয়েছে'.tr,
+          '"${widget.entry.productName}" ${'সাপ্লাইয়ারে পাঠানো হয়েছে'.tr}',
           snackPosition: SnackPosition.BOTTOM);
     } catch (_) {
       setState(() => _saving = false);
@@ -1958,7 +1960,7 @@ class _SendToSupplierSheetState extends State<_SendToSupplierSheet> {
         children: [
           _handle(),
           _sheetHeader(
-              'সাপ্লাইয়ারে পাঠান', Icons.local_shipping_rounded, Colors.blue),
+              'সাপ্লাইয়ারে পাঠান'.tr, Icons.local_shipping_rounded, Colors.blue),
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
@@ -1996,7 +1998,7 @@ class _SendToSupplierSheetState extends State<_SendToSupplierSheet> {
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                       color: Colors.blue))
-                              : Text('সাপ্লাইয়ার বেছে নিন',
+                              : Text('সাপ্লাইয়ার বেছে নিন'.tr,
                                   style: TextStyle(
                                       color: scheme.onSurfaceVariant)),
                         ),
@@ -2011,7 +2013,7 @@ class _SendToSupplierSheetState extends State<_SendToSupplierSheet> {
                   controller: _noteCtrl,
                   maxLines: 2,
                   decoration: InputDecoration(
-                    labelText: 'নোট (ঐচ্ছিক)',
+                    labelText: 'নোট (ঐচ্ছিক)'.tr,
                     prefixIcon:
                         const Icon(Icons.note_alt_outlined, size: 18),
                     border: OutlineInputBorder(
@@ -2035,7 +2037,7 @@ class _SendToSupplierSheetState extends State<_SendToSupplierSheet> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.send_rounded),
-                    label: const Text('পাঠিয়ে দিন'),
+                    label: Text('পাঠিয়ে দিন'.tr),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -2087,11 +2089,11 @@ class _ResolveSheetState extends State<_ResolveSheet> {
       );
       if (mounted) Navigator.of(context).pop();
       final label = _resolution == 'scrapped'
-          ? 'বাতিল করা হয়েছে'
+          ? 'বাতিল করা হয়েছে'.tr
           : _resolution == 'added_to_regular_stock'
-              ? 'রেগুলার স্টকে যোগ হয়েছে'
-              : 'রিপ্লেস স্টকে যোগ হয়েছে';
-      Get.snackbar('সম্পন্ন!', '"${widget.entry.productName}" — $label',
+              ? 'রেগুলার স্টকে যোগ হয়েছে'.tr
+              : 'রিপ্লেস স্টকে যোগ হয়েছে'.tr;
+      Get.snackbar('সম্পন্ন!'.tr, '"${widget.entry.productName}" — $label',
           snackPosition: SnackPosition.BOTTOM);
     } catch (_) {
       setState(() => _saving = false);
@@ -2108,7 +2110,7 @@ class _ResolveSheetState extends State<_ResolveSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
-          _sheetHeader('পরিস্থিতি নির্ধারণ',
+          _sheetHeader('পরিস্থিতি নির্ধারণ'.tr,
               Icons.check_circle_outline_rounded, Colors.green),
           const Divider(height: 1),
           Padding(
@@ -2118,36 +2120,36 @@ class _ResolveSheetState extends State<_ResolveSheet> {
               children: [
                 _productInfo(widget.entry, scheme),
                 const SizedBox(height: 16),
-                const Text('কোথায় যাবে?',
+                Text('কোথায় যাবে?'.tr,
                     style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 _resolutionOption(
                   'added_to_replace_stock',
                   Icons.inventory_2_rounded,
-                  'রিপ্লেস স্টকে যোগ করুন',
-                  'মেরামত/পরিবর্তিত — রিপ্লেস স্টক হিসেবে রাখুন',
+                  'রিপ্লেস স্টকে যোগ করুন'.tr,
+                  'মেরামত/পরিবর্তিত — রিপ্লেস স্টক হিসেবে রাখুন'.tr,
                   Colors.teal,
                 ),
                 const SizedBox(height: 8),
                 _resolutionOption(
                   'added_to_regular_stock',
                   Icons.add_box_rounded,
-                  'রেগুলার স্টকে যোগ করুন',
-                  'নতুনের মতো — সাধারণ স্টকে রাখুন',
+                  'রেগুলার স্টকে যোগ করুন'.tr,
+                  'নতুনের মতো — সাধারণ স্টকে রাখুন'.tr,
                   Colors.green,
                 ),
                 const SizedBox(height: 8),
                 _resolutionOption(
                   'scrapped',
                   Icons.delete_forever_rounded,
-                  'বাতিল করুন',
-                  'মেরামত অযোগ্য — ফেলে দিন',
+                  'বাতিল করুন'.tr,
+                  'মেরামত অযোগ্য — ফেলে দিন'.tr,
                   Colors.red,
                 ),
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    const Text('পরিমাণ: ',
+                    Text('পরিমাণ: '.tr,
                         style: TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(width: 8),
                     SizedBox(
@@ -2165,7 +2167,7 @@ class _ResolveSheetState extends State<_ResolveSheet> {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    Text('/ ${widget.entry.quantity}টি',
+                    Text('/ ${widget.entry.quantity}${'টি'.tr}',
                         style: const TextStyle(color: Colors.grey)),
                   ],
                 ),
@@ -2174,7 +2176,7 @@ class _ResolveSheetState extends State<_ResolveSheet> {
                   controller: _noteCtrl,
                   maxLines: 2,
                   decoration: InputDecoration(
-                    labelText: 'নোট (ঐচ্ছিক)',
+                    labelText: 'নোট (ঐচ্ছিক)'.tr,
                     prefixIcon:
                         const Icon(Icons.note_alt_outlined, size: 18),
                     border: OutlineInputBorder(
@@ -2198,7 +2200,7 @@ class _ResolveSheetState extends State<_ResolveSheet> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.check_rounded),
-                    label: const Text('নিশ্চিত করুন'),
+                    label: Text('নিশ্চিত করুন'.tr),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -2336,12 +2338,12 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
   Future<void> _save() async {
     if (_defectiveProduct == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Defective product বেছে নিন')));
+          SnackBar(content: Text('Defective product বেছে নিন'.tr)));
       return;
     }
     if (_customer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Customer বেছে নিন')));
+          SnackBar(content: Text('Customer বেছে নিন'.tr)));
       return;
     }
     final qty = int.tryParse(_qtyCtrl.text) ?? 1;
@@ -2365,7 +2367,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
         date: _date,
       );
       if (mounted) Navigator.of(context).pop();
-      Get.snackbar('Added', 'Customer replace entry added',
+      Get.snackbar('Added'.tr, 'Customer replace entry added'.tr,
           snackPosition: SnackPosition.BOTTOM);
     } catch (_) {
       setState(() => _saving = false);
@@ -2383,7 +2385,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
         children: [
           _handle(),
           _sheetHeader(
-              'Customer Replace', Icons.person_add_rounded, Colors.deepPurple),
+              'Customer Replace'.tr, Icons.person_add_rounded, Colors.deepPurple),
           const Divider(height: 1),
           Flexible(
             child: SingleChildScrollView(
@@ -2416,7 +2418,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
                                 Icon(Icons.person_search_rounded,
                                     size: 20, color: Colors.grey.shade500),
                                 const SizedBox(width: 10),
-                                Text('Customer বেছে নিন *',
+                                Text('Customer বেছে নিন *'.tr,
                                     style: TextStyle(
                                         color: Colors.grey.shade500,
                                         fontSize: 14)),
@@ -2478,7 +2480,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
                   ),
                   const SizedBox(height: 12),
                   // Defective product picker
-                  Text('Defective Product (Received from customer)',
+                  Text('Defective Product (Received from customer)'.tr,
                       style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade600,
@@ -2494,7 +2496,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
                   ),
                   const SizedBox(height: 14),
                   // Resolution type
-                  const Text('Resolution Type',
+                  Text('Resolution Type'.tr,
                       style: TextStyle(
                           fontWeight: FontWeight.w600, fontSize: 13)),
                   const SizedBox(height: 8),
@@ -2504,7 +2506,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
                         child: _resolutionOption(
                           'product_replace',
                           Icons.swap_horiz_rounded,
-                          'Product Replace',
+                          'Product Replace'.tr,
                           Colors.teal,
                         ),
                       ),
@@ -2513,7 +2515,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
                         child: _resolutionOption(
                           'money_deduct',
                           Icons.currency_rupee_rounded,
-                          'Money Deduct',
+                          'Money Deduct'.tr,
                           Colors.blue,
                         ),
                       ),
@@ -2522,7 +2524,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
                         child: _resolutionOption(
                           '',
                           Icons.hourglass_empty_rounded,
-                          'Decide Later',
+                          'Decide Later'.tr,
                           Colors.grey,
                         ),
                       ),
@@ -2531,7 +2533,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
                   const SizedBox(height: 12),
                   // Conditional fields
                   if (_resolutionType == 'product_replace') ...[
-                    Text('Replace Product (Customer will receive)',
+                    Text('Replace Product (Customer will receive)'.tr,
                         style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -2541,7 +2543,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
                       onTap: _pickReplaceProduct,
                       icon: Icons.inventory_2_rounded,
                       label:
-                          _replaceProduct?.name ?? 'Pick replace product',
+                          _replaceProduct?.name ?? 'Pick replace product'.tr,
                       selected: _replaceProduct != null,
                       color: Colors.teal,
                       scheme: scheme,
@@ -2552,7 +2554,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
                       controller: _amountCtrl,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                        labelText: 'Deduction Amount (৳)',
+                        labelText: 'Deduction Amount (৳)'.tr,
                         prefixIcon: const Icon(
                             Icons.currency_rupee_rounded,
                             size: 18),
@@ -2601,7 +2603,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
                           controller: _qtyCtrl,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            labelText: 'Qty',
+                            labelText: 'Qty'.tr,
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10)),
                             contentPadding: const EdgeInsets.symmetric(
@@ -2616,7 +2618,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
                     controller: _noteCtrl,
                     maxLines: 2,
                     decoration: InputDecoration(
-                      labelText: 'Note (optional)',
+                      labelText: 'Note (optional)'.tr,
                       prefixIcon:
                           const Icon(Icons.note_alt_outlined, size: 18),
                       border: OutlineInputBorder(
@@ -2640,7 +2642,7 @@ class _AddCustomerReplaceSheetState extends State<_AddCustomerReplaceSheet> {
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.save_rounded),
-                      label: const Text('Save Entry'),
+                      label: Text('Save Entry'.tr),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -2781,7 +2783,7 @@ class _SetResolutionSheetState extends State<_SetResolutionSheet> {
         _replaceProduct == null &&
         widget.entry.replaceProductName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Replace product বেছে নিন')));
+          SnackBar(content: Text('Replace product বেছে নিন'.tr)));
       return;
     }
     final amount = int.tryParse(_amountCtrl.text) ?? 0;
@@ -2798,7 +2800,7 @@ class _SetResolutionSheetState extends State<_SetResolutionSheet> {
             _resolutionType == 'money_deduct' ? amount : 0,
       );
       if (mounted) Navigator.of(context).pop();
-      Get.snackbar('Updated', 'Customer resolution updated',
+      Get.snackbar('Updated'.tr, 'Customer resolution updated'.tr,
           snackPosition: SnackPosition.BOTTOM);
     } catch (_) {
       setState(() => _saving = false);
@@ -2816,7 +2818,7 @@ class _SetResolutionSheetState extends State<_SetResolutionSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
-          _sheetHeader('Set Resolution', Icons.edit_rounded, Colors.deepPurple),
+          _sheetHeader('Set Resolution'.tr, Icons.edit_rounded, Colors.deepPurple),
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
@@ -2840,7 +2842,7 @@ class _SetResolutionSheetState extends State<_SetResolutionSheet> {
                       Text(
                           e.customerName.isNotEmpty
                               ? e.customerName
-                              : 'Unknown',
+                              : 'Unknown'.tr,
                           style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               color: Colors.deepPurple)),
@@ -2855,7 +2857,7 @@ class _SetResolutionSheetState extends State<_SetResolutionSheet> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                const Text('Resolution Type',
+                Text('Resolution Type'.tr,
                     style: TextStyle(
                         fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 8),
@@ -2865,14 +2867,14 @@ class _SetResolutionSheetState extends State<_SetResolutionSheet> {
                         child: _resolutionOption(
                             'product_replace',
                             Icons.swap_horiz_rounded,
-                            'Product Replace',
+                            'Product Replace'.tr,
                             Colors.teal)),
                     const SizedBox(width: 8),
                     Expanded(
                         child: _resolutionOption(
                             'money_deduct',
                             Icons.currency_rupee_rounded,
-                            'Money Deduct',
+                            'Money Deduct'.tr,
                             Colors.blue)),
                   ],
                 ),
@@ -2907,7 +2909,7 @@ class _SetResolutionSheetState extends State<_SetResolutionSheet> {
                               _replaceProduct?.name ??
                                   (e.replaceProductName.isNotEmpty
                                       ? e.replaceProductName
-                                      : 'Pick replace product'),
+                                      : 'Pick replace product'.tr),
                               style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: _replaceProduct != null ||
@@ -2928,7 +2930,7 @@ class _SetResolutionSheetState extends State<_SetResolutionSheet> {
                     controller: _amountCtrl,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      labelText: 'Deduction Amount (৳)',
+                      labelText: 'Deduction Amount (৳)'.tr,
                       prefixIcon: const Icon(
                           Icons.currency_rupee_rounded,
                           size: 18),
@@ -2954,7 +2956,7 @@ class _SetResolutionSheetState extends State<_SetResolutionSheet> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.save_rounded),
-                    label: const Text('Save'),
+                    label: Text('Save'.tr),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -3033,8 +3035,8 @@ class _DeliverToCustomerSheetState extends State<_DeliverToCustomerSheet> {
       );
       if (mounted) Navigator.of(context).pop();
       Get.snackbar(
-        'ডেলিভারি দেওয়া হয়েছে',
-        '${widget.entry.customerName.isNotEmpty ? widget.entry.customerName : "কাস্টমার"}কে "${widget.entry.replaceProductName}" দেওয়া হয়েছে',
+        'ডেলিভারি দেওয়া হয়েছে'.tr,
+        '${widget.entry.customerName.isNotEmpty ? widget.entry.customerName : "কাস্টমার".tr}কে "${widget.entry.replaceProductName}" ${'দেওয়া হয়েছে'.tr}',
         snackPosition: SnackPosition.BOTTOM,
       );
     } catch (_) {
@@ -3054,7 +3056,7 @@ class _DeliverToCustomerSheetState extends State<_DeliverToCustomerSheet> {
         children: [
           _handle(),
           _sheetHeader(
-              'কাস্টমারকে ডেলিভারি দিন',
+              'কাস্টমারকে ডেলিভারি দিন'.tr,
               Icons.person_pin_rounded,
               Colors.deepPurple),
           const Divider(height: 1),
@@ -3083,7 +3085,7 @@ class _DeliverToCustomerSheetState extends State<_DeliverToCustomerSheet> {
                           Text(
                             e.customerName.isNotEmpty
                                 ? e.customerName
-                                : 'অজানা কাস্টমার',
+                                : 'অজানা কাস্টমার'.tr,
                             style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 color: Colors.deepPurple),
@@ -3110,7 +3112,7 @@ class _DeliverToCustomerSheetState extends State<_DeliverToCustomerSheet> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('দিয়েছিল:',
+                                Text('দিয়েছিল:'.tr,
                                     style: TextStyle(
                                         fontSize: 11,
                                         color: Colors.grey)),
@@ -3128,7 +3130,7 @@ class _DeliverToCustomerSheetState extends State<_DeliverToCustomerSheet> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                const Text('পাবে:',
+                                Text('পাবে:'.tr,
                                     style: TextStyle(
                                         fontSize: 11,
                                         color: Colors.grey)),
@@ -3150,7 +3152,7 @@ class _DeliverToCustomerSheetState extends State<_DeliverToCustomerSheet> {
                   controller: _noteCtrl,
                   maxLines: 2,
                   decoration: InputDecoration(
-                    labelText: 'নোট (ঐচ্ছিক)',
+                    labelText: 'নোট (ঐচ্ছিক)'.tr,
                     prefixIcon:
                         const Icon(Icons.note_alt_outlined, size: 18),
                     border: OutlineInputBorder(
@@ -3174,7 +3176,7 @@ class _DeliverToCustomerSheetState extends State<_DeliverToCustomerSheet> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.check_circle_rounded),
-                    label: const Text('ডেলিভারি নিশ্চিত করুন'),
+                    label: Text('ডেলিভারি নিশ্চিত করুন'.tr),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -3212,14 +3214,14 @@ class _ProductPickerSheetState extends State<_ProductPickerSheet> {
         children: [
           _handle(),
           _sheetHeader(
-              'প্রডাক্ট বেছে নিন', Icons.inventory_2_rounded, Colors.teal),
+              'প্রডাক্ট বেছে নিন'.tr, Icons.inventory_2_rounded, Colors.teal),
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
             child: TextField(
               onChanged: (v) => setState(() => _query = v.toLowerCase()),
-              decoration: const InputDecoration(
-                hintText: 'প্রডাক্ট সার্চ করুন...',
+              decoration: InputDecoration(
+                hintText: 'প্রডাক্ট সার্চ করুন...'.tr,
                 prefixIcon: Icon(Icons.search_rounded),
                 isDense: true,
                 border: OutlineInputBorder(),
@@ -3247,7 +3249,7 @@ class _ProductPickerSheetState extends State<_ProductPickerSheet> {
                         style: const TextStyle(
                             fontWeight: FontWeight.w600)),
                     subtitle: Text(
-                        '${p.productCategory} · স্টক: ${p.stock}',
+                        '${p.productCategory} · ${'স্টক'.tr}: ${p.stock}',
                         style: const TextStyle(fontSize: 11)),
                     onTap: () => Navigator.of(context).pop(p),
                   );
@@ -3340,12 +3342,12 @@ class _AddDirectSupplierSheetState
   Future<void> _save() async {
     if (_product == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('প্রডাক্ট বেছে নিন')));
+          SnackBar(content: Text('প্রডাক্ট বেছে নিন'.tr)));
       return;
     }
     if (_supplier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('সাপ্লাইয়ার বেছে নিন')));
+          SnackBar(content: Text('সাপ্লাইয়ার বেছে নিন'.tr)));
       return;
     }
     final qty = int.tryParse(_qtyCtrl.text) ?? 1;
@@ -3365,7 +3367,7 @@ class _AddDirectSupplierSheetState
         date: _date,
       );
       if (mounted) Navigator.of(context).pop();
-      Get.snackbar('যোগ হয়েছে', 'সাপ্লাইয়ারে সরাসরি এন্ট্রি যোগ হয়েছে',
+      Get.snackbar('যোগ হয়েছে'.tr, 'সাপ্লাইয়ারে সরাসরি এন্ট্রি যোগ হয়েছে'.tr,
           snackPosition: SnackPosition.BOTTOM);
     } catch (_) {
       setState(() => _saving = false);
@@ -3382,7 +3384,7 @@ class _AddDirectSupplierSheetState
         mainAxisSize: MainAxisSize.min,
         children: [
           _handle(),
-          _sheetHeader('Supplier এ যোগ করুন',
+          _sheetHeader('Supplier এ যোগ করুন'.tr,
               Icons.local_shipping_rounded, Colors.blue),
           const Divider(height: 1),
           Flexible(
@@ -3418,7 +3420,7 @@ class _AddDirectSupplierSheetState
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              _product?.name ?? 'প্রডাক্ট বেছে নিন *',
+                              _product?.name ?? 'প্রডাক্ট বেছে নিন *'.tr,
                               style: TextStyle(
                                   fontWeight: _product != null
                                       ? FontWeight.w700
@@ -3462,7 +3464,7 @@ class _AddDirectSupplierSheetState
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              _supplier?.shopName ?? 'সাপ্লাইয়ার বেছে নিন *',
+                              _supplier?.shopName ?? 'সাপ্লাইয়ার বেছে নিন *'.tr,
                               style: TextStyle(
                                   fontWeight: _supplier != null
                                       ? FontWeight.w700
@@ -3502,7 +3504,7 @@ class _AddDirectSupplierSheetState
                                   size: 18,
                                   color: scheme.onSurfaceVariant),
                               const SizedBox(width: 8),
-                              Text('Customer বেছে নিন (ঐচ্ছিক)',
+                              Text('Customer বেছে নিন (ঐচ্ছিক)'.tr,
                                   style: TextStyle(
                                       color: scheme.onSurfaceVariant)),
                             ])
@@ -3565,7 +3567,7 @@ class _AddDirectSupplierSheetState
                           controller: _qtyCtrl,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            labelText: 'Qty',
+                            labelText: 'Qty'.tr,
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10)),
                             contentPadding: const EdgeInsets.symmetric(
@@ -3580,7 +3582,7 @@ class _AddDirectSupplierSheetState
                     controller: _noteCtrl,
                     maxLines: 2,
                     decoration: InputDecoration(
-                      labelText: 'Note (optional)',
+                      labelText: 'Note (optional)'.tr,
                       prefixIcon:
                           const Icon(Icons.note_alt_outlined, size: 18),
                       border: OutlineInputBorder(
@@ -3604,7 +3606,7 @@ class _AddDirectSupplierSheetState
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.save_rounded),
-                      label: const Text('সংরক্ষণ করুন'),
+                      label: Text('সংরক্ষণ করুন'.tr),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -3645,15 +3647,15 @@ class _CustomerPickerSheetState extends State<_CustomerPickerSheet> {
         children: [
           _handle(),
           _sheetHeader(
-              'Customer বেছে নিন', Icons.person_search_rounded, Colors.deepPurple),
+              'Customer বেছে নিন'.tr, Icons.person_search_rounded, Colors.deepPurple),
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
             child: TextField(
               autofocus: true,
               onChanged: (v) => setState(() => _query = v.toLowerCase()),
-              decoration: const InputDecoration(
-                hintText: 'দোকানের নাম, ফোন বা ঠিকানা দিয়ে সার্চ করুন...',
+              decoration: InputDecoration(
+                hintText: 'দোকানের নাম, ফোন বা ঠিকানা দিয়ে সার্চ করুন...'.tr,
                 prefixIcon: Icon(Icons.search_rounded),
                 isDense: true,
                 border: OutlineInputBorder(),
@@ -3670,10 +3672,10 @@ class _CustomerPickerSheetState extends State<_CustomerPickerSheet> {
                     u.proprietorName.toLowerCase().contains(_query);
               }).toList();
               if (list.isEmpty) {
-                return const Padding(
+                return Padding(
                   padding: EdgeInsets.all(32),
                   child: Center(
-                      child: Text('কোনো customer পাওয়া যায়নি',
+                      child: Text('কোনো customer পাওয়া যায়নি'.tr,
                           style: TextStyle(color: Colors.grey))),
                 );
               }
@@ -3760,14 +3762,14 @@ class _SupplierPickerSheetState extends State<_SupplierPickerSheet> {
         children: [
           _handle(),
           _sheetHeader(
-              'সাপ্লাইয়ার বেছে নিন', Icons.store_rounded, Colors.blue),
+              'সাপ্লাইয়ার বেছে নিন'.tr, Icons.store_rounded, Colors.blue),
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
             child: TextField(
               onChanged: (v) => setState(() => _query = v.toLowerCase()),
-              decoration: const InputDecoration(
-                hintText: 'সাপ্লাইয়ার সার্চ করুন...',
+              decoration: InputDecoration(
+                hintText: 'সাপ্লাইয়ার সার্চ করুন...'.tr,
                 prefixIcon: Icon(Icons.search_rounded),
                 isDense: true,
                 border: OutlineInputBorder(),
@@ -3859,7 +3861,7 @@ class _AddAtShopSheetState extends State<_AddAtShopSheet> {
   Future<void> _save() async {
     if (_product == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('প্রডাক্ট বেছে নিন')));
+          SnackBar(content: Text('প্রডাক্ট বেছে নিন'.tr)));
       return;
     }
     final qty = int.tryParse(_qtyCtrl.text) ?? 1;
@@ -3873,7 +3875,7 @@ class _AddAtShopSheetState extends State<_AddAtShopSheet> {
         date: _date,
       );
       if (mounted) Navigator.of(context).pop();
-      Get.snackbar('যোগ হয়েছে', '${_product!.name} × $qtyটি At Shop-এ যোগ হয়েছে',
+      Get.snackbar('যোগ হয়েছে'.tr, '${_product!.name} × $qtyটি At Shop-এ যোগ হয়েছে',
           snackPosition: SnackPosition.BOTTOM);
     } catch (_) {
       setState(() => _saving = false);
@@ -3891,7 +3893,7 @@ class _AddAtShopSheetState extends State<_AddAtShopSheet> {
         children: [
           _handle(),
           _sheetHeader(
-              'At Shop যোগ করুন', Icons.inventory_2_rounded, Colors.orange),
+              'At Shop যোগ করুন'.tr, Icons.inventory_2_rounded, Colors.orange),
           const Divider(height: 1),
           Flexible(
             child: SingleChildScrollView(
@@ -3925,7 +3927,7 @@ class _AddAtShopSheetState extends State<_AddAtShopSheet> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              _product?.name ?? 'প্রডাক্ট বেছে নিন *',
+                              _product?.name ?? 'প্রডাক্ট বেছে নিন *'.tr,
                               style: TextStyle(
                                   fontWeight: _product != null
                                       ? FontWeight.w700
@@ -3975,7 +3977,7 @@ class _AddAtShopSheetState extends State<_AddAtShopSheet> {
                           controller: _qtyCtrl,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            labelText: 'পরিমাণ',
+                            labelText: 'পরিমাণ'.tr,
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10)),
                             contentPadding: const EdgeInsets.symmetric(
@@ -3990,7 +3992,7 @@ class _AddAtShopSheetState extends State<_AddAtShopSheet> {
                     controller: _noteCtrl,
                     maxLines: 2,
                     decoration: InputDecoration(
-                      labelText: 'নোট (ঐচ্ছিক)',
+                      labelText: 'নোট (ঐচ্ছিক)'.tr,
                       prefixIcon:
                           const Icon(Icons.note_alt_outlined, size: 18),
                       border: OutlineInputBorder(
@@ -4014,7 +4016,7 @@ class _AddAtShopSheetState extends State<_AddAtShopSheet> {
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white))
                           : const Icon(Icons.save_rounded),
-                      label: const Text('সংরক্ষণ করুন'),
+                      label: Text('সংরক্ষণ করুন'.tr),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -4085,7 +4087,7 @@ Widget _productInfo(AdminReplaceModel e, ColorScheme scheme) {
             children: [
               Text(e.productName,
                   style: const TextStyle(fontWeight: FontWeight.w700)),
-              Text('${e.quantity}টি · ${e.statusLabel}',
+              Text('${e.quantity}${'টি'.tr} · ${e.statusLabel}',
                   style: const TextStyle(fontSize: 11, color: Colors.grey)),
             ],
           ),

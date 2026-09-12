@@ -106,7 +106,7 @@ class CreateOrderController extends GetxController {
   Future<bool> submitOrder() async {
     final customer = selectedCustomer.value;
     if (customer == null) {
-      error.value = 'কাস্টমার নির্বাচন করুন';
+      error.value = 'কাস্টমার নির্বাচন করুন'.tr;
       return false;
     }
 
@@ -114,7 +114,7 @@ class CreateOrderController extends GetxController {
     if (isDueCollection.value) {
       final dueAmount = num.tryParse(dueCollectionAmountCtrl.text.trim()) ?? 0;
       if (dueAmount <= 0) {
-        error.value = 'জমা পরিমাণ লিখুন';
+        error.value = 'জমা পরিমাণ লিখুন'.tr;
         return false;
       }
 
@@ -152,7 +152,7 @@ class CreateOrderController extends GetxController {
 
         return true;
       } catch (e) {
-        error.value = 'সাবমিট করতে ব্যর্থ: $e';
+        error.value = '${'সাবমিট করতে ব্যর্থ'.tr}: $e';
         return false;
       } finally {
         submitting.value = false;
@@ -161,7 +161,7 @@ class CreateOrderController extends GetxController {
 
     // Normal order mode
     if (cart.isEmpty) {
-      error.value = 'কমপক্ষে একটি পণ্য যোগ করুন';
+      error.value = 'কমপক্ষে একটি পণ্য যোগ করুন'.tr;
       return false;
     }
 
@@ -208,7 +208,7 @@ class CreateOrderController extends GetxController {
 
       return true;
     } catch (e) {
-      error.value = 'অর্ডার সাবমিট করতে ব্যর্থ: $e';
+      error.value = '${'অর্ডার সাবমিট করতে ব্যর্থ'.tr}: $e';
       return false;
     } finally {
       submitting.value = false;
