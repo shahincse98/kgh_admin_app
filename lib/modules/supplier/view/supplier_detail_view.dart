@@ -51,7 +51,8 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
       isScrollControlled: true,
       useSafeArea: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => _SupplierForm(
         existing: _supplier,
         onSaved: (updated) => setState(() => _supplier = updated),
@@ -62,8 +63,7 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final totalAmount =
-        _history.fold(0.0, (s, e) => s + e.totalAmount);
+    final totalAmount = _history.fold(0.0, (s, e) => s + e.totalAmount);
 
     return Scaffold(
       appBar: AppBar(
@@ -100,14 +100,15 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Row(
                           children: [
-                            Icon(Icons.history_rounded,
-                                size: 18, color: cs.primary),
+                            Icon(
+                              Icons.history_rounded,
+                              size: 18,
+                              color: cs.primary,
+                            ),
                             const SizedBox(width: 6),
                             Text(
                               'ক্রয় ইতিহাস'.tr,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                           ],
@@ -127,13 +128,17 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.error_outline_rounded,
-                          size: 48, color: cs.error),
+                      Icon(
+                        Icons.error_outline_rounded,
+                        size: 48,
+                        color: cs.error,
+                      ),
                       const SizedBox(height: 8),
                       Text('লোড করতে সমস্যা হয়েছে'.tr),
                       TextButton(
-                          onPressed: _loadHistory,
-                          child: Text('আবার চেষ্টা করুন'.tr)),
+                        onPressed: _loadHistory,
+                        child: Text('আবার চেষ্টা করুন'.tr),
+                      ),
                     ],
                   ),
                 ),
@@ -144,11 +149,16 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.shopping_cart_outlined,
-                          size: 56, color: cs.outlineVariant),
+                      Icon(
+                        Icons.shopping_cart_outlined,
+                        size: 56,
+                        color: cs.outlineVariant,
+                      ),
                       const SizedBox(height: 12),
-                      Text('এই সাপ্লাইয়ারের কোনো ক্রয় নেই'.tr,
-                          style: TextStyle(color: cs.onSurfaceVariant)),
+                      Text(
+                        'এই সাপ্লাইয়ারের কোনো ক্রয় নেই'.tr,
+                        style: TextStyle(color: cs.onSurfaceVariant),
+                      ),
                     ],
                   ),
                 ),
@@ -158,7 +168,8 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
                 padding: const EdgeInsets.fromLTRB(14, 0, 14, 30),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate(
-                      _buildGroupedHistory(context, cs)),
+                    _buildGroupedHistory(context, cs),
+                  ),
                 ),
               ),
           ],
@@ -189,9 +200,10 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
                           ? _supplier.shopName[0].toUpperCase()
                           : '?',
                       style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w800,
-                          color: cs.primary),
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: cs.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -203,12 +215,18 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
                       Text(
                         _supplier.shopName,
                         style: const TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w800),
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       if (_supplier.ownerName.isNotEmpty)
-                        Text(_supplier.ownerName,
-                            style: TextStyle(
-                                fontSize: 13, color: cs.onSurfaceVariant)),
+                        Text(
+                          _supplier.ownerName,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -220,8 +238,7 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
               _infoRow(Icons.phone_outlined, _supplier.phone, cs),
             if (_supplier.address.isNotEmpty) ...[
               const SizedBox(height: 4),
-              _infoRow(
-                  Icons.location_on_outlined, _supplier.address, cs),
+              _infoRow(Icons.location_on_outlined, _supplier.address, cs),
             ],
           ],
         ),
@@ -236,8 +253,10 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
         Icon(icon, size: 15, color: cs.onSurfaceVariant),
         const SizedBox(width: 6),
         Expanded(
-          child: Text(text,
-              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+          child: Text(
+            text,
+            style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+          ),
         ),
       ],
     );
@@ -247,28 +266,35 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
     return Row(
       children: [
         Expanded(
-            child: _statCard(
-          '${_history.length}',
-          'মোট ক্রয়'.tr,
-          Icons.receipt_long_rounded,
-          cs.primary,
-          cs,
-        )),
+          child: _statCard(
+            '${_history.length}',
+            'মোট ক্রয়'.tr,
+            Icons.receipt_long_rounded,
+            cs.primary,
+            cs,
+          ),
+        ),
         const SizedBox(width: 10),
         Expanded(
-            child: _statCard(
-          '৳ ${_fmt.format(total.toInt())}',
-          'মোট পরিমাণ'.tr,
-          Icons.payments_rounded,
-          const Color(0xFF16A34A),
-          cs,
-        )),
+          child: _statCard(
+            '৳ ${_fmt.format(total.toInt())}',
+            'মোট পরিমাণ'.tr,
+            Icons.payments_rounded,
+            const Color(0xFF16A34A),
+            cs,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _statCard(String value, String label, IconData icon, Color color,
-      ColorScheme cs) {
+  Widget _statCard(
+    String value,
+    String label,
+    IconData icon,
+    Color color,
+    ColorScheme cs,
+  ) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -283,14 +309,18 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      color: color)),
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 11, color: cs.onSurfaceVariant)),
+              Text(
+                value,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  color: color,
+                ),
+              ),
+              Text(
+                label,
+                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+              ),
             ],
           ),
         ],
@@ -298,8 +328,7 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
     );
   }
 
-  List<Widget> _buildGroupedHistory(
-      BuildContext context, ColorScheme cs) {
+  List<Widget> _buildGroupedHistory(BuildContext context, ColorScheme cs) {
     // Group by month
     final months = <String, List<PurchaseEntryModel>>{};
     for (final e in _history) {
@@ -319,35 +348,44 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
         margin: const EdgeInsets.only(bottom: 10),
         clipBehavior: Clip.antiAlias,
         child: Theme(
-          data:
-              Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
             initiallyExpanded: true,
-            tilePadding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            title: Text(label,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700, fontSize: 14)),
+            tilePadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 4,
+            ),
+            title: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            ),
             subtitle: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.orange.shade50,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text('${list.length}${'টি'.tr} entry',
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.orange.shade700)),
+                  child: Text(
+                    '${list.length}${'টি'.tr} entry',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.orange.shade700,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   '৳ ${_fmt.format(monthTotal.toInt())}',
                   style: TextStyle(
-                      color: Colors.red.shade600,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13),
+                    color: Colors.red.shade600,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
@@ -365,8 +403,7 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       decoration: BoxDecoration(
-        border: Border(
-            top: BorderSide(color: cs.outlineVariant.withAlpha(60))),
+        border: Border(top: BorderSide(color: cs.outlineVariant.withAlpha(60))),
       ),
       child: Row(
         children: [
@@ -384,16 +421,18 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
                 Text(
                   DateFormat('dd').format(e.date),
                   style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      color: cs.primary),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: cs.primary,
+                  ),
                 ),
                 Text(
                   DateFormat('MMM').format(e.date).toUpperCase(),
                   style: TextStyle(
-                      fontSize: 9,
-                      color: cs.primary,
-                      fontWeight: FontWeight.w600),
+                    fontSize: 9,
+                    color: cs.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -403,25 +442,28 @@ class _SupplierDetailViewState extends State<SupplierDetailView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(e.productName,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(
+                  e.productName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
                 Text(
                   '${e.quantity}${'টি'.tr} × ৳ ${_fmt.format(e.unitPrice.toInt())} = ৳ ${_fmt.format(e.totalAmount.toInt())}',
-                  style:
-                      TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
                 ),
                 if (e.note.isNotEmpty)
-                  Text(e.note,
-                      style: TextStyle(
-                          fontSize: 11, color: cs.onSurfaceVariant)),
+                  Text(
+                    e.note,
+                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                  ),
               ],
             ),
           ),
           Text(
             '৳ ${_fmt.format(e.totalAmount.toInt())}',
-            style: const TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 13),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
           ),
         ],
       ),
@@ -442,12 +484,13 @@ class _SupplierForm extends StatefulWidget {
 
 class _SupplierFormState extends State<_SupplierForm> {
   late final _shopCtrl = TextEditingController(text: widget.existing.shopName);
-  late final _ownerCtrl =
-      TextEditingController(text: widget.existing.ownerName);
-  late final _phoneCtrl =
-      TextEditingController(text: widget.existing.phone);
-  late final _addressCtrl =
-      TextEditingController(text: widget.existing.address);
+  late final _ownerCtrl = TextEditingController(
+    text: widget.existing.ownerName,
+  );
+  late final _phoneCtrl = TextEditingController(text: widget.existing.phone);
+  late final _addressCtrl = TextEditingController(
+    text: widget.existing.address,
+  );
   bool _saving = false;
 
   @override
@@ -462,8 +505,9 @@ class _SupplierFormState extends State<_SupplierForm> {
   Future<void> _save() async {
     final shopName = _shopCtrl.text.trim();
     if (shopName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('দোকানের নাম আবশ্যিক'.tr)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('দোকানের নাম আবশ্যিক'.tr)));
       return;
     }
     setState(() => _saving = true);
@@ -484,8 +528,11 @@ class _SupplierFormState extends State<_SupplierForm> {
       );
       widget.onSaved(updated);
       if (mounted) Navigator.of(context).pop();
-      Get.snackbar('আপডেট হয়েছে'.tr, '"$shopName" ${'সফলভাবে আপডেট হয়েছে'.tr}',
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'আপডেট হয়েছে'.tr,
+        '"$shopName" ${'সফলভাবে আপডেট হয়েছে'.tr}',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     } catch (_) {
       setState(() => _saving = false);
     }
@@ -495,8 +542,9 @@ class _SupplierFormState extends State<_SupplierForm> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -505,8 +553,9 @@ class _SupplierFormState extends State<_SupplierForm> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2)),
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 8, 0),
@@ -515,14 +564,17 @@ class _SupplierFormState extends State<_SupplierForm> {
                 Icon(Icons.edit_rounded, color: scheme.primary),
                 const SizedBox(width: 10),
                 Expanded(
-                    child: Text('সাপ্লাইয়ার সম্পাদনা'.tr,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700))),
+                  child: Text(
+                    'সাপ্লাইয়ার সম্পাদনা'.tr,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
                 IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop()),
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ],
             ),
           ),
@@ -536,11 +588,19 @@ class _SupplierFormState extends State<_SupplierForm> {
                   const SizedBox(height: 12),
                   _tf(_ownerCtrl, 'মালিকের নাম'.tr, Icons.person_rounded),
                   const SizedBox(height: 12),
-                  _tf(_phoneCtrl, 'ফোন নম্বর'.tr, Icons.phone_rounded,
-                      keyboardType: TextInputType.phone),
+                  _tf(
+                    _phoneCtrl,
+                    'ফোন নম্বর'.tr,
+                    Icons.phone_rounded,
+                    keyboardType: TextInputType.phone,
+                  ),
                   const SizedBox(height: 12),
-                  _tf(_addressCtrl, 'ঠিকানা'.tr, Icons.location_on_rounded,
-                      maxLines: 2),
+                  _tf(
+                    _addressCtrl,
+                    'ঠিকানা'.tr,
+                    Icons.location_on_rounded,
+                    maxLines: 2,
+                  ),
                   const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
@@ -552,7 +612,10 @@ class _SupplierFormState extends State<_SupplierForm> {
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white))
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
                           : const Icon(Icons.save_rounded),
                       label: Text('আপডেট করুন'.tr),
                     ),
@@ -567,8 +630,13 @@ class _SupplierFormState extends State<_SupplierForm> {
     );
   }
 
-  Widget _tf(TextEditingController c, String label, IconData icon,
-      {TextInputType? keyboardType, int maxLines = 1}) {
+  Widget _tf(
+    TextEditingController c,
+    String label,
+    IconData icon, {
+    TextInputType? keyboardType,
+    int maxLines = 1,
+  }) {
     return TextField(
       controller: c,
       keyboardType: keyboardType,
@@ -577,8 +645,10 @@ class _SupplierFormState extends State<_SupplierForm> {
         labelText: label,
         prefixIcon: Icon(icon, size: 20),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
       ),
     );
   }

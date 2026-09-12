@@ -5,6 +5,7 @@ import '../model/supplier_model.dart';
 import '../../purchase/model/purchase_entry_model.dart';
 import 'package:intl/intl.dart';
 import 'package:kgh_admin_app/widgets/app_drawer.dart';
+import 'package:kgh_admin_app/widgets/responsive.dart';
 
 // ─── List View ───────────────────────────────────────────────────────────────
 
@@ -45,17 +46,20 @@ class SupplierListView extends GetView<SupplierController> {
               decoration: InputDecoration(
                 hintText: 'সাপ্লাইয়ার সার্চ করুন...'.tr,
                 prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: Obx(() => searchText.value.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          searchCtrl.clear();
-                          searchText.value = '';
-                        },
-                      )
-                    : const SizedBox.shrink()),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                suffixIcon: Obx(
+                  () => searchText.value.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            searchCtrl.clear();
+                            searchText.value = '';
+                          },
+                        )
+                      : const SizedBox.shrink(),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 10),
               ),
             ),
@@ -72,19 +76,24 @@ class SupplierListView extends GetView<SupplierController> {
               final filtered = query.isEmpty
                   ? all
                   : all
-                      .where((s) =>
-                          s.shopName.toLowerCase().contains(query) ||
-                          s.ownerName.toLowerCase().contains(query) ||
-                          s.phone.contains(query))
-                      .toList();
+                        .where(
+                          (s) =>
+                              s.shopName.toLowerCase().contains(query) ||
+                              s.ownerName.toLowerCase().contains(query) ||
+                              s.phone.contains(query),
+                        )
+                        .toList();
 
               if (filtered.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.store_mall_directory_outlined,
-                          size: 64, color: cs.outlineVariant),
+                      Icon(
+                        Icons.store_mall_directory_outlined,
+                        size: 64,
+                        color: cs.outlineVariant,
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         query.isEmpty
@@ -106,11 +115,12 @@ class SupplierListView extends GetView<SupplierController> {
 
               return RefreshIndicator(
                 onRefresh: () => controller.fetchSuppliers(force: true),
-                child: ListView.builder(
+                child: ResponsiveCardGrid(
                   padding: const EdgeInsets.fromLTRB(14, 4, 14, 100),
                   itemCount: filtered.length,
-                  itemBuilder: (_, i) =>
-                      _SupplierCard(supplier: filtered[i]),
+                  itemHeight: 132,
+                  maxItemWidth: 400,
+                  itemBuilder: (_, i) => _SupplierCard(supplier: filtered[i]),
                 ),
               );
             }),
@@ -126,7 +136,8 @@ class SupplierListView extends GetView<SupplierController> {
       isScrollControlled: true,
       useSafeArea: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => _SupplierForm(existing: existing),
     );
   }
@@ -167,9 +178,10 @@ class _SupplierCard extends StatelessWidget {
                         ? supplier.shopName[0].toUpperCase()
                         : '?',
                     style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: cs.primary),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: cs.primary,
+                    ),
                   ),
                 ),
               ),
@@ -182,21 +194,27 @@ class _SupplierCard extends StatelessWidget {
                     Text(
                       supplier.shopName,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 15),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                     if (supplier.ownerName.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 3),
                         child: Row(
                           children: [
-                            Icon(Icons.person_outline_rounded,
-                                size: 13, color: cs.onSurfaceVariant),
+                            Icon(
+                              Icons.person_outline_rounded,
+                              size: 13,
+                              color: cs.onSurfaceVariant,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               supplier.ownerName,
                               style: TextStyle(
-                                  fontSize: 12,
-                                  color: cs.onSurfaceVariant),
+                                fontSize: 12,
+                                color: cs.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),
@@ -206,14 +224,18 @@ class _SupplierCard extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 2),
                         child: Row(
                           children: [
-                            Icon(Icons.phone_outlined,
-                                size: 13, color: cs.onSurfaceVariant),
+                            Icon(
+                              Icons.phone_outlined,
+                              size: 13,
+                              color: cs.onSurfaceVariant,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               supplier.phone,
                               style: TextStyle(
-                                  fontSize: 12,
-                                  color: cs.onSurfaceVariant),
+                                fontSize: 12,
+                                color: cs.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),
@@ -224,15 +246,19 @@ class _SupplierCard extends StatelessWidget {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.location_on_outlined,
-                                size: 13, color: cs.onSurfaceVariant),
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 13,
+                              color: cs.onSurfaceVariant,
+                            ),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 supplier.address,
                                 style: TextStyle(
-                                    fontSize: 12,
-                                    color: cs.onSurfaceVariant),
+                                  fontSize: 12,
+                                  color: cs.onSurfaceVariant,
+                                ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -245,8 +271,7 @@ class _SupplierCard extends StatelessWidget {
               ),
               // Menu
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert_rounded,
-                    color: cs.onSurfaceVariant),
+                icon: Icon(Icons.more_vert_rounded, color: cs.onSurfaceVariant),
                 onSelected: (v) async {
                   if (v == 'edit') {
                     await Future.delayed(Duration.zero);
@@ -256,27 +281,35 @@ class _SupplierCard extends StatelessWidget {
                         isScrollControlled: true,
                         useSafeArea: true,
                         shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(20))),
-                        builder: (_) =>
-                            _SupplierForm(existing: supplier),
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
+                        ),
+                        builder: (_) => _SupplierForm(existing: supplier),
                       );
                     }
                   } else if (v == 'delete') {
-                    final ok = await Get.dialog<bool>(AlertDialog(
-                      title: Text('সাপ্লাইয়ার মুছবেন?'.tr),
-                      content: Text(
-                          '"${supplier.shopName}" কে স্থায়ীভাবে মুছে ফেলা হবে।'),
-                      actions: [
-                        TextButton(
+                    final ok = await Get.dialog<bool>(
+                      AlertDialog(
+                        title: Text('সাপ্লাইয়ার মুছবেন?'.tr),
+                        content: Text(
+                          '"${supplier.shopName}" কে স্থায়ীভাবে মুছে ফেলা হবে।',
+                        ),
+                        actions: [
+                          TextButton(
                             onPressed: () => Get.back(result: false),
-                            child: Text('না'.tr)),
-                        TextButton(
+                            child: Text('না'.tr),
+                          ),
+                          TextButton(
                             onPressed: () => Get.back(result: true),
-                            child: Text('হ্যাঁ, মুছুন'.tr,
-                                style: TextStyle(color: Colors.red))),
-                      ],
-                    ));
+                            child: Text(
+                              'হ্যাঁ, মুছুন'.tr,
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
                     if (ok == true) {
                       await ctrl.deleteSupplier(supplier);
                       Get.snackbar(
@@ -290,22 +323,30 @@ class _SupplierCard extends StatelessWidget {
                 itemBuilder: (_) => [
                   PopupMenuItem(
                     value: 'edit',
-                    child: Row(children: [
-                      Icon(Icons.edit_rounded, size: 17),
-                      SizedBox(width: 10),
-                      Text('সম্পাদনা'.tr),
-                    ]),
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_rounded, size: 17),
+                        SizedBox(width: 10),
+                        Text('সম্পাদনা'.tr),
+                      ],
+                    ),
                   ),
                   PopupMenuItem(
                     value: 'delete',
-                    child: Row(children: [
-                      Icon(Icons.delete_outline_rounded,
-                          size: 17, color: Colors.red.shade400),
-                      const SizedBox(width: 10),
-                      Text('মুছে ফেলুন'.tr,
-                          style:
-                              TextStyle(color: Colors.red.shade400)),
-                    ]),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline_rounded,
+                          size: 17,
+                          color: Colors.red.shade400,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'মুছে ফেলুন'.tr,
+                          style: TextStyle(color: Colors.red.shade400),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -359,8 +400,9 @@ class _SupplierFormState extends State<_SupplierForm> {
   Future<void> _save() async {
     final shopName = _shopCtrl.text.trim();
     if (shopName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('দোকানের নাম আবশ্যিক'.tr)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('দোকানের নাম আবশ্যিক'.tr)));
       return;
     }
     setState(() => _saving = true);
@@ -397,7 +439,8 @@ class _SupplierFormState extends State<_SupplierForm> {
       setState(() => _saving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('সংরক্ষণ করতে সমস্যা হয়েছে'.tr)));
+          SnackBar(content: Text('সংরক্ষণ করতে সমস্যা হয়েছে'.tr)),
+        );
       }
     }
   }
@@ -407,8 +450,9 @@ class _SupplierFormState extends State<_SupplierForm> {
     final scheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -418,8 +462,9 @@ class _SupplierFormState extends State<_SupplierForm> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2)),
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
           // Header
           Padding(
@@ -431,10 +476,9 @@ class _SupplierFormState extends State<_SupplierForm> {
                 Expanded(
                   child: Text(
                     _isEdit ? 'সাপ্লাইয়ার সম্পাদনা'.tr : 'নতুন সাপ্লাইয়ার'.tr,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -488,14 +532,18 @@ class _SupplierFormState extends State<_SupplierForm> {
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white))
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
                           : Icon(
                               _isEdit
                                   ? Icons.save_rounded
                                   : Icons.add_business_rounded,
                             ),
-                      label: Text(_isEdit ? 'আপডেট করুন'.tr : 'সংরক্ষণ করুন'.tr),
+                      label: Text(
+                        _isEdit ? 'আপডেট করুন'.tr : 'সংরক্ষণ করুন'.tr,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -525,8 +573,10 @@ class _SupplierFormState extends State<_SupplierForm> {
         labelText: label,
         prefixIcon: Icon(icon, size: 20),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
       ),
     );
   }
@@ -564,8 +614,9 @@ class _SupplierPickerSheetState extends State<SupplierPickerSheet> {
           width: 40,
           height: 4,
           decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(2)),
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(2),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
@@ -574,11 +625,12 @@ class _SupplierPickerSheetState extends State<SupplierPickerSheet> {
               Icon(Icons.store_rounded, color: cs.primary),
               const SizedBox(width: 10),
               Expanded(
-                child: Text('সাপ্লাইয়ার বেছে নিন'.tr,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700)),
+                child: Text(
+                  'সাপ্লাইয়ার বেছে নিন'.tr,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.close),
@@ -597,8 +649,9 @@ class _SupplierPickerSheetState extends State<SupplierPickerSheet> {
             decoration: InputDecoration(
               hintText: 'সার্চ করুন...'.tr,
               prefixIcon: const Icon(Icons.search_rounded),
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
               contentPadding: const EdgeInsets.symmetric(vertical: 10),
             ),
           ),
@@ -609,10 +662,12 @@ class _SupplierPickerSheetState extends State<SupplierPickerSheet> {
             final filtered = _query.isEmpty
                 ? all
                 : all
-                    .where((s) =>
-                        s.shopName.toLowerCase().contains(_query) ||
-                        s.ownerName.toLowerCase().contains(_query))
-                    .toList();
+                      .where(
+                        (s) =>
+                            s.shopName.toLowerCase().contains(_query) ||
+                            s.ownerName.toLowerCase().contains(_query),
+                      )
+                      .toList();
 
             if (filtered.isEmpty) {
               return Padding(
@@ -637,20 +692,26 @@ class _SupplierPickerSheetState extends State<SupplierPickerSheet> {
                   leading: CircleAvatar(
                     backgroundColor: cs.primaryContainer,
                     child: Text(
-                      s.shopName.isNotEmpty
-                          ? s.shopName[0].toUpperCase()
-                          : '?',
+                      s.shopName.isNotEmpty ? s.shopName[0].toUpperCase() : '?',
                       style: TextStyle(
-                          fontWeight: FontWeight.w700, color: cs.primary),
+                        fontWeight: FontWeight.w700,
+                        color: cs.primary,
+                      ),
                     ),
                   ),
-                  title: Text(s.shopName,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  title: Text(
+                    s.shopName,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   subtitle: s.ownerName.isNotEmpty ? Text(s.ownerName) : null,
                   trailing: s.phone.isNotEmpty
-                      ? Text(s.phone,
+                      ? Text(
+                          s.phone,
                           style: TextStyle(
-                              fontSize: 12, color: cs.onSurfaceVariant))
+                            fontSize: 12,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        )
                       : null,
                   onTap: () => Navigator.of(context).pop(s),
                 );

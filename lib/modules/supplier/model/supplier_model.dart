@@ -18,7 +18,8 @@ class SupplierModel {
   });
 
   factory SupplierModel.fromFirestore(
-      DocumentSnapshot<Map<String, dynamic>> doc) {
+    DocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
     final d = doc.data()!;
     return SupplierModel(
       id: doc.id,
@@ -31,24 +32,23 @@ class SupplierModel {
   }
 
   Map<String, dynamic> toMap() => {
-        'shopName': shopName,
-        'ownerName': ownerName,
-        'phone': phone,
-        'address': address,
-      };
+    'shopName': shopName,
+    'ownerName': ownerName,
+    'phone': phone,
+    'address': address,
+  };
 
   SupplierModel copyWith({
     String? shopName,
     String? ownerName,
     String? phone,
     String? address,
-  }) =>
-      SupplierModel(
-        id: id,
-        shopName: shopName ?? this.shopName,
-        ownerName: ownerName ?? this.ownerName,
-        phone: phone ?? this.phone,
-        address: address ?? this.address,
-        createdAt: createdAt,
-      );
+  }) => SupplierModel(
+    id: id,
+    shopName: shopName ?? this.shopName,
+    ownerName: ownerName ?? this.ownerName,
+    phone: phone ?? this.phone,
+    address: address ?? this.address,
+    createdAt: createdAt,
+  );
 }

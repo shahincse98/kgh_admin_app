@@ -35,7 +35,8 @@ void main() async {
     await GoogleFonts.pendingFonts([
       GoogleFonts.manrope(),
       GoogleFonts.spaceGrotesk(),
-    ]).timeout(const Duration(seconds: 5));
+      GoogleFonts.notoSansBengali(),
+    ]).timeout(const Duration(seconds: 8));
   } catch (_) {}
 
   try {

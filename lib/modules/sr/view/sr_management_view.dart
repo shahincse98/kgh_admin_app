@@ -94,10 +94,12 @@ class SrManagementView extends GetView<SrManagementController> {
                 }
                 return RefreshIndicator(
                   onRefresh: controller.fetchSrList,
-                  child: ListView.separated(
+                  child: ResponsiveCardGrid(
                     padding: const EdgeInsets.fromLTRB(14, 0, 14, 120),
                     itemCount: list.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemHeight: 200,
+                    maxItemWidth: 460,
+                    spacing: 8,
                     itemBuilder: (_, i) =>
                         _SrCard(sr: list[i], scheme: scheme, fmt: _fmt),
                   ),

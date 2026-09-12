@@ -18,7 +18,8 @@ class SrPaymentModel {
   });
 
   factory SrPaymentModel.fromFirestore(
-      QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
     final data = doc.data();
     return SrPaymentModel(
       id: doc.id,

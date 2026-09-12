@@ -50,10 +50,7 @@ class SrController extends GetxController {
   Future<void> loadData() async {
     loading.value = true;
     try {
-      await Future.wait([
-        _loadSettings(),
-        _loadDeliveries(),
-      ]);
+      await Future.wait([_loadSettings(), _loadDeliveries()]);
       await _loadPayments();
       _calcBalance();
     } finally {
@@ -62,8 +59,7 @@ class SrController extends GetxController {
   }
 
   Future<void> _loadSettings() async {
-    final doc =
-        await _db.collection('admin_settings').doc('finance').get();
+    final doc = await _db.collection('admin_settings').doc('finance').get();
     final data = doc.data();
     commissionPercent.value =
         (data?['srCommissionPercent'] as num?)?.toDouble() ?? 6.0;
@@ -81,8 +77,7 @@ class SrController extends GetxController {
       final snap = await _db
           .collection('orders')
           .where('status', isEqualTo: 'delivered')
-          .where('createdAt',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
           .where('createdAt', isLessThan: Timestamp.fromDate(end))
           .get();
 
@@ -104,8 +99,7 @@ class SrController extends GetxController {
 
   Future<void> _loadPayments() async {
     final m = selectedMonth.value;
-    final monthKey =
-        '${m.year}-${m.month.toString().padLeft(2, '0')}';
+    final monthKey = '${m.year}-${m.month.toString().padLeft(2, '0')}';
 
     // Single equality filter – no composite index needed
     final snap = await _db
@@ -116,8 +110,10 @@ class SrController extends GetxController {
     // Sort by paidAt descending in memory
     final docs = snap.docs.toList()
       ..sort((a, b) {
-        final ta = (a.data()['paidAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
-        final tb = (b.data()['paidAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+        final ta =
+            (a.data()['paidAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+        final tb =
+            (b.data()['paidAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
         return tb.compareTo(ta);
       });
 
@@ -129,11 +125,12 @@ class SrController extends GetxController {
     balance.value = totalDue.value - totalPaid.value;
   }
 
-  Future<void> recordPayment(
-      {required double amount, required String note}) async {
+  Future<void> recordPayment({
+    required double amount,
+    required String note,
+  }) async {
     final m = selectedMonth.value;
-    final monthKey =
-        '${m.year}-${m.month.toString().padLeft(2, '0')}';
+    final monthKey = '${m.year}-${m.month.toString().padLeft(2, '0')}';
 
     await _db.collection('sr_payments').add({
       'month': monthKey,

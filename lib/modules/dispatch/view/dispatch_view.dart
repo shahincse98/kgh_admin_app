@@ -29,8 +29,13 @@ class DispatchView extends GetView<DispatchController> {
                 'স্টক আউট / Dispatch'.tr,
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
+              // সরু স্ক্রিনে বন্ধনীর ব্যাখ্যাটুকু বাদ যায়, নইলে শিরোনাম কেটে যায়
               Text(
-                '${controller.filteredOrders.length} ${'টি অর্ডার'.tr} (Pending / Approved / Delivered w/o Dispatch)',
+                MediaQuery.sizeOf(context).width < 600
+                    ? '${controller.filteredOrders.length} ${'টি অর্ডার'.tr}'
+                    : '${controller.filteredOrders.length} ${'টি অর্ডার'.tr} (Pending / Approved / Delivered w/o Dispatch)',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
                   color: scheme.onSurface.withAlpha(160),

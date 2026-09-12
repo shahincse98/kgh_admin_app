@@ -20,10 +20,10 @@ class SupplierController extends GetxController {
     if (_loadedOnce && !force) return;
     loading.value = true;
     try {
-      final snap =
-          await _db.collection('suppliers').orderBy('shopName').get();
+      final snap = await _db.collection('suppliers').orderBy('shopName').get();
       suppliers.assignAll(
-          snap.docs.map((d) => SupplierModel.fromFirestore(d)).toList());
+        snap.docs.map((d) => SupplierModel.fromFirestore(d)).toList(),
+      );
       _loadedOnce = true;
     } finally {
       loading.value = false;
@@ -90,8 +90,7 @@ class SupplierController extends GetxController {
   }
 
   /// Purchase history for a specific supplier (by supplierId).
-  Future<List<PurchaseEntryModel>> getSupplierPurchases(
-      SupplierModel s) async {
+  Future<List<PurchaseEntryModel>> getSupplierPurchases(SupplierModel s) async {
     final snap = await _db
         .collection('stock_purchases')
         .where('supplierId', isEqualTo: s.id)

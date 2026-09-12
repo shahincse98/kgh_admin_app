@@ -11,8 +11,8 @@ class SrModel {
   final bool isActive;
 
   // Assigned shops & contacts (user IDs from users collection)
-  final List<String> assignedShopIds;   // দোকান ভিজিট তালিকা
-  final List<String> callContactIds;    // কল করার তালিকা
+  final List<String> assignedShopIds; // দোকান ভিজিট তালিকা
+  final List<String> callContactIds; // কল করার তালিকা
 
   // Delivery days per shop: {shopId: 'রবিবার'}
   final Map<String, String> shopDeliveryDays;
@@ -56,18 +56,18 @@ class SrModel {
   }
 
   Map<String, dynamic> toMap() => {
-        'name': name,
-        'phone': phone,
-        'email': email,
-        'monthlyFixedSalary': monthlyFixedSalary,
-        'commissionPercent': commissionPercent,
-        'dueLimit': dueLimit,
-        'isActive': isActive,
-        'assignedShopIds': assignedShopIds,
-        'callContactIds': callContactIds,
-        'shopDeliveryDays': shopDeliveryDays,
-        'uid': uid,
-      };
+    'name': name,
+    'phone': phone,
+    'email': email,
+    'monthlyFixedSalary': monthlyFixedSalary,
+    'commissionPercent': commissionPercent,
+    'dueLimit': dueLimit,
+    'isActive': isActive,
+    'assignedShopIds': assignedShopIds,
+    'callContactIds': callContactIds,
+    'shopDeliveryDays': shopDeliveryDays,
+    'uid': uid,
+  };
 
   SrModel copyWith({
     String? name,

@@ -129,7 +129,7 @@ class _OrderListViewState extends State<OrderListView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _dateHeader(entry.key, entry.value.length),
-                            ...entry.value.map((o) => _orderCard(o, scheme)),
+                            _orderGroup(entry.value, scheme),
                           ],
                         ),
                       ),
@@ -146,6 +146,31 @@ class _OrderListViewState extends State<OrderListView> {
           ],
         ),
       ),
+    );
+  }
+
+  /// একটি তারিখের অর্ডারগুলো। প্রশস্ত স্ক্রিনে পাশাপাশি কয়েকটি কার্ড বসে,
+  /// নইলে ল্যাপটপে প্রতিটি কার্ডের ডান পাশ ফাঁকা পড়ে থাকে।
+  Widget _orderGroup(List<OrderModel> orders, ColorScheme scheme) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        const gap = 10.0;
+        final columns = (c.maxWidth / 480).floor().clamp(1, 3);
+        if (columns == 1) {
+          return Column(
+            children: orders.map((o) => _orderCard(o, scheme)).toList(),
+          );
+        }
+        final itemWidth = (c.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          children: orders
+              .map(
+                (o) => SizedBox(width: itemWidth, child: _orderCard(o, scheme)),
+              )
+              .toList(),
+        );
+      },
     );
   }
 

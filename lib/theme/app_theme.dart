@@ -18,6 +18,20 @@ class AppTheme {
     _box.write(_key, dark);
   }
 
+  /// অ্যাপের লেখা মূলত বাংলা, কিন্তু Manrope/Space Grotesk-এ বাংলা বর্ণ নেই।
+  /// ফন্ট স্পষ্ট করে না দিলে রেন্ডারার চাহিদামতো fallback ফন্ট নামায় — ধীর
+  /// সংযোগে ততক্ষণ বাংলা লেখা খালি চৌকো বাক্স হয়ে থাকে। তাই বাংলা ফন্টটি
+  /// fallback হিসেবে ঘোষণা করা হয় এবং main()-এ আগেই নামিয়ে রাখা হয়।
+  static final List<String> bengaliFallback = [
+    GoogleFonts.notoSansBengali().fontFamily!,
+  ];
+
+  static TextTheme _text(TextTheme? base) =>
+      (base == null
+              ? GoogleFonts.manropeTextTheme()
+              : GoogleFonts.manropeTextTheme(base))
+          .apply(fontFamilyFallback: bengaliFallback);
+
   static const Color _seedLight = Color(0xFF0E7490);
   static const Color _seedDark = Color(0xFF22D3EE);
 
@@ -27,7 +41,7 @@ class AppTheme {
       seedColor: _seedLight,
       brightness: Brightness.light,
     ),
-    textTheme: GoogleFonts.manropeTextTheme(),
+    textTheme: _text(null),
     scaffoldBackgroundColor: const Color(0xFFF3F8FB),
     appBarTheme: AppBarTheme(
       centerTitle: false,
@@ -39,7 +53,7 @@ class AppTheme {
         fontSize: 20,
         fontWeight: FontWeight.w700,
         color: const Color(0xFF0A2533),
-      ),
+      ).copyWith(fontFamilyFallback: bengaliFallback),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -80,7 +94,7 @@ class AppTheme {
       seedColor: _seedDark,
       brightness: Brightness.dark,
     ),
-    textTheme: GoogleFonts.manropeTextTheme(ThemeData.dark().textTheme),
+    textTheme: _text(ThemeData.dark().textTheme),
     scaffoldBackgroundColor: const Color(0xFF0A1218),
     appBarTheme: AppBarTheme(
       centerTitle: false,
@@ -92,7 +106,7 @@ class AppTheme {
         fontSize: 20,
         fontWeight: FontWeight.w700,
         color: const Color(0xFFDAF6FF),
-      ),
+      ).copyWith(fontFamilyFallback: bengaliFallback),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,

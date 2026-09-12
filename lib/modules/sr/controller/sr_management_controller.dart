@@ -14,12 +14,13 @@ class SrMonthStats {
   final int totalDeliveries;
   final double totalRevenue;
   final double commissionDue;
-  final double totalDue;      // salary + commission
+  final double totalDue; // salary + commission
   final double totalPaid;
-  final double balance;       // totalDue - totalPaid
-  final double totalDueFromCustomers; // total unpaid customer due assigned to this SR
-  final double frozenAmount;  // salary frozen due to exceeding dueLimit
-  final double netPayable;    // balance - frozenAmount
+  final double balance; // totalDue - totalPaid
+  final double
+  totalDueFromCustomers; // total unpaid customer due assigned to this SR
+  final double frozenAmount; // salary frozen due to exceeding dueLimit
+  final double netPayable; // balance - frozenAmount
 
   const SrMonthStats({
     this.totalDeliveries = 0,
@@ -51,8 +52,7 @@ class SrManagementController extends GetxController {
     loading.value = true;
     try {
       final snap = await _db.collection('sr_staff').orderBy('name').get();
-      srList.value =
-          snap.docs.map((e) => SrModel.fromFirestore(e)).toList();
+      srList.value = snap.docs.map((e) => SrModel.fromFirestore(e)).toList();
     } finally {
       loading.value = false;
     }
@@ -62,8 +62,7 @@ class SrManagementController extends GetxController {
     final q = searchText.value.trim().toLowerCase();
     if (q.isEmpty) return srList;
     return srList
-        .where((s) =>
-            s.name.toLowerCase().contains(q) || s.phone.contains(q))
+        .where((s) => s.name.toLowerCase().contains(q) || s.phone.contains(q))
         .toList();
   }
 
@@ -101,7 +100,10 @@ class SrManagementController extends GetxController {
 
   /// Updates Firebase Auth password for an SR. Uses secondary app instance.
   Future<void> _updateAuthPassword(
-      String email, String oldPassword, String newPassword) async {
+    String email,
+    String oldPassword,
+    String newPassword,
+  ) async {
     // Re-authenticate via secondary app and update password
     const secondaryAppName = 'sr_creation_app';
     FirebaseApp? secondary;
@@ -122,12 +124,17 @@ class SrManagementController extends GetxController {
     await secondaryAuth.signOut();
   }
 
-  Future<void> addSr(Map<String, dynamic> data,
-      {required String password}) async {
+  Future<void> addSr(
+    Map<String, dynamic> data, {
+    required String password,
+  }) async {
     final email = (data['email'] as String? ?? '').trim();
     if (email.isEmpty) {
-      Get.snackbar('ত্রুটি'.tr, 'SR এর ইমেইল আবশ্যক'.tr,
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'ত্রুটি'.tr,
+        'SR এর ইমেইল আবশ্যক'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+      );
       return;
     }
 
@@ -139,10 +146,13 @@ class SrManagementController extends GetxController {
       final msg = e.code == 'email-already-in-use'
           ? 'এই ইমেইল ইতিমধ্যে ব্যবহৃত হচ্ছে'.tr
           : '${'অ্যাকাউন্ট তৈরি ব্যর্থ'.tr}: ${e.message}';
-      Get.snackbar('ত্রুটি'.tr, msg,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Color(0xFFDC2626),
-          colorText: Colors.white);
+      Get.snackbar(
+        'ত্রুটি'.tr,
+        msg,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Color(0xFFDC2626),
+        colorText: Colors.white,
+      );
       return;
     }
 
@@ -150,15 +160,21 @@ class SrManagementController extends GetxController {
     data['createdAt'] = FieldValue.serverTimestamp();
     data['assignedShopIds'] ??= <String>[];
     data['callContactIds'] ??= <String>[];
-    final ref = await _db.collection('sr_staff').doc(uid).set(data).then(
-        (_) => _db.collection('sr_staff').doc(uid));
+    final ref = await _db
+        .collection('sr_staff')
+        .doc(uid)
+        .set(data)
+        .then((_) => _db.collection('sr_staff').doc(uid));
     final doc = await ref.get();
     srList.add(SrModel.fromFirestore(doc));
     srList.refresh();
-    Get.snackbar('সফল'.tr, '${data['name']} এর অ্যাকাউন্ট তৈরি হয়েছে',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Color(0xFF10B981),
-        colorText: Colors.white);
+    Get.snackbar(
+      'সফল'.tr,
+      '${data['name']} এর অ্যাকাউন্ট তৈরি হয়েছে',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Color(0xFF10B981),
+      colorText: Colors.white,
+    );
   }
 
   Future<void> updateSr(String id, Map<String, dynamic> data) async {
@@ -171,19 +187,20 @@ class SrManagementController extends GetxController {
         name: data['name'] ?? old.name,
         phone: data['phone'] ?? old.phone,
         email: data['email'] ?? old.email,
-        monthlyFixedSalary: (data['monthlyFixedSalary'] as num?)
-                ?.toDouble() ??
+        monthlyFixedSalary:
+            (data['monthlyFixedSalary'] as num?)?.toDouble() ??
             old.monthlyFixedSalary,
         commissionPercent:
             (data['commissionPercent'] as num?)?.toDouble() ??
-                old.commissionPercent,
-        dueLimit:
-            (data['dueLimit'] as num?)?.toDouble() ?? old.dueLimit,
+            old.commissionPercent,
+        dueLimit: (data['dueLimit'] as num?)?.toDouble() ?? old.dueLimit,
         isActive: data['isActive'] as bool? ?? old.isActive,
-        assignedShopIds:
-            List<String>.from(data['assignedShopIds'] ?? old.assignedShopIds),
-        callContactIds:
-            List<String>.from(data['callContactIds'] ?? old.callContactIds),
+        assignedShopIds: List<String>.from(
+          data['assignedShopIds'] ?? old.assignedShopIds,
+        ),
+        callContactIds: List<String>.from(
+          data['callContactIds'] ?? old.callContactIds,
+        ),
         shopDeliveryDays: data['shopDeliveryDays'] != null
             ? Map<String, String>.from(data['shopDeliveryDays'])
             : old.shopDeliveryDays,
@@ -196,11 +213,13 @@ class SrManagementController extends GetxController {
 
   /// Set a delivery day for a specific shop in an SR's assignment
   Future<void> setShopDeliveryDay(
-      String srId, String shopId, String day) async {
-    await _db
-        .collection('sr_staff')
-        .doc(srId)
-        .update({'shopDeliveryDays.$shopId': day});
+    String srId,
+    String shopId,
+    String day,
+  ) async {
+    await _db.collection('sr_staff').doc(srId).update({
+      'shopDeliveryDays.$shopId': day,
+    });
     final idx = srList.indexWhere((s) => s.id == srId);
     if (idx != -1) {
       final old = srList[idx];
@@ -227,10 +246,9 @@ class SrManagementController extends GetxController {
 
   /// Remove a shop's delivery day
   Future<void> removeShopDeliveryDay(String srId, String shopId) async {
-    await _db
-        .collection('sr_staff')
-        .doc(srId)
-        .update({'shopDeliveryDays.$shopId': FieldValue.delete()});
+    await _db.collection('sr_staff').doc(srId).update({
+      'shopDeliveryDays.$shopId': FieldValue.delete(),
+    });
     final idx = srList.indexWhere((s) => s.id == srId);
     if (idx != -1) {
       final old = srList[idx];
@@ -263,13 +281,19 @@ class SrManagementController extends GetxController {
     required String newPassword,
   }) async {
     if (sr.uid.isEmpty) {
-      Get.snackbar('ত্রুটি'.tr, 'SR এর অ্যাকাউন্ট এখনো তৈরি হয়নি'.tr,
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'ত্রুটি'.tr,
+        'SR এর অ্যাকাউন্ট এখনো তৈরি হয়নি'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+      );
       return false;
     }
     if (sr.email.isEmpty) {
-      Get.snackbar('ত্রুটি'.tr, 'SR এর ইমেইল নেই'.tr,
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'ত্রুটি'.tr,
+        'SR এর ইমেইল নেই'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+      );
       return false;
     }
 
@@ -288,16 +312,20 @@ class SrManagementController extends GetxController {
       // Use sendPasswordResetEmail — works without knowing current password
       await FirebaseAuth.instance.sendPasswordResetEmail(email: sr.email);
       Get.snackbar(
-          'পাসওয়ার্ড রিসেট লিংক পাঠানো হয়েছে'.tr,
-          '${sr.email} ${'এ একটি রিসেট লিংক পাঠানো হয়েছে'.tr}',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 5),
-          backgroundColor: Color(0xFF0891B2),
-          colorText: Colors.white);
+        'পাসওয়ার্ড রিসেট লিংক পাঠানো হয়েছে'.tr,
+        '${sr.email} ${'এ একটি রিসেট লিংক পাঠানো হয়েছে'.tr}',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 5),
+        backgroundColor: Color(0xFF0891B2),
+        colorText: Colors.white,
+      );
       return true;
     } on FirebaseAuthException catch (e) {
-      Get.snackbar('ত্রুটি'.tr, e.message ?? 'ব্যর্থ হয়েছে'.tr,
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'ত্রুটি'.tr,
+        e.message ?? 'ব্যর্থ হয়েছে'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+      );
       return false;
     }
   }
@@ -340,15 +368,16 @@ class SrManagementController extends GetxController {
     final totalDue = commission + sr.monthlyFixedSalary;
 
     // Payments this month
-    final monthKey =
-        '${month.year}-${month.month.toString().padLeft(2, '0')}';
+    final monthKey = '${month.year}-${month.month.toString().padLeft(2, '0')}';
     final paidSnap = await _db
         .collection('sr_payments')
         .where('srId', isEqualTo: sr.id)
         .where('month', isEqualTo: monthKey)
         .get();
-    final totalPaid =
-        paidSnap.docs.fold<double>(0, (s, d) => s + ((d.data()['amount'] as num?)?.toDouble() ?? 0));
+    final totalPaid = paidSnap.docs.fold<double>(
+      0,
+      (s, d) => s + ((d.data()['amount'] as num?)?.toDouble() ?? 0),
+    );
 
     final balance = totalDue - totalPaid;
 
@@ -365,8 +394,7 @@ class SrManagementController extends GetxController {
     } catch (_) {}
 
     // Frozen amount: if customer due exceeds limit, freeze the excess from SR salary
-    final excess =
-        (customerDueTotal - sr.dueLimit).clamp(0.0, double.infinity);
+    final excess = (customerDueTotal - sr.dueLimit).clamp(0.0, double.infinity);
     final frozen = excess.clamp(0.0, balance);
     final netPayable = balance - frozen;
 
@@ -386,7 +414,9 @@ class SrManagementController extends GetxController {
   // ── Payments ───────────────────────────────────────────────────────────────
 
   Future<List<SrPaymentModel>> loadPayments(
-      String srId, String monthKey) async {
+    String srId,
+    String monthKey,
+  ) async {
     final snap = await _db
         .collection('sr_payments')
         .where('srId', isEqualTo: srId)
@@ -403,11 +433,12 @@ class SrManagementController extends GetxController {
     return docs.map(SrPaymentModel.fromFirestore).toList();
   }
 
-  Future<void> recordPayment(
-      {required String srId,
-      required String monthKey,
-      required double amount,
-      required String note}) async {
+  Future<void> recordPayment({
+    required String srId,
+    required String monthKey,
+    required double amount,
+    required String note,
+  }) async {
     await _db.collection('sr_payments').add({
       'srId': srId,
       'month': monthKey,
@@ -422,8 +453,11 @@ class SrManagementController extends GetxController {
   }
 
   /// Update assigned shops or call contacts
-  Future<void> updateAssignments(String srId,
-      {List<String>? shopIds, List<String>? callIds}) async {
+  Future<void> updateAssignments(
+    String srId, {
+    List<String>? shopIds,
+    List<String>? callIds,
+  }) async {
     final data = <String, dynamic>{};
     if (shopIds != null) data['assignedShopIds'] = shopIds;
     if (callIds != null) data['callContactIds'] = callIds;
@@ -433,9 +467,7 @@ class SrManagementController extends GetxController {
   List<UserModel> getAssignedShops(SrModel sr) {
     try {
       final uc = Get.find<UserController>();
-      return uc.users
-          .where((u) => sr.assignedShopIds.contains(u.id))
-          .toList();
+      return uc.users.where((u) => sr.assignedShopIds.contains(u.id)).toList();
     } catch (_) {
       return [];
     }
@@ -444,9 +476,7 @@ class SrManagementController extends GetxController {
   List<UserModel> getCallContacts(SrModel sr) {
     try {
       final uc = Get.find<UserController>();
-      return uc.users
-          .where((u) => sr.callContactIds.contains(u.id))
-          .toList();
+      return uc.users.where((u) => sr.callContactIds.contains(u.id)).toList();
     } catch (_) {
       return [];
     }
@@ -455,9 +485,7 @@ class SrManagementController extends GetxController {
   List<UserModel> getUnassignedShops(SrModel sr) {
     try {
       final uc = Get.find<UserController>();
-      return uc.users
-          .where((u) => !sr.assignedShopIds.contains(u.id))
-          .toList();
+      return uc.users.where((u) => !sr.assignedShopIds.contains(u.id)).toList();
     } catch (_) {
       return [];
     }
@@ -491,8 +519,7 @@ class SrManagementController extends GetxController {
   String? getVisitStatus(String srId, String shopId) =>
       _visitLogs['$srId/$shopId'];
 
-  Future<void> setVisitStatus(
-      String srId, String shopId, String status) async {
+  Future<void> setVisitStatus(String srId, String shopId, String status) async {
     final today = DateTime.now();
     final dateKey =
         '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';

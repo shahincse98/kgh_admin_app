@@ -17,9 +17,14 @@ class Rsp {
   static bool isWide(double w) => w >= mobileMax; // tablet or desktop
 
   // ── Content max-width (for centered layouts) ─────────────────
+  //
+  // এটি ডেটা-ঘন অ্যাডমিন প্যানেল, পড়ার জন্য নিবন্ধ নয়। আগের ৯৬০px সীমা
+  // ল্যাপটপে পর্দার বড় অংশ ফাঁকা রেখে দিত, ফলে এক পর্দায় মাত্র ৩-৪টি রেকর্ড
+  // দেখা যেত। তাই সীমা বাড়ানো হয়েছে — ১৩৬৬px ল্যাপটপ প্রায় পুরোটাই ব্যবহার
+  // করে, আবার খুব চওড়া মনিটরে লাইন অসম্ভব লম্বা হয় না।
   static double contentMax(double w) {
-    if (w >= tabletMax) return 960;
-    if (w >= mobileMax) return 720;
+    if (w >= tabletMax) return 1440;
+    if (w >= mobileMax) return 900;
     return double.infinity;
   }
 
@@ -34,7 +39,12 @@ class Rsp {
   }
 
   // ── Grid columns for list/grid views ─────────────────────────
-  static int gridCols(double w, {int mobile = 1, int tablet = 2, int desktop = 3}) {
+  static int gridCols(
+    double w, {
+    int mobile = 1,
+    int tablet = 2,
+    int desktop = 3,
+  }) {
     if (w >= tabletMax) return desktop;
     if (w >= mobileMax) return tablet;
     return mobile;
@@ -42,8 +52,10 @@ class Rsp {
 
   // ── Padding ───────────────────────────────────────────────────
   static EdgeInsets pagePadding(double w) {
-    if (w >= tabletMax) return const EdgeInsets.symmetric(horizontal: 32, vertical: 20);
-    if (w >= mobileMax) return const EdgeInsets.symmetric(horizontal: 20, vertical: 16);
+    if (w >= tabletMax)
+      return const EdgeInsets.symmetric(horizontal: 32, vertical: 20);
+    if (w >= mobileMax)
+      return const EdgeInsets.symmetric(horizontal: 20, vertical: 16);
     return const EdgeInsets.symmetric(horizontal: 12, vertical: 12);
   }
 
@@ -68,9 +80,7 @@ class Rsp {
 
   // ── Convenience widget: LayoutBuilder shorthand ───────────────
   static Widget builder(Widget Function(BuildContext, double) builder) {
-    return LayoutBuilder(
-      builder: (ctx, c) => builder(ctx, c.maxWidth),
-    );
+    return LayoutBuilder(builder: (ctx, c) => builder(ctx, c.maxWidth));
   }
 }
 
@@ -87,16 +97,18 @@ class ResponsiveWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (_, c) {
-      if (Rsp.isMobile(c.maxWidth)) return child;
-      return Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: Rsp.contentMax(c.maxWidth)),
-          child: child,
-        ),
-      );
-    });
+    return LayoutBuilder(
+      builder: (_, c) {
+        if (Rsp.isMobile(c.maxWidth)) return child;
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: Rsp.contentMax(c.maxWidth)),
+            child: child,
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -128,5 +140,76 @@ class ResponsivePage extends StatelessWidget {
         ),
       );
     });
+  }
+}
+
+/// তালিকার কার্ডগুলো প্রশস্ত স্ক্রিনে পাশাপাশি কয়েক কলামে সাজায়, সরু স্ক্রিনে
+/// এক কলামেই রাখে।
+///
+/// কেন দরকার: ফোনের জন্য বানানো এক-কলাম তালিকা ল্যাপটপে টেনে বসালে প্রতিটি
+/// কার্ডের অর্ধেকের বেশি ফাঁকা পড়ে থাকে এবং এক পর্দায় মাত্র ৩-৪টি রেকর্ড দেখা
+/// যায়। কলাম সংখ্যা প্রস্থ থেকেই হিসাব হয় ([maxItemWidth]), তাই আলাদা করে
+/// breakpoint মনে রাখতে হয় না।
+///
+/// [ListView.builder]-এর মতোই lazy — যতটুকু পর্দায় দেখা যায় ততটুকুই তৈরি হয়।
+class ResponsiveCardGrid extends StatelessWidget {
+  const ResponsiveCardGrid({
+    super.key,
+    required this.itemCount,
+    required this.itemBuilder,
+    required this.itemHeight,
+    this.maxItemWidth = 460,
+    this.padding = const EdgeInsets.fromLTRB(12, 2, 12, 16),
+    this.spacing = 10,
+    this.controller,
+  });
+
+  final int itemCount;
+  final IndexedWidgetBuilder itemBuilder;
+
+  /// একাধিক কলামে সাজানোর সময় প্রতিটি কার্ডের উচ্চতা। গ্রিডে সব ঘর সমান
+  /// উচ্চতার হতে হয়, তাই সবচেয়ে বড় কার্ডটি যতটুকু নেয় ততটুকু দিতে হবে।
+  final double itemHeight;
+
+  /// একটি কার্ড এর চেয়ে চওড়া হবে না; এখান থেকেই কলাম সংখ্যা ঠিক হয়।
+  final double maxItemWidth;
+
+  final EdgeInsets padding;
+  final double spacing;
+  final ScrollController? controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        final available = c.maxWidth - padding.horizontal;
+        final columns = (available / maxItemWidth).floor().clamp(1, 4);
+
+        // এক কলাম হলে গ্রিডের বাঁধা উচ্চতা চাপিয়ে দেওয়ার দরকার নেই —
+        // কার্ড নিজের প্রয়োজনমতো লম্বা হতে পারে।
+        if (columns == 1) {
+          return ListView.separated(
+            controller: controller,
+            padding: padding,
+            itemCount: itemCount,
+            separatorBuilder: (_, __) => SizedBox(height: spacing),
+            itemBuilder: itemBuilder,
+          );
+        }
+
+        return GridView.builder(
+          controller: controller,
+          padding: padding,
+          itemCount: itemCount,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisSpacing: spacing,
+            crossAxisSpacing: spacing,
+            mainAxisExtent: itemHeight,
+          ),
+          itemBuilder: itemBuilder,
+        );
+      },
+    );
   }
 }
