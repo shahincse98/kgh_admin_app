@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 
+import '../../order/model/order_model.dart';
+
 class SalesOrderRow {
   final String id;
   final DateTime createdAt;
@@ -23,10 +25,13 @@ class SalesOrderRow {
   final List<Map<String, dynamic>> items;
   final List<Map<String, dynamic>> payments;
 
+  /// Not cut off at zero (see OrderProfit).
   double get netSales =>
-      (totalAmount - discountAmount - deductionAmount - returnAmount)
-          .clamp(0, double.infinity);
-  double get profit => netSales - purchaseCost;
+      totalAmount - discountAmount - deductionAmount - returnAmount;
+  /// Goods that came back are not a loss (see OrderProfit).
+  final double recovered;
+
+  double get profit => netSales - purchaseCost + recovered;
   bool get hasSr =>
       deliveryAssignedSrId.isNotEmpty || deliveredBySrId.isNotEmpty;
 
@@ -42,6 +47,7 @@ class SalesOrderRow {
     required this.returnAmount,
     required this.discountAmount,
     required this.purchaseCost,
+    this.recovered = 0,
     required this.previousDue,
     required this.localMemo,
     required this.memoNumber,
@@ -58,10 +64,19 @@ class SalesDayRow {
   final DateTime date;
   final List<SalesOrderRow> orders;
 
+  /// Expenses dated on this day.
+  final double expenses;
+
   double get totalNetSales =>
       orders.fold(0.0, (s, o) => s + o.netSales);
   double get totalPurchaseCost =>
       orders.fold(0.0, (s, o) => s + o.purchaseCost);
+  double get totalRecovered =>
+      orders.fold(0.0, (s, o) => s + o.recovered);
+
+  /// Same as the day's page: sales − purchase price + goods back − expenses.
+  double get netProfit =>
+      totalNetSales - totalPurchaseCost + totalRecovered - expenses;
   double get totalDeduction =>
       orders.fold(0.0, (s, o) => s + o.deductionAmount);
   double get totalReturn =>
@@ -70,11 +85,44 @@ class SalesDayRow {
       orders.fold(0.0, (s, o) => s + o.discountAmount);
   int get orderCount => orders.length;
 
-  SalesDayRow({required this.date, required this.orders});
+  SalesDayRow({required this.date, required this.orders, this.expenses = 0});
 }
 
 class SalesController extends GetxController {
+  SalesController({this.srId});
+
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  /// When set, only this SR's sales, collections and expenses are shown
+  /// (the SR panel's day-wise sales).
+  final String? srId;
+
+  /// An order belongs to the SR who delivered it; older deliveries did not
+  /// record that, so the assigned SR is used for them.
+  bool _ownedBySr(SalesOrderRow r) => r.deliveredBySrId.isNotEmpty
+      ? r.deliveredBySrId == srId
+      : r.deliveryAssignedSrId == srId;
+
+  /// Money collected on the orders of a day (for the SR: only what they took).
+  double collectedOn(SalesDayRow row) {
+    var sum = 0.0;
+    for (final r in row.orders) {
+      if (r.payments.isEmpty) {
+        sum += (r.paidAmount - r.deductionAmount - r.returnAmount).clamp(0, double.infinity);
+        continue;
+      }
+      for (final p in r.payments) {
+        if (_takenBySr(p)) sum += (p['amount'] as num?)?.toDouble() ?? 0;
+      }
+    }
+    return sum;
+  }
+
+  /// Payment taken by this SR (payments without an SR id belong to the order's SR).
+  bool _takenBySr(Map<String, dynamic> p) {
+    final by = (p['srId'] ?? '').toString();
+    return srId == null || by.isEmpty || by == srId;
+  }
 
   final loading = false.obs;
 
@@ -89,6 +137,7 @@ class SalesController extends GetxController {
   final avgOrderValue = 0.0.obs;
   final totalExpenses = 0.0.obs;
   final totalPurchaseCost = 0.0.obs;
+  final totalRecovered = 0.0.obs;
   final totalDeduction = 0.0.obs;
   final totalReturn = 0.0.obs;
   final totalDiscount = 0.0.obs;
@@ -169,13 +218,7 @@ class SalesController extends GetxController {
         final da = data['deliveredAt'];
         final deliveredAt = da is Timestamp ? da.toDate() : null;
 
-        final purchaseCost = items.fold<num>(0, (s, item) {
-          final pid = (item['productId'] ?? '').toString();
-          final qty = (item['quantity'] as num?)?.toInt() ?? 1;
-          final costInOrder = (item['purchasePrice'] as num?) ?? 0;
-          if (costInOrder > 0) return s + costInOrder * qty;
-          return s + (_productCostById[pid] ?? 0) * qty;
-        });
+        final money = orderProfitOf(data, (id) => _productCostById[id] ?? 0);
 
         return SalesOrderRow(
           id: doc.id,
@@ -190,7 +233,8 @@ class SalesController extends GetxController {
           returnAmount: (data['returnAmount'] as num?)?.toDouble() ?? 0,
           discountAmount:
               (data['discountAmount'] as num?)?.toDouble() ?? 0,
-          purchaseCost: purchaseCost.toDouble(),
+          purchaseCost: money.purchaseCost.toDouble(),
+          recovered: money.recovered.toDouble(),
           previousDue: (data['previousDue'] as num?)?.toInt() ?? 0,
           localMemo: (data['localMemo'] ?? '').toString(),
           memoNumber: (data['memoNumber'] ?? '').toString(),
@@ -208,13 +252,13 @@ class SalesController extends GetxController {
       var filtered = rows.where((r) {
         final d = DateTime(r.createdAt.year, r.createdAt.month, r.createdAt.day);
         return !d.isBefore(DateTime(start.year, start.month, start.day)) &&
-            !d.isAfter(DateTime(end.year, end.month, end.day));
+            !d.isAfter(DateTime(end.year, end.month, end.day)) &&
+            (srId == null || _ownedBySr(r));
       }).toList();
 
+      final expensesByDay = await _loadExpenses(start, end);
       allOrders.assignAll(filtered);
-      _buildSummary(filtered);
-
-      _loadExpenses(start, end);
+      _buildSummary(filtered, expensesByDay);
     } catch (e) {
       print('SalesController loadData error: $e');
     } finally {
@@ -222,7 +266,13 @@ class SalesController extends GetxController {
     }
   }
 
-  Future<void> _loadExpenses(DateTime? start, DateTime? end) async {
+  static String _dayKey(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// Loads the period's expenses, sets [totalExpenses] and returns them
+  /// summed per day (keyed by [_dayKey]).
+  Future<Map<String, double>> _loadExpenses(DateTime? start, DateTime? end) async {
+    final byDay = <String, double>{};
     try {
       Query q = _db.collection('expenses');
       if (start != null) {
@@ -234,27 +284,38 @@ class SalesController extends GetxController {
         q = q.where('date', isLessThanOrEqualTo: Timestamp.fromDate(end));
       }
       final snap = await q.get();
-      totalExpenses.value = snap.docs.fold(0.0, (s, d) {
+      var total = 0.0;
+      for (final d in snap.docs) {
         final data = d.data() as Map<String, dynamic>?;
-        if (data == null) return s;
-        return s + ((data['amount'] as num?)?.toDouble() ?? 0);
-      });
+        if (data == null) continue;
+        if (srId != null && (data['srId'] ?? '').toString() != srId) continue;
+        final amt = (data['amount'] as num?)?.toDouble() ?? 0;
+        total += amt;
+        final ts = data['date'];
+        if (ts is Timestamp) {
+          final key = _dayKey(ts.toDate());
+          byDay[key] = (byDay[key] ?? 0) + amt;
+        }
+      }
+      totalExpenses.value = total;
     } catch (_) {
       totalExpenses.value = 0;
     }
+    return byDay;
   }
 
-  void _buildSummary(List<SalesOrderRow> rows) {
+  void _buildSummary(List<SalesOrderRow> rows, Map<String, double> expensesByDay) {
     final dayMap = <String, List<SalesOrderRow>>{};
     for (final r in rows) {
-      final key =
-          '${r.createdAt.year}-${r.createdAt.month.toString().padLeft(2, '0')}-${r.createdAt.day.toString().padLeft(2, '0')}';
-      dayMap.putIfAbsent(key, () => []).add(r);
+      dayMap.putIfAbsent(_dayKey(r.createdAt), () => []).add(r);
     }
-    final keys = dayMap.keys.toList()..sort((a, b) => b.compareTo(a));
+    // Days with only expenses are listed too, so the days add up to the total.
+    final keys = {...dayMap.keys, ...expensesByDay.keys}.toList()
+      ..sort((a, b) => b.compareTo(a));
     dayRows.assignAll(keys.map((k) => SalesDayRow(
           date: DateTime.parse(k),
-          orders: dayMap[k]!,
+          orders: dayMap[k] ?? [],
+          expenses: expensesByDay[k] ?? 0,
         )));
 
     final netSales = rows.fold(0.0, (s, r) => s + r.netSales);
@@ -267,6 +328,7 @@ class SalesController extends GetxController {
     monthOrderCount.value = rows.length;
     avgOrderValue.value = rows.isEmpty ? 0 : netSales / rows.length;
     totalPurchaseCost.value = purchaseCost;
+    totalRecovered.value = rows.fold(0.0, (s, r) => s + r.recovered);
     totalDeduction.value = deduction;
     totalReturn.value = returnAmt;
     totalDiscount.value = discount;
@@ -300,14 +362,18 @@ class SalesController extends GetxController {
     for (final r in rows) {
       if (r.payments.isNotEmpty) {
         for (final p in r.payments) {
+          if (!_takenBySr(p)) continue;
           final method = (p['method'] ?? '').toString();
           final amt = (p['amount'] as num?)?.toDouble() ?? 0;
           if (method.isNotEmpty && amt > 0) {
             payMap[method] = (payMap[method] ?? 0) + amt;
           }
         }
-      } else if (r.netSales > 0) {
-        payMap['জমা'.tr] = (payMap['জমা'.tr] ?? 0) + r.netSales;
+      } else {
+        final cash = (r.paidAmount - r.deductionAmount - r.returnAmount)
+            .clamp(0, double.infinity)
+            .toDouble();
+        if (cash > 0) payMap['জমা'.tr] = (payMap['জমা'.tr] ?? 0) + cash;
       }
     }
     final sortedPay = payMap.entries.toList()

@@ -85,11 +85,30 @@ class UserController extends GetxController {
     await _db.collection('users').doc(id).update(data);
   }
 
-  Future<void> updateTotalDue(String userId, int newAmount) async {
-    await _db
-        .collection('users')
-        .doc(userId)
-        .update({'totalDue': newAmount});
+  /// Sets a customer's due directly (admin or SR entry). Runs in a
+  /// transaction and keeps a history entry on the customer (before, after,
+  /// who changed it and why), so a direct change can always be traced.
+  Future<void> updateTotalDue(String userId, int newAmount,
+      {String changedBy = '', String changedByName = '', String note = ''}) async {
+    final ref = _db.collection('users').doc(userId);
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      final before = ((snap.data()?['totalDue'] as num?) ?? 0).round();
+      tx.update(ref, {
+        'totalDue': newAmount,
+        'dueHistory': FieldValue.arrayUnion([
+          {
+            'before': before,
+            'after': newAmount,
+            'change': newAmount - before,
+            'by': changedBy,
+            'byName': changedByName,
+            'note': note,
+            'at': Timestamp.now(),
+          }
+        ]),
+      });
+    });
 
     final idx = users.indexWhere((u) => u.id == userId);
     if (idx != -1) {

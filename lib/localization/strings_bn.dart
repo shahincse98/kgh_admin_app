@@ -37,7 +37,7 @@ const Map<String, String> bnBD = {
   'Purchase': 'ক্রয়',
   'Sales': 'বিক্রয়',
   'SR': 'SR',
-  'Sales Analytics': 'বিক্রয় বিশ্লেষণ',
+  'Sales Analytics': 'দৈনিক হিসাব',
   'Dispatch History': 'ডিসপ্যাচ ইতিহাস',
   'Logout': 'লগআউট',
   'Refresh': 'রিফ্রেশ',
@@ -106,7 +106,7 @@ const Map<String, String> bnBD = {
   'Purchase Ledger': 'ক্রয়ের খাতা',
   'Stock Purchase Ledger': 'স্টক ক্রয়ের খাতা',
   'SR Performance': 'SR পারফরম্যান্স',
-  'Daily Sales': 'দৈনিক বিক্রয়',
+  'Daily Sales': 'দৈনিক হিসাব',
   'Refresh actuals': 'প্রকৃত হিসাব রিফ্রেশ করুন',
 
   // ── প্রোডাক্ট / Product ──

@@ -1055,7 +1055,7 @@ class _ProductStepState extends State<_ProductStep> {
         Obx(() {
           final categories = ['all'] +
               pc.products
-                  .where((p) => (p.isAvailable && p.stock > 0) || p.isInternal)
+                  .where((p) => p.isAvailable || p.isInternal)
                   .map((p) => p.productCategory)
                   .where((c) => c.isNotEmpty)
                   .toSet()
@@ -1109,7 +1109,7 @@ class _ProductStepState extends State<_ProductStep> {
         Expanded(
           child: Obx(() {
             final allProducts = pc.products
-                .where((p) => (p.isAvailable && p.stock > 0) || p.isInternal)
+                .where((p) => p.isAvailable || p.isInternal)
                 .where((p) =>
                     _category == 'all' ||
                     p.productCategory == _category)

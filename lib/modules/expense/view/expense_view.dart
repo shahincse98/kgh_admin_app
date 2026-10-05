@@ -4,27 +4,15 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controller/expense_controller.dart';
 import '../model/expense_model.dart';
+import '../expense_categories.dart';
+import '../../sales/model/day_summary.dart';
+import '../../../localization/domain_labels.dart';
 import '../../../widgets/responsive.dart';
 import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class ExpenseView extends GetView<ExpenseController> {
   const ExpenseView({super.key});
 
-  static const _types = [
-    'rent',
-    'electricity',
-    'transport',
-    'salary',
-    'misc'
-  ];
-  // getter — ভাষা বদলালে লেবেলও বদলাবে (static field হলে একবারই বসত)
-  static Map<String, String> get _typeLabels => {
-    'rent': 'ভাড়া'.tr,
-    'electricity': 'বিদ্যুৎ'.tr,
-    'transport': 'পরিবহন'.tr,
-    'salary': 'বেতন'.tr,
-    'misc': 'অন্যান্য'.tr,
-  };
   static final _typeIcons = {
     'rent': Icons.home_rounded,
     'electricity': Icons.bolt_rounded,
@@ -145,7 +133,7 @@ class ExpenseView extends GetView<ExpenseController> {
   }
 
   Widget _summaryCard(BuildContext context, ColorScheme scheme) {
-    final byType = controller.byType;
+    final byCategory = controller.byCategory;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -170,12 +158,13 @@ class ExpenseView extends GetView<ExpenseController> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _types.where((t) => (byType[t] ?? 0) > 0).map((t) {
+              children: byCategory.map((c) {
+                final t = expenseTypeOf(c.key);
                 return Chip(
                   avatar:
                       Icon(_typeIcons[t], size: 16, color: _typeColors[t]),
                   label: Text(
-                    '${_typeLabels[t]}: ৳${NumberFormat('#,##,##0').format(byType[t]!.toInt())}',
+                    '${DomainLabels.expenseCategory(c.key)}: ৳${NumberFormat('#,##,##0').format(c.value.toInt())}',
                     style: const TextStyle(fontSize: 12),
                   ),
                   side: BorderSide(color: _typeColors[t]!.withAlpha(100)),
@@ -192,9 +181,10 @@ class ExpenseView extends GetView<ExpenseController> {
 
   Widget _expenseTile(
       BuildContext context, ExpenseModel e, ColorScheme scheme) {
-    final color = _typeColors[e.type] ?? const Color(0xFF94A3B8);
-    final icon = _typeIcons[e.type] ?? Icons.more_horiz_rounded;
-    final label = _typeLabels[e.type] ?? e.type;
+    final t = expenseTypeOf(e.category);
+    final color = _typeColors[t] ?? const Color(0xFF94A3B8);
+    final icon = _typeIcons[t] ?? Icons.more_horiz_rounded;
+    final label = DomainLabels.expenseCategory(e.category);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -270,7 +260,7 @@ class ExpenseView extends GetView<ExpenseController> {
       AlertDialog(
         title: Text('খরচ মুছবেন?'.tr),
         content: Text(
-            '${_typeLabels[e.type] ?? e.type}: ৳${e.amount.toInt()} — ${e.note.isNotEmpty ? e.note : 'কোনো note নেই'}'),
+            '${DomainLabels.expenseCategory(e.category)}: ৳${e.amount.toInt()} — ${e.note.isNotEmpty ? e.note : 'কোনো note নেই'}'),
         actions: [
           TextButton(
               onPressed: () => Get.back(result: false),
@@ -286,7 +276,10 @@ class ExpenseView extends GetView<ExpenseController> {
   }
 
   Future<void> _showAddDialog(BuildContext context) async {
-    final typeObs = 'misc'.obs;
+    const newKey = '__new__';
+    final cats = await ExpenseCategories.load();
+    final categoryObs = cats.lastUsed.obs;
+    final newCatCtrl = TextEditingController();
     final amountCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
     final dateObs = DateTime.now().obs;
@@ -301,17 +294,35 @@ class ExpenseView extends GetView<ExpenseController> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Obx(() => DropdownButtonFormField<String>(
-                      initialValue: typeObs.value,
-                      decoration:
-                          InputDecoration(labelText: 'ধরন'.tr),
-                      items: _types
-                          .map((t) => DropdownMenuItem(
-                              value: t,
-                              child: Text(_typeLabels[t] ?? t)))
-                          .toList(),
-                      onChanged: (v) => typeObs.value = v ?? 'misc',
-                    )),
+                Obx(() => Column(children: [
+                      DropdownButtonFormField<String>(
+                        initialValue: categoryObs.value,
+                        isExpanded: true,
+                        decoration: InputDecoration(labelText: 'খাত'.tr),
+                        items: [
+                          ...cats.items.map((c) => DropdownMenuItem(
+                              value: c,
+                              child: Text(DomainLabels.expenseCategory(c)))),
+                          DropdownMenuItem(
+                              value: newKey,
+                              child: Text('+ ${'নতুন খাত যোগ করুন'.tr}',
+                                  style: const TextStyle(
+                                      color: Color(0xFF16A34A),
+                                      fontWeight: FontWeight.w700))),
+                        ],
+                        onChanged: (v) =>
+                            categoryObs.value = v ?? categoryObs.value,
+                      ),
+                      if (categoryObs.value == newKey)
+                        TextFormField(
+                          controller: newCatCtrl,
+                          decoration: InputDecoration(
+                              labelText: 'নতুন খাতের নাম'.tr),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'নতুন খাতের নাম লিখুন'.tr
+                              : null,
+                        ),
+                    ])),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: amountCtrl,
@@ -322,7 +333,7 @@ class ExpenseView extends GetView<ExpenseController> {
                   decoration:
                       InputDecoration(labelText: 'পরিমাণ (৳)'.tr),
                   validator: (v) =>
-                      (v == null || v.isEmpty || int.tryParse(v) == null)
+                      (v == null || (int.tryParse(v) ?? 0) <= 0)
                           ? 'পরিমাণ লিখুন'.tr
                           : null,
                 ),
@@ -362,7 +373,9 @@ class ExpenseView extends GetView<ExpenseController> {
               if (!formKey.currentState!.validate()) return;
               Get.back();
               await controller.addExpense(
-                type: typeObs.value,
+                category: categoryObs.value == newKey
+                    ? newCatCtrl.text.trim()
+                    : categoryObs.value,
                 amount: double.parse(amountCtrl.text),
                 note: noteCtrl.text.trim(),
                 date: dateObs.value,

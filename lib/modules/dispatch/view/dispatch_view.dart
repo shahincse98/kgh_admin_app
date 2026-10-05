@@ -6,6 +6,7 @@ import '../../order/model/order_model.dart';
 import '../../order/view/order_details_view.dart';
 import '../../../widgets/responsive.dart';
 import '../../../localization/domain_labels.dart';
+import '../../product/controller/product_controller.dart';
 import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class DispatchView extends GetView<DispatchController> {
@@ -67,12 +68,42 @@ class DispatchView extends GetView<DispatchController> {
         child: Column(
           children: [
             _searchBar(scheme),
+            _deliveredToggle(scheme),
             _selectAllBar(scheme),
             Expanded(
               child: Obx(() {
                 final orders = controller.filteredOrders;
                 if (orders.isEmpty && controller.loading.value) {
                   return const Center(child: CircularProgressIndicator());
+                }
+                if (orders.isEmpty && controller.loadError.isNotEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline_rounded,
+                              size: 48, color: Colors.red),
+                          const SizedBox(height: 12),
+                          Text('তালিকা লোড হয়নি'.tr,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 15)),
+                          const SizedBox(height: 8),
+                          Text(controller.loadError.value,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.grey)),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: controller.fetchDispatchableOrders,
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: Text('আবার চেষ্টা করুন'.tr),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 }
                 if (orders.isEmpty) {
                   return Center(
@@ -95,13 +126,25 @@ class DispatchView extends GetView<DispatchController> {
                     ),
                   );
                 }
+                // Flat list of date headers and cards, built lazily — the
+                // queue can hold thousands of orders.
+                final rows = <Object>[];
+                for (final entry in _groupByDate(orders).entries) {
+                  rows.add(_DateGroup(entry.key, entry.value));
+                  rows.addAll(entry.value);
+                }
                 return RefreshIndicator(
                   onRefresh: () => controller.fetchDispatchableOrders(),
                   child: ListView.builder(
                     padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-                    itemCount: orders.length,
-                    itemBuilder: (_, i) =>
-                        _dispatchOrderCard(orders[i], scheme, fmt),
+                    itemCount: rows.length,
+                    itemBuilder: (_, i) {
+                      final row = rows[i];
+                      if (row is _DateGroup) {
+                        return _dateHeader(row.date, row.orders, scheme, fmt);
+                      }
+                      return _dispatchOrderCard(row as OrderModel, scheme, fmt);
+                    },
                   ),
                 );
               }),
@@ -109,6 +152,91 @@ class DispatchView extends GetView<DispatchController> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Current purchase price of a product, for items saved without one.
+  num _productCost(String productId) {
+    try {
+      return Get.find<ProductController>()
+              .products
+              .firstWhereOrNull((p) => p.id == productId)
+              ?.purchasePrice ??
+          0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Map<String, List<OrderModel>> _groupByDate(List<OrderModel> orders) {
+    final map = <String, List<OrderModel>>{};
+    for (final o in orders) {
+      map.putIfAbsent(DateFormat('dd MMMM yyyy').format(o.createdAt), () => [])
+          .add(o);
+    }
+    return map;
+  }
+
+  /// Date header with the day's sale total, expected profit and margin.
+  Widget _dateHeader(String date, List<OrderModel> orders, ColorScheme scheme,
+      NumberFormat fmt) {
+    final total = orders.fold<num>(0, (s, o) => s + o.totalAmount);
+    final sellable =
+        orders.where((o) => !o.isDueCollection && o.items.isNotEmpty);
+    final profit = sellable.fold<num>(0, (s, o) => s + o.profit(_productCost));
+    final netSales = sellable.fold<num>(0, (s, o) => s + o.netSales);
+    final rate = netSales > 0 ? profit / netSales * 100 : 0;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(date,
+              style:
+                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text('${orders.length}',
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onPrimaryContainer)),
+          ),
+          _statPill(Icons.shopping_cart_rounded, '৳ ${fmt.format(total.round())}',
+              const Color(0xFF0891B2)),
+          if (sellable.isNotEmpty)
+            _statPill(
+              Icons.savings_rounded,
+              '${'সম্ভাব্য লাভ'.tr}: ৳ ${fmt.format(profit.round())}'
+              '${netSales > 0 ? ' (${rate.toStringAsFixed(1)}%)' : ''}',
+              profit >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statPill(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withAlpha(18),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 4),
+        Text(label,
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+      ]),
     );
   }
 
@@ -133,6 +261,31 @@ class DispatchView extends GetView<DispatchController> {
         ),
       ),
     );
+  }
+
+  /// Delivered-without-dispatch orders are usually old paperwork, so they
+  /// are shown only on demand.
+  Widget _deliveredToggle(ColorScheme scheme) {
+    return Obx(() {
+      final count = controller.deliveredWithoutDispatchCount.value;
+      if (count == 0) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+        child: Row(children: [
+          Expanded(
+            child: Text(
+              '${'ডেলিভার্ড কিন্তু ডিসপ্যাচ হয়নি'.tr} ($count) — ${'শেষ ৩০ দিন'.tr}',
+              style: TextStyle(
+                  fontSize: 12, color: scheme.onSurface.withAlpha(160)),
+            ),
+          ),
+          Switch(
+            value: controller.showDeliveredWithoutDispatch.value,
+            onChanged: controller.toggleDeliveredWithoutDispatch,
+          ),
+        ]),
+      );
+    });
   }
 
   Widget _selectAllBar(ColorScheme scheme) {
@@ -314,26 +467,67 @@ class DispatchView extends GetView<DispatchController> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              order.items
-                                      .take(3)
-                                      .map((i) => i.productName)
-                                      .join(', ') +
-                                  (order.items.length > 3
-                                      ? ' +${order.items.length - 3} more'
-                                      : ''),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: scheme.onSurface.withAlpha(140),
+                      // Every product with its own profit, so it is clear
+                      // what this dispatch earns (or loses).
+                      ...order.items.map((i) {
+                        final cost = i.purchasePrice > 0
+                            ? i.purchasePrice
+                            : _productCost(i.productId);
+                        final lineProfit = i.totalPrice - cost * i.quantity;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Row(children: [
+                            Expanded(
+                              child: Text(
+                                '${i.productName}  ${i.quantity} × ৳${fmt.format(i.pricePerUnit.round())}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: scheme.onSurface.withAlpha(150)),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
+                            const SizedBox(width: 6),
+                            if (cost > 0)
+                              Text(
+                                '${'লাভ'.tr} ৳${fmt.format(lineProfit.round())}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: lineProfit >= 0
+                                      ? const Color(0xFF16A34A)
+                                      : const Color(0xFFDC2626),
+                                ),
+                              )
+                            else
+                              Text('${'ক্রয়মূল্য নেই'.tr}',
+                                  style: const TextStyle(
+                                      fontSize: 11, color: Color(0xFFDC2626))),
+                            const SizedBox(width: 8),
+                            Text('৳ ${fmt.format(i.totalPrice.round())}',
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF0891B2))),
+                          ]),
+                        );
+                      }),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          // Whole-order profit (after discount, replace, return).
+                          if (!order.isDueCollection && order.items.isNotEmpty)
+                            Builder(builder: (_) {
+                              final p = order.profit(_productCost);
+                              return _statPill(
+                                Icons.savings_rounded,
+                                '${'মোট লাভ'.tr}: ৳ ${fmt.format(p.round())}',
+                                p >= 0
+                                    ? const Color(0xFF16A34A)
+                                    : const Color(0xFFDC2626),
+                              );
+                            }),
+                          const Spacer(),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
@@ -571,4 +765,11 @@ class DispatchView extends GetView<DispatchController> {
     }
     memoCtrl.dispose();
   }
+}
+
+/// A date header row in the dispatch list.
+class _DateGroup {
+  final String date;
+  final List<OrderModel> orders;
+  const _DateGroup(this.date, this.orders);
 }

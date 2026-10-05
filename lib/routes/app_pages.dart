@@ -45,9 +45,20 @@ import '../modules/product/view/stock_management_view.dart';
 import '../modules/product/view/stock_snapshot_view.dart';
 import '../modules/product/view/replace_management_view.dart';
 import 'app_routes.dart';
+import 'sr_guard.dart';
 
 class AppPages {
+  /// Every page except login and the SR panel is admin-only; [SrGuard]
+  /// sends an SR back to their panel.
   static final pages = [
+    for (final page in _pages)
+      if (page.name == AppRoutes.login || page.name == AppRoutes.srPanel)
+        page
+      else
+        page.copy(middlewares: [...?page.middlewares, SrGuard()]),
+  ];
+
+  static final _pages = [
     GetPage(name: AppRoutes.login, page: () => const LoginView()),
     GetPage(
       name: AppRoutes.home,
@@ -175,6 +186,17 @@ class AppPages {
     GetPage(
       name: AppRoutes.purchases,
       page: () => const PurchaseView(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<PurchaseController>(() => PurchaseController());
+        Get.lazyPut<SupplierController>(
+          () => SupplierController(),
+          fenix: true,
+        );
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.purchaseNeeds,
+      page: () => const PurchaseView(initialTab: 1),
       binding: BindingsBuilder(() {
         Get.lazyPut<PurchaseController>(() => PurchaseController());
         Get.lazyPut<SupplierController>(

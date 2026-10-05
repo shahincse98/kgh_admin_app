@@ -363,6 +363,36 @@ const Map<String, String> enUS = {
   'আজকের জমা': "Today's deposits",
   'মোট জমা': 'Total deposits',
   'জমা: ফেরত বাবদ': 'Deposit: for returns',
+
+  // Bank loan: the instalment that pays it down and the savings kept beside it
+  'ব্যাংক জমা': 'Bank deposit',
+  'ব্যাংক জমা (SR থেকে)': 'Bank deposit (from SR)',
+  'কিস্তি': 'Instalment',
+  'সঞ্চয়': 'Savings',
+  'টাকার উৎস': 'Source of money',
+  'উৎস': 'Source',
+  '(SR হাতে)': '(SR hand)',
+  'আমি': 'Me',
+  'এই টাকা লাভ-ক্ষতির হিসাবে ধরা হবে না': 'This money is not counted in profit or loss',
+  'জমা দিন': 'Save deposit',
+  'কিস্তি বা সঞ্চয়ে সঠিক পরিমাণ লিখুন': 'Enter a valid instalment or savings amount',
+  'ব্যাংক জমা সেভ হয়নি': 'The bank deposit was not saved',
+  'মোট ব্যাংক লোন': 'Total bank loan',
+  'লোনের মোট পরিমাণ': 'Total loan amount',
+  'এখান থেকে জমা দেওয়া কিস্তি বাদ দিয়ে বাকি দেখানো হবে':
+      'The outstanding is shown after deducting the instalments paid',
+  'ব্যাংক এখনো পাবে': 'Still owed to the bank',
+  'মোট লোন': 'Total loan',
+  'মোট লোন সম্পাদন': 'Edit total loan',
+  'কিস্তি পরিশোধ': 'Instalments paid',
+  'ব্যাংকে জমা সঞ্চয়': 'Savings held at the bank',
+  'মোট লোনের পরিমাণ দিলে বাকি কত তা দেখা যাবে':
+      'Enter the total loan amount to see what is left',
+  'এই দিনে ব্যাংকে কোনো জমা নেই': 'No bank deposit on this day',
+  'ব্যাংকে কোনো জমা নেই': 'No bank deposits',
+  'ব্যাংক জমা ডিলিট?': 'Delete bank deposit?',
+  'এই ব্যাংক জমার এন্ট্রি মুছে ফেলা হবে।':
+      'This bank deposit entry will be deleted.',
   'জমা: রিপ্লেস বাবদ': 'Deposit: for replaces',
   'এই টাকা কাস্টমারের জমা হিসাবে যোগ হবে':
       "This amount will be added to the customer's credit",
@@ -434,6 +464,10 @@ const Map<String, String> enUS = {
   'নিট লাভ': 'Net profit',
   'লাভের হার': 'Margin',
   'লাভের হিসাব': 'Profit breakdown',
+  'মোট লাভ': 'Gross profit',
+  'ফেরত মাল': 'Goods back',
+  'নিট লাভ (খরচ বাদে)': 'Net profit (after expenses)',
+  'নিট লোকসান': 'Net loss',
   'পরিবর্তন সেভ করুন': 'Save changes',
 
   // ── প্রোডাক্ট / Product ──
@@ -649,7 +683,7 @@ const Map<String, String> enUS = {
   'এই সময়ের মধ্যে কোনো ডাটা নেই': 'No data in this period',
   'কোনো পেমেন্ট নেই': 'No payments',
   'দিনওয়ারি বিবরণ': 'Day-wise breakdown',
-  'দৈনিক বিবরণ': 'Daily breakdown',
+  'দিনের হিসাব': 'Daily accounts',
   'পেমেন্ট মাধ্যম ভিত্তিক জমা': 'Deposits by payment method',
   'বিকাশ/অন্যান্য': 'bKash / other',
 

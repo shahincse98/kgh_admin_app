@@ -69,16 +69,15 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
         base = all
             .where((o) => o.deliveryAssignedSrId == srDocId)
             .toList()
+          // Admin can assign an SR without a date; those come last.
           ..sort((a, b) {
-            final da = DateTime(
-                a.scheduledDeliveryDate!.year,
-                a.scheduledDeliveryDate!.month,
-                a.scheduledDeliveryDate!.day);
-            final db = DateTime(
-                b.scheduledDeliveryDate!.year,
-                b.scheduledDeliveryDate!.month,
-                b.scheduledDeliveryDate!.day);
-            return db.compareTo(da);
+            final da = a.scheduledDeliveryDate;
+            final db = b.scheduledDeliveryDate;
+            if (da == null && db == null) return 0;
+            if (da == null) return 1;
+            if (db == null) return -1;
+            return DateTime(db.year, db.month, db.day)
+                .compareTo(DateTime(da.year, da.month, da.day));
           });
         break;
       default:
@@ -377,6 +376,16 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
 
   // ── Order card ─────────────────────────────────────────────────
 
+  /// Opens the order (optionally straight into the delivery dialog) and
+  /// reloads the list when the SR comes back.
+  Future<void> _openOrder(OrderModel order, {bool delivery = false}) async {
+    await Get.to(() => OrderDetailsView(
+        order: order, srDocId: _srCtrl.srDocId, openDelivery: delivery));
+    _orderCtrl.lastDoc = null;
+    _orderCtrl.hasMore.value = true;
+    _orderCtrl.fetchOrders();
+  }
+
   Widget _orderCard(OrderModel order, ColorScheme scheme) {
     final srDocId = _srCtrl.srDocId;
     final statusColor = _statusColor(order.status);
@@ -401,13 +410,7 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () async {
-          await Get.to(
-              () => OrderDetailsView(order: order, srDocId: srDocId));
-          _orderCtrl.lastDoc = null;
-          _orderCtrl.hasMore.value = true;
-          _orderCtrl.fetchOrders();
-        },
+        onTap: () => _openOrder(order),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -511,6 +514,10 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
                         runSpacing: 6,
                         children: [
                           _chip(Icons.tag_rounded, '#${order.id}', scheme),
+                          if (order.localMemo.isNotEmpty)
+                            _chip(Icons.receipt_rounded,
+                                '${'মেমো'.tr} #${order.localMemo}', scheme,
+                                labelColor: const Color(0xFF0891B2)),
                           _chip(Icons.schedule_rounded, time, scheme),
                           _chip(Icons.shopping_bag_outlined,
                               DomainLabels.productCount(order.items.length), scheme),
@@ -586,6 +593,29 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
                           ),
                         ],
                       ),
+                      if (order.status != 'delivered' &&
+                          order.status != 'cancelled') ...[
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _openOrder(order, delivery: true),
+                            icon: const Icon(Icons.local_shipping_rounded,
+                                size: 18),
+                            label: Text('ডেলিভারি করুন'.tr,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w800)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF16A34A),
+                              foregroundColor: Colors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -680,8 +710,10 @@ class _SrMyOrdersViewState extends State<SrMyOrdersView> {
       List<OrderModel> orders) {
     final map = <String, List<OrderModel>>{};
     for (final o in orders) {
-      final d = o.scheduledDeliveryDate!;
-      final date = DateFormat('dd MMMM yyyy').format(d);
+      final d = o.scheduledDeliveryDate;
+      final date = d == null
+          ? 'তারিখ নির্ধারিত নেই'.tr
+          : DateFormat('dd MMMM yyyy').format(d);
       map.putIfAbsent(date, () => []).add(o);
     }
     return map;

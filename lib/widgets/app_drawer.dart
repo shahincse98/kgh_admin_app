@@ -222,6 +222,11 @@ const List<_NavGroup> _groups = [
       AppRoutes.purchases,
     ),
     _NavItem(
+      Icons.playlist_add_check_circle_rounded,
+      'কেনার তালিকা',
+      AppRoutes.purchaseNeeds,
+    ),
+    _NavItem(
       Icons.store_mall_directory_rounded,
       'সাপ্লাইয়ার',
       AppRoutes.suppliers,

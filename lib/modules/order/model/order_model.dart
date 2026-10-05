@@ -71,6 +71,7 @@ class OrderModel {
   final String paymentMethod;           // নগদ / বিকাশ / রকেট / SR হাতে
   final List<Map<String, dynamic>> payments; // Multiple payment entries [{amount, method}]
   final List<Map<String, dynamic>> replaceItems; // Replace products given during delivery
+  final List<Map<String, dynamic>> returnItems;  // Products the customer returned (sales return)
   final bool isDueCollection;          // True if this is a due collection entry (no products)
   final int previousDue;               // User's due at time of delivery
   String userPhone;            // resolved after load from users collection
@@ -105,6 +106,7 @@ class OrderModel {
     this.paymentMethod = '',
     this.payments = const [],
     this.replaceItems = const [],
+    this.returnItems = const [],
     this.isDueCollection = false,
     this.previousDue = 0,
     this.userPhone = '',
@@ -154,6 +156,10 @@ class OrderModel {
               ?.map((e) => Map<String, dynamic>.from(e as Map))
               .toList() ??
           [],
+      returnItems: (data['returnItems'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e as Map))
+              .toList() ??
+          [],
       isDueCollection: data['isDueCollection'] as bool? ?? false,
       previousDue: (data['previousDue'] as num?)?.toInt() ?? 0,
       userPhone: data['userPhone'] ?? data['orderedByPhone'] ?? '',
@@ -162,4 +168,131 @@ class OrderModel {
           .toList(),
     );
   }
+
+  /// Sale after discount, replace credit and returns. Negative when more
+  /// was credited back than this order was worth (see [OrderProfit]).
+  num get netSales =>
+      totalAmount - discountAmount - deductionAmount - returnAmount;
+
+  /// The money side of this order; [fallbackCost] gives a product's current
+  /// purchase price when the order did not store one.
+  OrderProfit profitOf(num Function(String productId) fallbackCost) =>
+      computeOrderProfit(
+        totalAmount: totalAmount,
+        discountAmount: discountAmount,
+        deductionAmount: deductionAmount,
+        returnAmount: returnAmount,
+        items: [for (final i in items) i.toMap()],
+        returnItems: returnItems,
+        replaceItems: replaceItems,
+        currentCost: fallbackCost,
+      );
+
+  num purchaseCost(num Function(String productId) fallbackCost) =>
+      profitOf(fallbackCost).purchaseCost;
+
+  num recoveredGoodsValue(num Function(String productId) fallbackCost) =>
+      profitOf(fallbackCost).recovered;
+
+  num profit(num Function(String productId) fallbackCost) =>
+      profitOf(fallbackCost).profit;
 }
+
+num _num(dynamic v) => v is num ? v : 0;
+
+List<Map<String, dynamic>> _maps(dynamic v) => (v as List? ?? const [])
+    .whereType<Map>()
+    .map((e) => Map<String, dynamic>.from(e))
+    .toList();
+
+/// The money side of one order, worked out the same way on every page that
+/// shows profit:
+///
+///   profit = net sale − purchase cost of what was sold
+///            + purchase value of the goods that came back
+///
+/// Returned products go back to stock, and a defective unit taken against a
+/// replace credit (টাকা কাটা) is exchanged by the supplier, so their purchase
+/// value is not a loss — only the money given above it is.
+class OrderProfit {
+  /// Sale after discount, replace credit and returns. Never cut off at zero:
+  /// when the credit is larger than the order (e.g. a replace for a unit
+  /// bought earlier), the difference is money the shop gave away.
+  final num netSales;
+  final num purchaseCost;
+
+  /// Purchase value of the goods that came back.
+  final num recovered;
+
+  const OrderProfit({
+    required this.netSales,
+    required this.purchaseCost,
+    required this.recovered,
+  });
+
+  num get profit => netSales - purchaseCost + recovered;
+}
+
+OrderProfit computeOrderProfit({
+  required num totalAmount,
+  required num discountAmount,
+  required num deductionAmount,
+  required num returnAmount,
+  required List<Map<String, dynamic>> items,
+  required List<Map<String, dynamic>> returnItems,
+  required List<Map<String, dynamic>> replaceItems,
+  required num Function(String productId) currentCost,
+}) {
+  // A unit is valued at the purchase price saved on this order's line for
+  // the same product, so a unit swapped within one order nets out exactly.
+  final savedCost = <String, num>{};
+  num purchaseCost = 0;
+  for (final i in items) {
+    final id = (i['productId'] ?? '').toString();
+    final qty = i['quantity'] is num ? i['quantity'] as num : 1;
+    final saved = _num(i['purchasePrice']);
+    if (saved > 0) savedCost[id] = saved;
+    purchaseCost += (saved > 0 ? saved : currentCost(id)) * qty;
+  }
+  num costOf(String id) => savedCost[id] ?? currentCost(id);
+
+  // Each line recovers at most what was credited for it.
+  num lineValue(Map<String, dynamic> m, num credited) {
+    final value = costOf((m['productId'] ?? '').toString()) * _num(m['quantity']);
+    return credited > 0 && value > credited ? credited : value;
+  }
+
+  num fromReturns = 0;
+  for (final r in returnItems) {
+    fromReturns += lineValue(r, _num(r['totalPrice']));
+  }
+  num fromReplaces = 0;
+  for (final m in replaceItems) {
+    if ((m['resolutionType'] ?? '') != 'money_deduct') continue;
+    fromReplaces += lineValue(m, _num(m['deductionAmount']));
+  }
+  // And never more than the credit the order itself records: a line whose
+  // money never reached the order (older entries) cannot bring value back.
+  num capped(num v, num credit) => v > credit ? (credit > 0 ? credit : 0) : v;
+
+  return OrderProfit(
+    netSales: totalAmount - discountAmount - deductionAmount - returnAmount,
+    purchaseCost: purchaseCost,
+    recovered: capped(fromReturns, returnAmount) +
+        capped(fromReplaces, deductionAmount),
+  );
+}
+
+/// [computeOrderProfit] for a raw Firestore order map.
+OrderProfit orderProfitOf(
+        Map<String, dynamic> o, num Function(String productId) currentCost) =>
+    computeOrderProfit(
+      totalAmount: _num(o['totalAmount']),
+      discountAmount: _num(o['discountAmount']),
+      deductionAmount: _num(o['deductionAmount']),
+      returnAmount: _num(o['returnAmount']),
+      items: _maps(o['items']),
+      returnItems: _maps(o['returnItems']),
+      replaceItems: _maps(o['replaceItems']),
+      currentCost: currentCost,
+    );

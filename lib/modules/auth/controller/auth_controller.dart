@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import '../../../routes/app_routes.dart';
+import '../../../routes/sr_guard.dart';
 
 class AuthController extends GetxController {
   final _auth = FirebaseAuth.instance;
@@ -69,6 +70,7 @@ class AuthController extends GetxController {
     final user = _auth.currentUser;
     if (user == null) return;
     final srId = await _detectSrRole(user.email ?? '');
+    Session.srDocId = srId;
     if (srId != null) {
       Get.offAllNamed(AppRoutes.srPanel, arguments: srId);
     } else {
@@ -86,6 +88,7 @@ class AuthController extends GetxController {
   }
 
   Future<void> logout() async {
+    Session.clear();
     await _auth.signOut();
     Get.offAllNamed(AppRoutes.login);
   }

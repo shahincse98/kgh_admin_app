@@ -2,12 +2,29 @@ import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../order/model/order_model.dart';
 import '../../order/controller/order_controller.dart';
+import '../../order/model/delivery_models.dart';
 
 class DispatchController extends GetxController {
   final _db = FirebaseFirestore.instance;
 
   final orders = <OrderModel>[].obs;
   final loading = false.obs;
+
+  /// Why the list could not be loaded — shown instead of an empty list.
+  final loadError = ''.obs;
+
+  /// Also list orders that were delivered without ever being dispatched
+  /// (last 30 days). Off by default: most deliveries skip dispatch, so this
+  /// would bury the orders that still need a stock-out.
+  final showDeliveredWithoutDispatch = false.obs;
+
+  /// How many such orders were found (for the toggle's label).
+  final deliveredWithoutDispatchCount = 0.obs;
+
+  void toggleDeliveredWithoutDispatch(bool v) {
+    showDeliveredWithoutDispatch.value = v;
+    fetchDispatchableOrders();
+  }
   final searchText = ''.obs;
 
   // For multi-select dispatch
@@ -21,38 +38,45 @@ class DispatchController extends GetxController {
 
   Future<void> fetchDispatchableOrders() async {
     loading.value = true;
+    loadError.value = '';
+    final list = <OrderModel>[];
     try {
-      // Fetch pending + approved orders (need dispatching)
+      // The dispatch queue: orders whose stock has not gone out yet.
       final snap = await _db
           .collection('orders')
           .where('status', whereIn: ['pending', 'approved'])
           .get();
-
-      // Fetch delivered orders that were never dispatched (no memoNumber)
-      // Use recent 90 days to avoid fetching ALL delivered orders ever
-      final ninetyDaysAgo = DateTime.now().subtract(const Duration(days: 90));
-      final deliveredSnap = await _db
-          .collection('orders')
-          .where('status', isEqualTo: 'delivered')
-          .where(
-            'createdAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(ninetyDaysAgo),
-          )
-          .get();
-
-      final list = <OrderModel>[];
       for (final doc in snap.docs) {
         list.add(OrderModel.fromFirestore(doc));
       }
-      for (final doc in deliveredSnap.docs) {
+    } catch (e) {
+      loadError.value = '$e';
+    }
+
+    // Delivered but never dispatched (no memo), last 30 days. Only the date
+    // is filtered in the query — adding the status would need a composite
+    // index — so the status is checked here.
+    try {
+      final from = DateTime.now().subtract(const Duration(days: 30));
+      final snap = await _db
+          .collection('orders')
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(from))
+          .get();
+      final delivered = <OrderModel>[];
+      for (final doc in snap.docs) {
         final order = OrderModel.fromFirestore(doc);
-        if (order.memoNumber.isEmpty) {
-          list.add(order);
+        if (order.status == 'delivered' && order.memoNumber.isEmpty) {
+          delivered.add(order);
         }
       }
-      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      orders.assignAll(list);
-    } catch (_) {}
+      deliveredWithoutDispatchCount.value = delivered.length;
+      if (showDeliveredWithoutDispatch.value) list.addAll(delivered);
+    } catch (e) {
+      if (loadError.isEmpty) loadError.value = '$e';
+    }
+
+    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    orders.assignAll(list);
     loading.value = false;
   }
 
@@ -100,13 +124,11 @@ class DispatchController extends GetxController {
         .toList();
 
     for (final order in selected) {
-      await oc.dispatchOrder(
-        orderId: order.id,
-        items: order.items
-            .map((i) => {'productId': i.productId, 'quantity': i.quantity})
-            .toList(),
-        memoNumber: memoNumber,
-      );
+      try {
+        await oc.dispatchOrder(orderId: order.id, memoNumber: memoNumber);
+      } on OrderOpException {
+        // Already dispatched/delivered elsewhere — its stock is already out.
+      }
     }
     await fetchDispatchableOrders();
     selectedOrderIds.clear();

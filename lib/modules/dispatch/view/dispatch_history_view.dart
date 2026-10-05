@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../order/model/order_model.dart';
+import '../../sales/model/day_summary.dart';
 import '../../order/view/order_details_view.dart';
 import '../../product/controller/product_controller.dart';
 import '../../product/model/product_model.dart';
@@ -733,17 +734,69 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
     return map;
   }
 
-  Widget _dateHeader(String date, int count) {
+  /// Money actually collected on an order, counted the same way as the
+  /// daily sales page: the payment entries, or — for older orders without
+  /// them — paidAmount minus the replace/return credits.
+  num _collectedOf(OrderModel order) => _collectedParts(order).$1;
+
+  /// (total collected, of which taken in hand). Cash in hand is what the
+  /// daily sales page counts as "SR হাতে"; bKash/bank go straight to the
+  /// business.
+  (num, num) _collectedParts(OrderModel order) {
+    if (order.payments.isNotEmpty) {
+      num total = 0;
+      num inHand = 0;
+      for (final p in order.payments) {
+        final amt = (p['amount'] as num?) ?? 0;
+        if (amt <= 0) continue;
+        var method = (p['method'] ?? '').toString().trim();
+        if (method.isEmpty) method = order.paymentMethod.trim();
+        if (method.isEmpty) method = 'SR হাতে';
+        total += amt;
+        if (srHandMethods.contains(method)) inHand += amt;
+      }
+      return (total, inHand);
+    }
+    final cash = (order.paidAmount - order.deductionAmount - order.returnAmount)
+        .clamp(0, double.infinity);
+    final method = order.paymentMethod.trim();
+    return (cash, directMethods.contains(method) ? 0 : cash);
+  }
+
+  /// Current purchase price of a product, for items saved without one.
+  num _productCost(String productId) {
+    try {
+      return Get.find<ProductController>()
+              .products
+              .firstWhereOrNull((p) => p.id == productId)
+              ?.purchasePrice ??
+          0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  /// Date header with the day's sale total, profit and margin.
+  Widget _dateHeader(String date, List<OrderModel> orders) {
     final scheme = Theme.of(context).colorScheme;
+    final fmt = NumberFormat('#,##,##0');
+    final sellable =
+        orders.where((o) => !o.isDueCollection && o.items.isNotEmpty);
+    final netSales = sellable.fold<num>(0, (s, o) => s + o.netSales);
+    final profit = sellable.fold<num>(0, (s, o) => s + o.profit(_productCost));
+    final rate = netSales > 0 ? profit / netSales * 100 : 0;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(
             date,
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
           ),
-          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
@@ -751,7 +804,7 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '$count',
+              '${orders.length}',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -759,8 +812,52 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
               ),
             ),
           ),
+          _dayStat(Icons.trending_up_rounded,
+              '${'বিক্রি'.tr}: ৳ ${fmt.format(netSales.round())}',
+              const Color(0xFF0891B2)),
+          // Collected, and how much of it came in hand — this is what the
+          // daily sales page shows as "SR হাতে".
+          Builder(builder: (_) {
+            num collected = 0;
+            num inHand = 0;
+            for (final o in orders) {
+              final parts = _collectedParts(o);
+              collected += parts.$1;
+              inHand += parts.$2;
+            }
+            return _dayStat(
+              Icons.payments_rounded,
+              '${'জমা'.tr}: ৳ ${fmt.format(collected.round())}'
+              ' (${'হাতে'.tr} ৳${fmt.format(inHand.round())})',
+              const Color(0xFF7C3AED),
+            );
+          }),
+          if (sellable.isNotEmpty)
+            _dayStat(
+              Icons.savings_rounded,
+              '${'লাভ'.tr}: ৳ ${fmt.format(profit.round())}'
+              '${netSales > 0 ? ' (${rate.toStringAsFixed(1)}%)' : ''}',
+              profit >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+            ),
         ],
       ),
+    );
+  }
+
+  Widget _dayStat(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withAlpha(18),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 4),
+        Text(label,
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+      ]),
     );
   }
 
@@ -771,7 +868,7 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
           (entry) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _dateHeader(entry.key, entry.value.length),
+              _dateHeader(entry.key, entry.value),
               ...entry.value.map((o) => _orderCard(o, scheme)),
             ],
           ),
@@ -830,6 +927,29 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
                                       fontSize: 12,
                                       color: scheme.onSurface.withAlpha(160),
                                     ),
+                                  ),
+                                if (order.shopAddress.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Row(children: [
+                                      Icon(Icons.location_on_outlined,
+                                          size: 13,
+                                          color:
+                                              scheme.onSurface.withAlpha(120)),
+                                      const SizedBox(width: 3),
+                                      Expanded(
+                                        child: Text(
+                                          order.shopAddress,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: scheme.onSurface
+                                                .withAlpha(140),
+                                          ),
+                                        ),
+                                      ),
+                                    ]),
                                   ),
                               ],
                             ),
@@ -937,37 +1057,31 @@ class _DispatchHistoryViewState extends State<DispatchHistoryView> {
                                   color: Color(0xFF0891B2),
                                 ),
                               ),
+                              // What was actually collected — the order total
+                              // alone hides partly-paid orders.
+                              Builder(builder: (_) {
+                                final collected = _collectedOf(order);
+                                final due = (order.netSales - collected)
+                                    .clamp(0, double.infinity);
+                                return Text(
+                                  '${'জমা'.tr}: ৳${_fmt.format(collected.round())}'
+                                  '${due > 0 ? ' • ${'বাকি'.tr}: ৳${_fmt.format(due.round())}' : ''}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: due > 0
+                                        ? const Color(0xFFDC2626)
+                                        : const Color(0xFF16A34A),
+                                  ),
+                                );
+                              }),
                               Builder(
                                 builder: (_) {
-                                  final net =
-                                      (order.totalAmount.toInt() -
-                                              order.deductionAmount.toInt() -
-                                              order.returnAmount.toInt() -
-                                              order.discountAmount.toInt())
-                                          .clamp(0, 9999999);
-                                  num cost = 0;
-                                  try {
-                                    final pc = Get.find<ProductController>();
-                                    for (final item in order.items) {
-                                      num c = item.purchasePrice;
-                                      if (c <= 0) {
-                                        final p = pc.products.firstWhereOrNull(
-                                          (p) => p.id == item.productId,
-                                        );
-                                        if (p != null) c = p.purchasePrice;
-                                      }
-                                      cost += c * item.quantity;
-                                    }
-                                  } catch (_) {}
-                                  final profit = (net - cost.toInt()).clamp(
-                                    0,
-                                    9999999,
-                                  );
+                                  final profit = order.profit(_productCost);
                                   return Text(
-                                    'লাভ: ৳${_fmt.format(profit)}',
+                                    '${profit < 0 ? 'লোকসান'.tr : 'লাভ'.tr}: ৳${_fmt.format(profit.abs().round())}',
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: profit > 0
+                                      color: profit >= 0
                                           ? const Color(0xFF16A34A)
                                           : const Color(0xFFDC2626),
                                     ),

@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import '../model/expense_model.dart';
+import '../expense_categories.dart';
+import '../../sales/model/day_summary.dart';
 
 class ExpenseController extends GetxController {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -58,23 +60,27 @@ class ExpenseController extends GetxController {
   double get totalExpenses =>
       expenses.fold(0.0, (s, e) => s + e.amount);
 
-  Map<String, double> get byType {
+  /// Total per খাত (category), largest first.
+  List<MapEntry<String, double>> get byCategory {
     final map = <String, double>{};
     for (final e in expenses) {
-      map[e.type] = (map[e.type] ?? 0) + e.amount;
+      map[e.category] = (map[e.category] ?? 0) + e.amount;
     }
-    return map;
+    return map.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
   }
 
   Future<void> addExpense({
-    required String type,
+    required String category,
     required double amount,
     required String note,
     required DateTime date,
   }) async {
     final expDate = DateTime(date.year, date.month, date.day);
+    // Keep the old type code too, for anything still reading it.
+    final type = expenseTypeOf(category);
     final ref = await _db.collection('expenses').add({
       'type': type,
+      'category': category,
       'amount': amount,
       'note': note,
       'date': Timestamp.fromDate(expDate),
@@ -84,12 +90,14 @@ class ExpenseController extends GetxController {
     final newExpense = ExpenseModel(
       id: ref.id,
       type: type,
+      category: category,
       amount: amount,
       note: note,
       date: expDate,
       createdAt: DateTime.now(),
     );
     expenses.insert(0, newExpense);
+    await ExpenseCategories.remember(category);
   }
 
   Future<void> deleteExpense(String id) async {

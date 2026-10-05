@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 
+import '../../order/model/order_model.dart';
+import '../../sales/model/day_summary.dart';
+
 enum FinanceRange { today, week, month, custom }
 
 class DayLedgerRow {
@@ -20,8 +23,12 @@ class OrderProfitRow {
   final String id;
   final DateTime createdAt;
   final String shopName;
+  /// Net sale (after discount, replace credit and returns).
   final double revenue;
   final double cost;
+
+  /// Purchase value of the goods that came back (see OrderProfit).
+  final double recovered;
   final double gross;
 
   OrderProfitRow({
@@ -30,6 +37,7 @@ class OrderProfitRow {
     required this.shopName,
     required this.revenue,
     required this.cost,
+    this.recovered = 0,
     required this.gross,
   });
 }
@@ -62,6 +70,7 @@ class FinanceController extends GetxController {
   // Period-filtered KPIs
   final totalSales = 0.0.obs;
   final totalCost = 0.0.obs;
+  final totalRecovered = 0.0.obs;
   final grossProfit = 0.0.obs;
   final grossMarginPct = 0.0.obs;
   final salaryAllocated = 0.0.obs;
@@ -265,6 +274,7 @@ class FinanceController extends GetxController {
 
     double sales = 0;
     double cost = 0;
+    double recovered = 0;
     double gross = 0;
     int delivered = 0;
     final rows = <OrderProfitRow>[];
@@ -274,28 +284,24 @@ class FinanceController extends GetxController {
       final status = (map['status'] ?? '').toString().toLowerCase();
       if (status != 'delivered') continue;
 
-      final ts = map['createdAt'];
-      if (ts is! Timestamp) continue;
-      final createdAt = ts.toDate();
+      // A sale belongs to the day it was delivered, as on the sales pages.
+      final createdAt = orderDayTime(map);
+      if (createdAt == null) continue;
       if (createdAt.isBefore(start)) continue;
       if (createdAt.isAfter(end)) continue;
 
-      final revenue = (map['totalAmount'] as num?)?.toDouble() ?? 0;
-      final items = (map['items'] as List?) ?? [];
-
-      double orderCost = 0;
-      for (final item in items) {
-        if (item is! Map) continue;
-        final productId = (item['productId'] ?? '').toString();
-        final qty = (item['quantity'] as num?)?.toDouble() ?? 0;
-        orderCost +=
-            (_productCostById[productId] ?? 0).toDouble() * qty;
-      }
-
-      final orderGross = revenue - orderCost;
+      // Same calculation as the sales pages (see OrderProfit): the sale is
+      // net of discount, replace credit and returns, and goods that came
+      // back are not a loss.
+      final money = orderProfitOf(map, (id) => _productCostById[id] ?? 0);
+      final revenue = money.netSales.toDouble();
+      final orderCost = money.purchaseCost.toDouble();
+      final orderRecovered = money.recovered.toDouble();
+      final orderGross = money.profit.toDouble();
 
       sales += revenue;
       cost += orderCost;
+      recovered += orderRecovered;
       gross += orderGross;
       delivered += 1;
 
@@ -305,6 +311,7 @@ class FinanceController extends GetxController {
         shopName: (map['shopName'] ?? '').toString(),
         revenue: revenue,
         cost: orderCost,
+        recovered: orderRecovered,
         gross: orderGross,
       ));
     }
@@ -335,6 +342,7 @@ class FinanceController extends GetxController {
 
     totalSales.value = sales;
     totalCost.value = cost;
+    totalRecovered.value = recovered;
     grossProfit.value = gross;
     grossMarginPct.value = sales > 0 ? (gross / sales) * 100 : 0;
     salaryAllocated.value = salary;

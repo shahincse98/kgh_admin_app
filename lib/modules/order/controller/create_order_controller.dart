@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'order_controller.dart';
 
 import '../../user/model/user_model.dart';
 import '../../product/model/product_model.dart';
@@ -126,29 +127,14 @@ class CreateOrderController extends GetxController {
         final orderedBy = currentUser?.uid ?? '';
         final orderedByEmail = currentUser?.email ?? '';
 
-        await _db.collection('orders').add({
-          'userId': customer.id,
-          'shopName': customer.shopName,
-          'shopAddress': customer.address,
-          'shopPhone': customer.phone,
-          'userPhone': customer.phone,
-          'userDue': customer.totalDue,
-          'items': <Map<String, dynamic>>[],
-          'totalAmount': 0,
-          'paidAmount': dueAmount,
-          'status': 'delivered',
-          'isDueCollection': true,
-          'paymentMethod': dueCollectionMethod.value,
-          'payments': [{'amount': dueAmount, 'method': dueCollectionMethod.value}],
-          'deliveredAt': Timestamp.fromDate(dueCollectionDate.value),
-          'orderedBy': orderedBy,
-          'orderedByEmail': orderedByEmail,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-
-        // Update user's due
-        final newDue = (customer.totalDue - dueAmount.toInt()).clamp(0, 9999999);
-        await _db.collection('users').doc(customer.id).update({'totalDue': newDue});
+        await Get.find<OrderController>().collectDue(
+          customer: customer,
+          amount: dueAmount,
+          method: dueCollectionMethod.value,
+          date: dueCollectionDate.value,
+          orderedBy: orderedBy,
+          orderedByEmail: orderedByEmail,
+        );
 
         return true;
       } catch (e) {

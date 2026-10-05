@@ -326,7 +326,7 @@ class _UserDetailsViewState extends State<UserDetailsView>
 
     if (ok != true) return;
     final newAmt = int.parse(ctrl.text.trim());
-    await controller.updateTotalDue(widget.user.id, newAmt);
+    await controller.updateTotalDue(widget.user.id, newAmt, changedByName: 'Admin');
     if (mounted) setState(() => _currentDue = newAmt);
   }
 

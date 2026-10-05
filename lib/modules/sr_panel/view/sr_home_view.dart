@@ -168,7 +168,7 @@ class SrHomeView extends GetView<SrPanelController> {
                   '${controller.totalDeliveries.value}',
                   Icons.local_shipping_rounded,
                   const Color(0xFF0EA5E9)),
-              _kpi('বিক্রয়'.tr,
+              _kpi('আমার অর্ডারের টাকা'.tr,
                   '৳ ${_fmt.format(controller.totalRevenue.value.toInt())}',
                   Icons.payments_rounded,
                   const Color(0xFF10B981)),
@@ -213,6 +213,12 @@ class SrHomeView extends GetView<SrPanelController> {
           () => Get.find<SrNavController>(tag: 'sr_nav').tabIndex.value = 1,
         ),
         _actionBtn(
+          'ডেলিভারি / অর্ডার'.tr,
+          Icons.local_shipping_rounded,
+          const Color(0xFF16A34A),
+          () => Get.find<SrNavController>(tag: 'sr_nav').tabIndex.value = 2,
+        ),
+        _actionBtn(
           'আমার দোকান'.tr,
           Icons.store_rounded,
           const Color(0xFF6366F1),
@@ -223,6 +229,18 @@ class SrHomeView extends GetView<SrPanelController> {
           Icons.receipt_long_rounded,
           const Color(0xFFDC2626),
           () => Get.find<SrNavController>(tag: 'sr_nav').tabIndex.value = 4,
+        ),
+        _actionBtn(
+          'আমার হিসাব'.tr,
+          Icons.calculate_rounded,
+          const Color(0xFF7C3AED),
+          () => Get.find<SrNavController>(tag: 'sr_nav').tabIndex.value = 6,
+        ),
+        _actionBtn(
+          'স্টক দেখুন'.tr,
+          Icons.inventory_2_rounded,
+          const Color(0xFFD97706),
+          () => Get.find<SrNavController>(tag: 'sr_nav').tabIndex.value = 5,
         ),
       ],
     );

@@ -104,14 +104,14 @@ class AdminReplaceController extends GetxController {
       date: date,
       createdAt: DateTime.now(),
     );
-    await ref.set(entry.toMap());
-
-    // Increment replaceCount on product (items awaiting processing)
+    // Entry + replaceCount (items awaiting processing) in one atomic batch
+    final batch = _db.batch()..set(ref, entry.toMap());
     if (productId.isNotEmpty) {
-      await _db
-          .collection('products')
-          .doc(productId)
-          .update({'replaceCount': FieldValue.increment(quantity)});
+      batch.update(_db.collection('products').doc(productId),
+          {'replaceCount': FieldValue.increment(quantity)});
+    }
+    await batch.commit();
+    if (productId.isNotEmpty) {
       _localProductUpdate(productId, replaceCountDelta: quantity);
     }
 
@@ -148,13 +148,13 @@ class AdminReplaceController extends GetxController {
       date: date,
       createdAt: DateTime.now(),
     );
-    await ref.set(entry.toMap());
-
+    final batch = _db.batch()..set(ref, entry.toMap());
     if (productId.isNotEmpty) {
-      await _db
-          .collection('products')
-          .doc(productId)
-          .update({'replaceCount': FieldValue.increment(quantity)});
+      batch.update(_db.collection('products').doc(productId),
+          {'replaceCount': FieldValue.increment(quantity)});
+    }
+    await batch.commit();
+    if (productId.isNotEmpty) {
       _localProductUpdate(productId, replaceCountDelta: quantity);
     }
 
@@ -200,13 +200,13 @@ class AdminReplaceController extends GetxController {
       createdAt: now,
       sentToSupplierDate: now,
     );
-    await ref.set(entry.toMap());
-
+    final batch = _db.batch()..set(ref, entry.toMap());
     if (productId.isNotEmpty) {
-      await _db
-          .collection('products')
-          .doc(productId)
-          .update({'replaceCount': FieldValue.increment(quantity)});
+      batch.update(_db.collection('products').doc(productId),
+          {'replaceCount': FieldValue.increment(quantity)});
+    }
+    await batch.commit();
+    if (productId.isNotEmpty) {
       _localProductUpdate(productId, replaceCountDelta: quantity);
     }
 
@@ -289,13 +289,10 @@ class AdminReplaceController extends GetxController {
       if (note.isNotEmpty) 'note': note,
     };
 
-    await _db
-        .collection('admin_replace_entries')
-        .doc(entry.id)
-        .update(updateMap);
-
-    // Update product counts
-    if (entry.productId.isNotEmpty && resolution != 'scrapped') {
+    // Entry status + product counts in one atomic batch
+    final batch = _db.batch()
+      ..update(_db.collection('admin_replace_entries').doc(entry.id), updateMap);
+    if (entry.productId.isNotEmpty) {
       final Map<String, dynamic> productUpdate = {
         'replaceCount': FieldValue.increment(-resolvedQty),
       };
@@ -304,10 +301,11 @@ class AdminReplaceController extends GetxController {
       } else if (resolution == 'added_to_replace_stock') {
         productUpdate['replaceStock'] = FieldValue.increment(resolvedQty);
       }
-      await _db
-          .collection('products')
-          .doc(entry.productId)
-          .update(productUpdate);
+      batch.update(_db.collection('products').doc(entry.productId), productUpdate);
+    }
+    await batch.commit();
+
+    if (entry.productId.isNotEmpty && resolution != 'scrapped') {
       _localProductUpdate(
         entry.productId,
         replaceCountDelta: -resolvedQty,
@@ -316,11 +314,6 @@ class AdminReplaceController extends GetxController {
             resolution == 'added_to_replace_stock' ? resolvedQty : 0,
       );
     } else if (entry.productId.isNotEmpty && resolution == 'scrapped') {
-      // Just remove from replaceCount
-      await _db
-          .collection('products')
-          .doc(entry.productId)
-          .update({'replaceCount': FieldValue.increment(-resolvedQty)});
       _localProductUpdate(entry.productId, replaceCountDelta: -resolvedQty);
     }
 
@@ -548,13 +541,12 @@ class AdminReplaceController extends GetxController {
   // ─── DELETE ENTRY ────────────────────────────────────────────────────────
 
   Future<void> deleteEntry(AdminReplaceModel entry) async {
-    await _db
-        .collection('admin_replace_entries')
-        .doc(entry.id)
-        .delete();
+    final batch = _db.batch()
+      ..delete(_db.collection('admin_replace_entries').doc(entry.id));
 
     // Reverse replaceCount if still pending
-    if (entry.productId.isNotEmpty && entry.status != 'resolved') {
+    final reverses = entry.productId.isNotEmpty && entry.status != 'resolved';
+    if (reverses) {
       final updates = <String, dynamic>{
         'replaceCount': FieldValue.increment(-entry.quantity),
       };
@@ -562,7 +554,10 @@ class AdminReplaceController extends GetxController {
       if (entry.customerResolutionType == 'replace_given') {
         updates['stock'] = FieldValue.increment(entry.quantity);
       }
-      await _db.collection('products').doc(entry.productId).update(updates);
+      batch.update(_db.collection('products').doc(entry.productId), updates);
+    }
+    await batch.commit();
+    if (reverses) {
       _localProductUpdate(entry.productId,
           replaceCountDelta: -entry.quantity,
           stockDelta: entry.customerResolutionType == 'replace_given' ? entry.quantity : 0);

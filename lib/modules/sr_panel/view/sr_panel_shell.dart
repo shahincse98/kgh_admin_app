@@ -6,6 +6,8 @@ import 'sr_place_order_view.dart';
 import 'sr_my_orders_view.dart';
 import 'sr_my_customers_view.dart';
 import 'sr_due_view.dart';
+import 'sr_stock_view.dart';
+import 'sr_account_view.dart';
 import '../../auth/controller/auth_controller.dart';
 import '../../../main.dart' show srDocIdForStartup;
 import '../../../widgets/responsive.dart';
@@ -34,6 +36,8 @@ class SrPanelShell extends StatelessWidget {
       SrMyOrdersView(),
       SrMyCustomersView(),
       SrDueView(),
+      const SrStockView(),
+      const SrAccountView(),
     ];
 
     return Obx(() {
@@ -44,6 +48,8 @@ class SrPanelShell extends StatelessWidget {
         NavigationDestination(icon: Icon(Icons.receipt_long_rounded), label: 'আমার অর্ডার'.tr),
         NavigationDestination(icon: Icon(Icons.people_alt_rounded), label: 'ইউজার'.tr),
         NavigationDestination(icon: Icon(Icons.account_balance_wallet_rounded), label: 'বাকি'.tr),
+        NavigationDestination(icon: Icon(Icons.inventory_2_rounded), label: 'স্টক'.tr),
+        NavigationDestination(icon: Icon(Icons.calculate_rounded), label: 'হিসাব'.tr),
       ];
 
       return LayoutBuilder(builder: (ctx, c) {
@@ -54,17 +60,28 @@ class SrPanelShell extends StatelessWidget {
           return Scaffold(
             body: Row(
               children: [
-                NavigationRail(
-                  selectedIndex: idx,
-                  onDestinationSelected: (i) => navCtrl.tabIndex.value = i,
-                  labelType: NavigationRailLabelType.all,
-                  destinations: [
-                    NavigationRailDestination(icon: Icon(Icons.dashboard_rounded), label: Text('ড্যাশবোর্ড'.tr)),
-                    NavigationRailDestination(icon: Icon(Icons.add_shopping_cart_rounded), label: Text('অর্ডার'.tr)),
-                    NavigationRailDestination(icon: Icon(Icons.receipt_long_rounded), label: Text('অর্ডার তালিকা'.tr)),
-                    NavigationRailDestination(icon: Icon(Icons.people_alt_rounded), label: Text('ইউজার'.tr)),
-                    NavigationRailDestination(icon: Icon(Icons.account_balance_wallet_rounded), label: Text('বাকি'.tr)),
-                  ],
+                // Scrollable so every tab stays reachable on short screens.
+                SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: c.maxHeight),
+                    child: IntrinsicHeight(
+                      child:
+                      NavigationRail(
+                        selectedIndex: idx,
+                        onDestinationSelected: (i) => navCtrl.tabIndex.value = i,
+                        labelType: NavigationRailLabelType.all,
+                        destinations: [
+                          NavigationRailDestination(icon: Icon(Icons.dashboard_rounded), label: Text('ড্যাশবোর্ড'.tr)),
+                          NavigationRailDestination(icon: Icon(Icons.add_shopping_cart_rounded), label: Text('অর্ডার'.tr)),
+                          NavigationRailDestination(icon: Icon(Icons.receipt_long_rounded), label: Text('অর্ডার তালিকা'.tr)),
+                          NavigationRailDestination(icon: Icon(Icons.people_alt_rounded), label: Text('ইউজার'.tr)),
+                          NavigationRailDestination(icon: Icon(Icons.account_balance_wallet_rounded), label: Text('বাকি'.tr)),
+                          NavigationRailDestination(icon: Icon(Icons.inventory_2_rounded), label: Text('স্টক'.tr)),
+                          NavigationRailDestination(icon: Icon(Icons.calculate_rounded), label: Text('আমার হিসাব'.tr)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
                 const VerticalDivider(width: 1, thickness: 1),
                 Expanded(child: IndexedStack(index: idx, children: pages)),
@@ -79,6 +96,10 @@ class SrPanelShell extends StatelessWidget {
           bottomNavigationBar: NavigationBar(
             selectedIndex: idx,
             onDestinationSelected: (i) => navCtrl.tabIndex.value = i,
+            // Seven tabs: on narrow phones show only the selected label.
+            labelBehavior: c.maxWidth < 480
+                ? NavigationDestinationLabelBehavior.onlyShowSelected
+                : NavigationDestinationLabelBehavior.alwaysShow,
             destinations: destinations,
           ),
         );

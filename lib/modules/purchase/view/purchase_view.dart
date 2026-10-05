@@ -13,7 +13,10 @@ import '../../../widgets/responsive.dart';
 import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
 class PurchaseView extends GetView<PurchaseController> {
-  const PurchaseView({super.key});
+  const PurchaseView({super.key, this.initialTab = 0});
+
+  /// 1 opens straight on the "সংগ্রহ তালিকা" (what must be bought).
+  final int initialTab;
 
   static final _fmt = NumberFormat('#,##,##0');
 
@@ -23,6 +26,7 @@ class PurchaseView extends GetView<PurchaseController> {
 
     return DefaultTabController(
       length: 2,
+      initialIndex: initialTab,
       child: Scaffold(
         drawer: appDrawerFor(context),
         appBar: AppBar(
@@ -219,7 +223,7 @@ class PurchaseView extends GetView<PurchaseController> {
             else ...[
               _copyButtonRow(context, scheme),
               const SizedBox(height: 10),
-              ...list.map((item) => _shortageCard(item, scheme)),
+              ...list.map((item) => _shortageCard(context, item, scheme)),
             ],
           ],
         ),
@@ -265,12 +269,37 @@ class PurchaseView extends GetView<PurchaseController> {
                           color: Color(0xFFD97706),
                         ),
                       ),
+                      Text(
+                        '${'আনুমানিক খরচ'.tr}: ৳ ${_fmt.format(controller.shortageTotalCost.round())}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF16A34A),
+                        ),
+                      ),
+                      // Some products have no purchase price saved yet.
+                      if (controller.shortageWithoutPrice > 0)
+                        Text(
+                          '${controller.shortageWithoutPrice} ${'টি প্রডাক্টের ক্রয়মূল্য নেই — খরচ এর চেয়ে বেশি হবে'.tr}',
+                          style: const TextStyle(fontSize: 11, color: Color(0xFFDC2626)),
+                        ),
                     ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
+            // Planning ahead: count orders that are not approved yet too.
+            CheckboxListTile(
+              value: controller.includePending.value,
+              onChanged: (v) => controller.setIncludePending(v ?? false),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: Text('পেন্ডিং অর্ডারও ধরুন'.tr,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            ),
+            const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.symmetric(
                   horizontal: 12, vertical: 8),
@@ -284,7 +313,9 @@ class PurchaseView extends GetView<PurchaseController> {
                       size: 16, color: Color(0xFF2563EB)),
                   const SizedBox(width: 8),
                   Text(
-                    'Approved ${'অর্ডার'.tr}: $approved ${'টি'.tr}',
+                    controller.includePending.value
+                        ? '${'Approved + পেন্ডিং অর্ডার'.tr}: $approved ${'টি'.tr}'
+                        : 'Approved ${'অর্ডার'.tr}: $approved ${'টি'.tr}',
                     style: const TextStyle(
                         fontSize: 13, fontWeight: FontWeight.w600),
                   ),
@@ -362,90 +393,135 @@ class PurchaseView extends GetView<PurchaseController> {
     );
   }
 
-  Widget _shortageCard(ShortageItem item, ColorScheme scheme) {
+  Widget _shortageCard(BuildContext context, ShortageItem item, ColorScheme scheme) {
+    final header = Row(
+      children: [
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: const Color(0xFFD97706).withAlpha(20),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.shopping_bag_rounded,
+              color: Color(0xFFD97706), size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item.productName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 14),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+              if (item.brandName.isNotEmpty || item.productCode.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    [item.brandName, item.productCode]
+                        .where((s) => s.isNotEmpty)
+                        .join(' • '),
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: scheme.onSurface.withAlpha(140)),
+                  ),
+                ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  _shortageBadge(
+                      '${'অর্ডার'.tr}: ${item.orderedQty}', const Color(0xFF2563EB)),
+                  _shortageBadge(
+                      '${'স্টক'.tr}: ${item.stockQty}', const Color(0xFF16A34A)),
+                  _shortageBadge(
+                      '${item.orderCount} ${'অর্ডারে'.tr}', const Color(0xFF6366F1)),
+                  if (item.estimatedCost > 0)
+                    _shortageBadge(
+                        '${'কিনতে'.tr}: ৳${_fmt.format(item.estimatedCost.round())}'
+                        ' (${'দর'.tr} ৳${_fmt.format(item.purchasePrice.round())})',
+                        const Color(0xFF16A34A))
+                  else
+                    _shortageBadge('ক্রয়মূল্য নেই'.tr, const Color(0xFFDC2626)),
+                  // The product was removed from the product list.
+                  if (item.missingProduct)
+                    _shortageBadge('প্রডাক্ট তালিকায় নেই'.tr, const Color(0xFFDC2626)),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFDC2626).withAlpha(20),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('শর্ট'.tr,
+                  style: TextStyle(fontSize: 10, color: Color(0xFFDC2626))),
+              Text(
+                '${item.shortQty}',
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFDC2626)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: const Color(0xFFD97706).withAlpha(20),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.shopping_bag_rounded,
-                  color: Color(0xFFD97706), size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: item.lines.isEmpty
+          ? Padding(padding: const EdgeInsets.all(14), child: header)
+          : Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                shape: const Border(),
+                collapsedShape: const Border(),
+                tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+                childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                title: header,
                 children: [
-                  Text(item.productName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 14),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
-                  if (item.brandName.isNotEmpty ||
-                      item.productCode.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        [item.brandName, item.productCode]
-                            .where((s) => s.isNotEmpty)
-                            .join(' • '),
-                        style: TextStyle(
-                            fontSize: 11,
-                            color: scheme.onSurface.withAlpha(140)),
-                      ),
-                    ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
-                    children: [
-                      _shortageBadge(
-                          '${'অর্ডার'.tr}: ${item.orderedQty}', const Color(0xFF2563EB)),
-                      _shortageBadge(
-                          '${'স্টক'.tr}: ${item.stockQty}', const Color(0xFF16A34A)),
-                      _shortageBadge(
-                          '${item.orderCount} ${'অর্ডারে'.tr}', const Color(0xFF6366F1)),
-                    ],
-                  ),
+                  // Which shops are waiting for this product.
+                  ...item.lines.map((l) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(children: [
+                          Icon(Icons.store_rounded,
+                              size: 14, color: scheme.onSurface.withAlpha(120)),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              l.shopName.isNotEmpty ? l.shopName : '#${l.orderId}',
+                              style: const TextStyle(fontSize: 12),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (l.status == 'pending')
+                            Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: _shortageBadge('পেন্ডিং'.tr, const Color(0xFFD97706)),
+                            ),
+                          Text('${l.quantity} ${'টি'.tr}',
+                              style: const TextStyle(
+                                  fontSize: 12, fontWeight: FontWeight.w700)),
+                        ]),
+                      )),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFDC2626).withAlpha(20),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('শর্ট'.tr,
-                      style: TextStyle(
-                          fontSize: 10, color: Color(0xFFDC2626))),
-                  Text(
-                    '${item.shortQty}',
-                    style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFFDC2626)),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

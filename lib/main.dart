@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'routes/app_routes.dart';
+import 'routes/sr_guard.dart';
 import 'routes/app_pages.dart';
 import 'bindings/initial_binding.dart';
 import 'theme/app_theme.dart';
@@ -75,6 +76,7 @@ void main() async {
   } catch (_) {}
 
   srDocIdForStartup = srDocId;
+  Session.srDocId = srDocId;
   runApp(MyApp(initialRoute: initialRoute, srDocId: srDocId));
 }
 

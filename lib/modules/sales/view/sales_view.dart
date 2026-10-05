@@ -4,9 +4,20 @@ import 'package:intl/intl.dart';
 import '../controller/sales_controller.dart';
 import 'day_sales_detail_view.dart';
 import 'package:kgh_admin_app/widgets/app_drawer.dart';
+import '../../../widgets/responsive.dart';
 
 class SalesView extends GetView<SalesController> {
-  const SalesView({super.key});
+  const SalesView({super.key, this.srId, this.srName = ''});
+
+  /// Set when opened from the SR panel: only that SR's figures, and no
+  /// purchase price / profit.
+  final String? srId;
+  final String srName;
+
+  bool get _isSr => srId != null;
+
+  @override
+  String? get tag => srId;
 
   static final _fmtInt = NumberFormat('#,##,##0');
   static final _dayFmt = DateFormat('dd MMM yyyy');
@@ -16,9 +27,9 @@ class SalesView extends GetView<SalesController> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      drawer: appDrawerFor(context),
+      drawer: _isSr ? null : appDrawerFor(context),
       appBar: AppBar(
-        title: Text('Daily Sales'.tr),
+        title: Text(_isSr ? 'দিনওয়ারি হিসাব'.tr : 'Daily Sales'.tr),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -26,7 +37,7 @@ class SalesView extends GetView<SalesController> {
           ),
         ],
       ),
-      body: Obx(() {
+      body: ResponsiveWrapper(child: Obx(() {
         return Column(
           children: [
             _quickDateChips(context, scheme),
@@ -37,7 +48,7 @@ class SalesView extends GetView<SalesController> {
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: controller.loadData,
-                  child: controller.allOrders.isEmpty
+                  child: controller.dayRows.isEmpty
                       ? ListView(children: [
                           SizedBox(height: 80),
                           Center(
@@ -70,7 +81,7 @@ class SalesView extends GetView<SalesController> {
               ),
           ],
         );
-      }),
+      })),
     );
   }
 
@@ -148,29 +159,48 @@ class SalesView extends GetView<SalesController> {
     final purch =
         _fmtInt.format(controller.totalPurchaseCost.value.toInt());
     final exp = _fmtInt.format(controller.totalExpenses.value.toInt());
-    final profit = _fmtInt.format(
-        (controller.monthNetSales.value -
-                controller.totalPurchaseCost.value -
-                controller.totalExpenses.value)
-            .toInt());
-    final profitVal = controller.monthNetSales.value -
-        controller.totalPurchaseCost.value -
-        controller.totalExpenses.value;
+    // Same as the day's page, so the days add up to these.
+    final grossVal = controller.monthNetSales.value -
+        controller.totalPurchaseCost.value +
+        controller.totalRecovered.value;
+    final profitVal = grossVal - controller.totalExpenses.value;
+    final gross = _fmtInt.format(grossVal.toInt());
+    final profit = _fmtInt.format(profitVal.toInt());
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const SizedBox(height: 4),
       Wrap(spacing: 10, runSpacing: 10, children: [
-        _summaryCard(context, 'মোট বিক্রি'.tr, '৳ $netSales',
-            Icons.trending_up_rounded, const Color(0xFF0891B2)),
+        if (!_isSr)
+          _summaryCard(context, 'মোট বিক্রি'.tr, '৳ $netSales',
+              Icons.trending_up_rounded, const Color(0xFF0891B2)),
+        if (_isSr)
+          _summaryCard(
+              context,
+              'মোট জমা'.tr,
+              '৳ ${_fmtInt.format(controller.dayRows.fold<double>(0, (s, r) => s + controller.collectedOn(r)).round())}',
+              Icons.payments_rounded,
+              const Color(0xFF16A34A)),
         _summaryCard(context, 'মোট অর্ডার'.tr, '$orders ${'টি'.tr}',
             Icons.receipt_long_rounded, const Color(0xFF7C3AED)),
-        _summaryCard(context, 'ক্রয় মূল্য'.tr, '৳ $purch',
-            Icons.shopping_cart_rounded, const Color(0xFFD97706)),
+        if (!_isSr)
+          _summaryCard(context, 'ক্রয় মূল্য'.tr, '৳ $purch',
+              Icons.shopping_cart_rounded, const Color(0xFFD97706)),
+        if (!_isSr && controller.totalRecovered.value > 0)
+          _summaryCard(
+              context,
+              'ফেরত মাল'.tr,
+              '+ ৳ ${_fmtInt.format(controller.totalRecovered.value.round())}',
+              Icons.assignment_return_rounded,
+              const Color(0xFF8B5CF6)),
+        if (!_isSr)
+          _summaryCard(context, 'মোট লাভ'.tr, '৳ $gross',
+              Icons.account_balance_wallet_rounded, const Color(0xFF0D9488)),
         _summaryCard(context, 'খরচ'.tr, '৳ $exp',
             Icons.money_off_rounded, const Color(0xFFDC2626)),
-        _summaryCard(
+        if (!_isSr)
+          _summaryCard(
             context,
-            'নিট লাভ'.tr,
+            'নিট লাভ (খরচ বাদে)'.tr,
             '৳ $profit',
             Icons.savings_rounded,
             profitVal >= 0
@@ -182,8 +212,12 @@ class SalesView extends GetView<SalesController> {
 
   Widget _summaryCard(BuildContext context, String title, String value,
       IconData icon, Color color) {
+    // 2 per row on phones, 3 on tablets, 4 on laptops.
+    final w = MediaQuery.of(context).size.width;
+    final cols = w >= Rsp.tabletMax ? 4 : (w >= Rsp.mobileMax ? 3 : 2);
+    final content = w >= Rsp.mobileMax ? Rsp.contentMax(w).clamp(0.0, w) : w;
     return SizedBox(
-      width: (MediaQuery.of(context).size.width - 48) / 2,
+      width: (content - 28 - 10 * (cols - 1)) / cols - 1,
       child: Card(
         elevation: 0,
         shape:
@@ -262,13 +296,16 @@ class SalesView extends GetView<SalesController> {
 
   Widget _dayTile(ColorScheme scheme, SalesDayRow row) {
     final netSales = _fmtInt.format(row.totalNetSales.toInt());
+    final collected = _fmtInt.format(controller.collectedOn(row).round());
+    final gross =
+        row.totalNetSales - row.totalPurchaseCost + row.totalRecovered;
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => Get.to(() => DaySalesDetailView(date: row.date)),
+        onTap: () => Get.to(() => DaySalesDetailView(date: row.date, srId: srId, srName: srName)),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(children: [
@@ -300,11 +337,33 @@ class SalesView extends GetView<SalesController> {
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
-                Text('${'মোট'.tr}: ৳ $netSales',
+                Text(_isSr ? '${'জমা'.tr}: ৳ $collected' : '${'মোট'.tr}: ৳ $netSales',
                     style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF0891B2))),
+                const SizedBox(height: 2),
+                Wrap(spacing: 12, children: [
+                  if (!_isSr)
+                    Text('${'মোট লাভ'.tr}: ৳ ${_fmtInt.format(gross.round())}',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF0D9488))),
+                  Text('${'খরচ'.tr}: ৳ ${_fmtInt.format(row.expenses.round())}',
+                      style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFDC2626))),
+                  if (!_isSr)
+                    Text('${'নিট লাভ'.tr}: ৳ ${_fmtInt.format(row.netProfit.round())}',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: row.netProfit >= 0
+                                ? const Color(0xFF16A34A)
+                                : const Color(0xFFDC2626))),
+                ]),
               ]),
             ),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [

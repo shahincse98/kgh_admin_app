@@ -77,6 +77,12 @@ class FinanceView extends GetView<FinanceController> {
                       _kpiCard('ক্রয় মূল্য (COGS)'.tr,
                           controller.totalCost.value,
                           const Color(0xFFEA580C)),
+                      // Goods back from returns / replaces, so that
+                      // বিক্রি − ক্রয় মূল্য + ফেরত মাল = মোট লাভ.
+                      if (controller.totalRecovered.value > 0)
+                        _kpiCard('ফেরত মাল'.tr,
+                            controller.totalRecovered.value,
+                            const Color(0xFF8B5CF6)),
                       _kpiCard('মোট লাভ (Gross)'.tr,
                           controller.grossProfit.value,
                           const Color(0xFF16A34A)),
@@ -694,6 +700,8 @@ class FinanceView extends GetView<FinanceController> {
               children: [
                 _pill('Sales'.tr, row.revenue, const Color(0xFF0284C7)),
                 _pill('Cost'.tr, row.cost, const Color(0xFFEA580C)),
+                if (row.recovered > 0)
+                  _pill('ফেরত মাল'.tr, row.recovered, const Color(0xFF8B5CF6)),
                 _pill('Gross'.tr, row.gross, const Color(0xFF16A34A)),
               ],
             ),

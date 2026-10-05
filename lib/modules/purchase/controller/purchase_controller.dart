@@ -239,6 +239,16 @@ class PurchaseController extends GetxController {
   // with current stock, and produces a list of products that need to
   // be procured.  shortQty = orderedQty - stock  (only if > 0).
 
+  /// Also count orders that are still pending (not approved yet).
+  final includePending = false.obs;
+
+  void setIncludePending(bool v) {
+    includePending.value = v;
+    computeShortage(force: true);
+  }
+
+  /// Which products must be bought: everything the approved (and optionally
+  /// pending) orders need, minus what is in stock.
   Future<void> computeShortage({bool force = false}) async {
     if (shortageLoading.value) return;
     if (_shortageLoaded && !force) return;
@@ -251,25 +261,36 @@ class PurchaseController extends GetxController {
         if (pc.products.isEmpty) await pc.fetchProducts();
       } catch (_) {}
 
-      // 2. Fetch ALL approved orders (no pagination)
+      // 2. Fetch the orders that still have to be handed over
+      final statuses = includePending.value ? ['approved', 'pending'] : ['approved'];
       final snap = await _db
           .collection('orders')
-          .where('status', isEqualTo: 'approved')
+          .where('status', whereIn: statuses)
           .get();
 
       approvedOrderCount.value = snap.docs.length;
 
       // 3. Aggregate ordered quantities per productId
       final orderedMap = <String, int>{};
-      final orderCountMap = <String, int>{};
+      final linesMap = <String, List<ShortageOrderLine>>{};
+      final nameMap = <String, String>{}; // fallback name for deleted products
       for (final doc in snap.docs) {
-        final items = doc.data()['items'] as List? ?? [];
+        final data = doc.data();
+        final items = data['items'] as List? ?? [];
+        final shopName = (data['shopName'] ?? '').toString();
+        final status = (data['status'] ?? '').toString();
         for (final item in items) {
           final productId = (item['productId'] ?? '').toString();
           final qty = (item['quantity'] as num?)?.toInt() ?? 0;
           if (productId.isEmpty || qty == 0) continue;
           orderedMap[productId] = (orderedMap[productId] ?? 0) + qty;
-          orderCountMap[productId] = (orderCountMap[productId] ?? 0) + 1;
+          nameMap[productId] = (item['productName'] ?? '').toString();
+          linesMap.putIfAbsent(productId, () => []).add(ShortageOrderLine(
+                orderId: doc.id,
+                shopName: shopName,
+                quantity: qty,
+                status: status,
+              ));
         }
       }
 
@@ -280,25 +301,31 @@ class PurchaseController extends GetxController {
       } catch (_) {
         products = allProducts.toList();
       }
+      final byId = {for (final p in products) p.id: p};
 
       final result = <ShortageItem>[];
-      for (final p in products) {
-        final ordered = orderedMap[p.id] ?? 0;
-        if (ordered == 0) continue;
-        final short = ordered - p.stock;
-        if (short <= 0) continue;
+      orderedMap.forEach((productId, ordered) {
+        final p = byId[productId];
+        // A product that is no longer in the list has no stock to count.
+        final stock = p?.stock ?? 0;
+        final short = ordered - stock;
+        if (short <= 0) return;
+        final lines = linesMap[productId] ?? const <ShortageOrderLine>[];
         result.add(ShortageItem(
-          productId: p.id,
-          productName: p.name,
-          brandName: p.brandName,
-          productCode: p.productCode,
-          unit: p.unit,
+          productId: productId,
+          productName: p?.name ?? (nameMap[productId] ?? 'অজানা প্রডাক্ট'.tr),
+          brandName: p?.brandName ?? '',
+          productCode: p?.productCode ?? '',
+          unit: p?.unit ?? '',
           orderedQty: ordered,
-          stockQty: p.stock,
+          stockQty: stock,
           shortQty: short,
-          orderCount: orderCountMap[p.id] ?? 0,
+          orderCount: lines.map((l) => l.orderId).toSet().length,
+          purchasePrice: p?.purchasePrice ?? 0,
+          lines: lines,
+          missingProduct: p == null,
         ));
-      }
+      });
 
       // Sort: largest shortage first
       result.sort((a, b) => b.shortQty.compareTo(a.shortQty));
@@ -311,7 +338,15 @@ class PurchaseController extends GetxController {
     }
   }
 
-  /// Builds a plain-text copy of the shortage list.
+  /// Money needed to buy the whole shortage list (products without a
+  /// purchase price count as 0).
+  num get shortageTotalCost =>
+      shortageList.fold<num>(0, (s, e) => s + e.estimatedCost);
+
+  /// Products in the list whose purchase price is not known.
+  int get shortageWithoutPrice =>
+      shortageList.where((e) => e.purchasePrice <= 0).length;
+
   String get shortageAsText {
     if (shortageList.isEmpty) return 'কোনো শর্ট প্রডাক্ট নেই'.tr;
     final now = DateTime.now();
@@ -319,15 +354,20 @@ class PurchaseController extends GetxController {
         '${now.day}/${now.month}/${now.year}';
     final buf = StringBuffer();
     buf.writeln('${'সংগ্রহ তালিকা'.tr} — $dateStr');
-    buf.writeln('Approved ${'অর্ডার'.tr}: $approvedOrderCount ${'টি'.tr}');
+    buf.writeln(includePending.value
+        ? '${'Approved + পেন্ডিং অর্ডার'.tr}: $approvedOrderCount ${'টি'.tr}'
+        : 'Approved ${'অর্ডার'.tr}: $approvedOrderCount ${'টি'.tr}');
     buf.writeln('${'শর্ট প্রডাক্ট'.tr}: ${shortageList.length} ${'টি'.tr}');
     buf.writeln('─────────────────────────────');
     for (var i = 0; i < shortageList.length; i++) {
       final item = shortageList[i];
       buf.writeln(
           '${i + 1}. ${item.displayName} — ${item.shortQty} ${'টি'.tr}'
-          ' (${'অর্ডার'.tr}: ${item.orderedQty}, ${'স্টক'.tr}: ${item.stockQty})');
+          ' (${'অর্ডার'.tr}: ${item.orderedQty}, ${'স্টক'.tr}: ${item.stockQty}'
+          '${item.estimatedCost > 0 ? ', ${'আনুমানিক'.tr}: ৳${item.estimatedCost.round()}' : ''})');
     }
+    buf.writeln('─────────────────────────────');
+    buf.writeln('${'আনুমানিক মোট খরচ'.tr}: ৳${shortageTotalCost.round()}');
     return buf.toString();
   }
 }

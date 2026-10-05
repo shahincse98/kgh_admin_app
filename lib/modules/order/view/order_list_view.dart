@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controller/order_controller.dart';
 import '../model/order_model.dart';
+import '../../product/controller/product_controller.dart';
 import 'order_details_view.dart';
 import '../../../routes/app_routes.dart';
 import '../../../widgets/call_button.dart';
@@ -128,7 +129,7 @@ class _OrderListViewState extends State<OrderListView> {
                         (entry) => Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _dateHeader(entry.key, entry.value.length),
+                            _dateHeader(entry.key, entry.value),
                             _orderGroup(entry.value, scheme),
                           ],
                         ),
@@ -365,17 +366,31 @@ class _OrderListViewState extends State<OrderListView> {
 
   // ── Date group header ──────────────────────────────────────────
 
-  Widget _dateHeader(String date, int count) {
+  /// Date header with the day's order total and expected profit.
+  /// Profit is an estimate: it uses each item's saved purchase price, or the
+  /// product's current one when the order has none.
+  Widget _dateHeader(String date, List<OrderModel> orders) {
     final scheme = Theme.of(context).colorScheme;
+    final count = orders.length;
+    final total = orders.fold<num>(0, (s, o) => s + o.totalAmount);
+    final sellable = orders.where((o) => !o.isDueCollection && o.items.isNotEmpty);
+    final profit = sellable.fold<num>(0, (s, o) => s + o.profit(_productCost));
+    final hasProfit = sellable.isNotEmpty;
+    // Margin on net sale, the same basis as the daily sales page.
+    final netSales = sellable.fold<num>(0, (s, o) => s + o.netSales);
+    final rate = netSales > 0 ? profit / netSales * 100 : 0;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 14, 4, 8),
-      child: Row(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(
             date,
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
           ),
-          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
@@ -391,12 +406,51 @@ class _OrderListViewState extends State<OrderListView> {
               ),
             ),
           ),
+          _dayStat(Icons.shopping_cart_rounded, '৳ ${_fmt.format(total.round())}',
+              const Color(0xFF0891B2)),
+          if (hasProfit)
+            _dayStat(
+              Icons.savings_rounded,
+              '${'সম্ভাব্য লাভ'.tr}: ৳ ${_fmt.format(profit.round())}'
+              '${netSales > 0 ? ' (${rate.toStringAsFixed(1)}%)' : ''}',
+              profit >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+            ),
         ],
       ),
     );
   }
 
+  Widget _dayStat(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withAlpha(18),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 4),
+        Text(label,
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+      ]),
+    );
+  }
+
   // ── Order card ─────────────────────────────────────────────────
+
+  /// Current purchase price of a product, for items saved without one.
+  num _productCost(String productId) {
+    try {
+      return Get.find<ProductController>()
+              .products
+              .firstWhereOrNull((p) => p.id == productId)
+              ?.purchasePrice ??
+          0;
+    } catch (_) {
+      return 0;
+    }
+  }
 
   Widget _orderCard(OrderModel order, ColorScheme scheme) {
     final statusColor = _statusColor(order.status);
@@ -646,6 +700,19 @@ class _OrderListViewState extends State<OrderListView> {
                               scheme,
                               labelColor: const Color(0xFF0891B2),
                             ),
+                          // Profit is admin-only; the SR panel has its own list.
+                          if (!order.isDueCollection && order.items.isNotEmpty)
+                            Builder(builder: (_) {
+                              final profit = order.profit(_productCost);
+                              return _chip(
+                                Icons.savings_rounded,
+                                '${'লাভ'.tr}: ৳${_fmt.format(profit.round())}',
+                                scheme,
+                                labelColor: profit >= 0
+                                    ? const Color(0xFF16A34A)
+                                    : const Color(0xFFDC2626),
+                              );
+                            }),
                         ],
                       ),
                       const SizedBox(height: 10),

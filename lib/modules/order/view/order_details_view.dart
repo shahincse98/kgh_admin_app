@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../model/order_model.dart';
+import '../model/delivery_models.dart';
 import '../controller/order_controller.dart';
 import '../../product/model/product_model.dart';
 import '../../product/controller/product_controller.dart';
@@ -10,7 +11,6 @@ import '../../user/model/user_model.dart';
 import '../../user/controller/user_controller.dart';
 import '../../replace/model/admin_replace_model.dart';
 import '../../replace/controller/admin_replace_controller.dart';
-import '../../stock_in/controller/stock_in_controller.dart';
 import '../../../widgets/call_button.dart';
 import '../../../widgets/responsive.dart';
 import '../../../localization/domain_labels.dart';
@@ -93,7 +93,10 @@ class OrderDetailsView extends StatefulWidget {
   final OrderModel order;
   /// If provided, marks this SR as deliverer when order status set to 'delivered'
   final String? srDocId;
-  const OrderDetailsView({super.key, required this.order, this.srDocId});
+
+  /// Opens the delivery dialog as soon as the page is shown (SR shortcut).
+  final bool openDelivery;
+  const OrderDetailsView({super.key, required this.order, this.srDocId, this.openDelivery = false});
 
   @override
   State<OrderDetailsView> createState() => _OrderDetailsViewState();
@@ -109,6 +112,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   late num _savedTotal;
   bool _editMode = false;
   bool _saving = false;
+  /// True while a status change / dispatch / delivery is running, so a
+  /// double tap can't start a second one.
+  bool _busy = false;
   late num _currentPaid;
   DateTime? _scheduledDate;
   DateTime? _deliveredAt;
@@ -120,8 +126,6 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
 
   // Customer state
   late String _currentShopName;
-  late String _currentShopAddress;
-  late String _currentShopPhone;
   late String _currentUserId;
   late String _currentUserPhone;
   late int _currentUserDue;
@@ -133,6 +137,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   late List<Map<String, dynamic>> _currentPayments;
   late String _currentLocalMemo;
   late List<Map<String, dynamic>> _currentReplaceItems;
+  late List<Map<String, dynamic>> _currentReturnItems;
 
   List<UserModel> _allUsers = [];
   bool _loadingUsers = false;
@@ -157,6 +162,15 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   static const _statuses = ['pending', 'approved', 'dispatched', 'delivered', 'cancelled'];
   static final _fmt = NumberFormat('#,##,##0');
 
+  /// Opened from the SR panel: the SR can deliver and enter payments,
+  /// replaces and returns, but never sees purchase prices or profit and
+  /// cannot make manual money corrections.
+  bool get _isSr => widget.srDocId != null;
+
+  /// SR may change the products only before the order goes out.
+  bool get _canEditItems =>
+      !_isSr || _currentStatus == 'pending' || _currentStatus == 'approved';
+
   bool get _hasSr => _assignedSrId.isNotEmpty || widget.order.deliveredBySrId.isNotEmpty;
   String get _handLabel => _hasSr ? 'SR হাতে' : 'হাতে';
 
@@ -179,8 +193,6 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     _savedItems = List<OrderItem>.from(widget.order.items);
     _savedTotal = widget.order.totalAmount;
     _currentShopName = widget.order.shopName;
-    _currentShopAddress = widget.order.shopAddress;
-    _currentShopPhone = widget.order.shopPhone;
     _currentUserId = widget.order.userId;
     _currentUserPhone = widget.order.userPhone;
     _currentUserDue = widget.order.userDue;
@@ -192,8 +204,14 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     _currentPreviousDue = widget.order.previousDue > 0 ? widget.order.previousDue : widget.order.userDue;
     _currentLocalMemo = widget.order.localMemo;
     _currentReplaceItems = widget.order.replaceItems.isNotEmpty ? List<Map<String, dynamic>>.from(widget.order.replaceItems) : [];
+    _currentReturnItems = List<Map<String, dynamic>>.from(widget.order.returnItems);
     _initEditItems();
     _loadProducts();
+    if (widget.openDelivery && _currentStatus != 'cancelled') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _startDelivery();
+      });
+    }
   }
 
   Future<void> _loadSrs() async {
@@ -350,10 +368,19 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     setState(() => _saving = true);
     final newItems = _editItems.map((e) => e.toOrderItem()).toList();
     final newTotal = _editTotal;
-    await controller.updateOrderItems(
-      widget.order.id,
-      newItems,
-    );
+    try {
+      // Also moves stock if it already went out, and the customer's due if
+      // the order is delivered — all in one transaction.
+      await controller.updateOrderItems(
+        widget.order.id,
+        newItems,
+      );
+    } catch (e) {
+      if (mounted) setState(() => _saving = false);
+      _showOpError('সেভ হয়নি'.tr, e);
+      return;
+    }
+    if (!mounted) return;
     setState(() {
       _saving = false;
       _editMode = false;
@@ -429,7 +456,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               icon: const Icon(Icons.close_rounded),
               label: Text('বাতিল'.tr),
             )
-          else
+          else if (_canEditItems)
             IconButton(
               icon: const Icon(Icons.edit_note_rounded),
               tooltip: 'প্রডাক্ট এডিট করুন'.tr,
@@ -668,7 +695,72 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
 
   // ── Status card ───────────────────────────────────────────────
 
+  /// Opens the delivery dialog (first delivery, or adding more payments /
+  /// replaces / returns to a delivered order). One at a time.
+  Future<void> _startDelivery() async {
+    if (_busy) return;
+    _busy = true;
+    try {
+      await _showDeliveryPaymentDialog(_currentStatus);
+    } finally {
+      _busy = false;
+    }
+  }
+
+  /// SR view of the status: current status and one clear action.
+  Widget _srStatusCard(ColorScheme scheme) {
+    final delivered = _currentStatus == 'delivered';
+    final cancelled = _currentStatus == 'cancelled';
+    final color = _statusColor(_currentStatus);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Text('অর্ডার স্ট্যাটাস'.tr, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(color: color.withAlpha(24), borderRadius: BorderRadius.circular(20)),
+              child: Text(_statusLabel(_currentStatus), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: color)),
+            ),
+          ]),
+          if (!cancelled) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: _startDelivery,
+                icon: Icon(delivered ? Icons.add_card_rounded : Icons.local_shipping_rounded),
+                label: Text(
+                  delivered ? 'আরও জমা / রিপ্লেস / ফেরত যোগ'.tr : 'ডেলিভারি করুন'.tr,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: delivered ? const Color(0xFF7C3AED) : const Color(0xFF16A34A),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              delivered
+                  ? 'কাস্টমার পরে টাকা দিলে বা প্রডাক্ট ফেরত/রিপ্লেস দিলে এখান থেকে যোগ করুন'.tr
+                  : 'জমা, রিপ্লেস প্রডাক্ট, ফেরত প্রডাক্ট — সব ডেলিভারির সময় একসাথে এন্ট্রি করুন'.tr,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: scheme.onSurface.withAlpha(150)),
+            ),
+          ],
+        ]),
+      ),
+    );
+  }
+
   Widget _statusCard(ColorScheme scheme) {
+    if (_isSr) return _srStatusCard(scheme);
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -692,24 +784,32 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                 return GestureDetector(
                   onTap: () async {
                     if (s == _currentStatus && s != 'delivered') return;
-                    if (s == 'delivered') {
-                      await _showDeliveryPaymentDialog(_currentStatus);
-                    } else if (s == 'dispatched') {
-                      await _showDispatchDialog(_currentStatus);
-                    } else {
-                      final prev = _currentStatus;
-                      setState(() => _currentStatus = s);
-                      await controller.updateOrderStatus(
-                        widget.order.id,
-                        s,
-                        previousStatus: prev,
-                        items: widget.order.items
-                            .map((i) => {
-                                  'productId': i.productId,
-                                  'quantity': i.quantity,
-                                })
-                            .toList(),
-                      );
+                    if (_busy) return;
+                    _busy = true;
+                    try {
+                      if (s == 'delivered') {
+                        await _showDeliveryPaymentDialog(_currentStatus);
+                      } else if (s == 'dispatched') {
+                        await _showDispatchDialog(_currentStatus);
+                      } else {
+                        final prev = _currentStatus;
+                        if (prev == 'delivered') {
+                          final ok = await _confirm(
+                            'সতর্কতা'.tr,
+                            'ডেলিভার্ড অর্ডারের স্ট্যাটাস বদলালে শুধু অর্ডারের প্রডাক্ট স্টকে ফেরত যাবে। কাস্টমারের বাকি, জমা, রিপ্লেস ও ফেরতের হিসাব আপনাআপনি উল্টাবে না — সেগুলো হাতে ঠিক করতে হবে। চালিয়ে যাবেন?'.tr,
+                          );
+                          if (ok != true) return;
+                        }
+                        setState(() => _currentStatus = s);
+                        try {
+                          await controller.updateOrderStatus(widget.order.id, s);
+                        } catch (e) {
+                          if (mounted) setState(() => _currentStatus = prev);
+                          _showOpError('স্ট্যাটাস বদলানো যায়নি'.tr, e);
+                        }
+                      }
+                    } finally {
+                      _busy = false;
                     }
                   },
                   child: AnimatedContainer(
@@ -926,6 +1026,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                       fontSize: 12,
                       color: scheme.onSurface.withAlpha(160)),
                 ),
+                if (!_isSr)
                 GestureDetector(
                   onTap: () => _editPurchasePriceViewMode(index, i),
                   child: Row(
@@ -945,6 +1046,34 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     ],
                   ),
                 ),
+                // Profit on this product line (admin only). With a replace
+                // credit or a return the line's own margin is not what the
+                // order earned, so only the order's profit (below) is shown.
+                if (!_isSr &&
+                    _currentDeductionAmount <= 0 &&
+                    _currentReturnAmount <= 0)
+                  Builder(builder: (_) {
+                    final cost = i.purchasePrice > 0
+                        ? i.purchasePrice
+                        : (product?.purchasePrice ?? 0);
+                    if (cost <= 0) return const SizedBox.shrink();
+                    final lineProfit = i.totalPrice - cost * i.quantity;
+                    // No purchase price on the order: the product's current
+                    // one is used, so the profit is an estimate.
+                    final estimated = i.purchasePrice <= 0;
+                    return Text(
+                      estimated
+                          ? '${'আনুমানিক লাভ'.tr}: ৳${_fmt.format(lineProfit.round())} (${'ক্রয়'.tr} ৳${_fmt.format(cost.round())})'
+                          : '${'লাভ'.tr}: ৳${_fmt.format(lineProfit.round())}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: lineProfit >= 0
+                            ? const Color(0xFF16A34A)
+                            : const Color(0xFFDC2626),
+                      ),
+                    );
+                  }),
               ],
             ),
           ),
@@ -1016,6 +1145,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     ],
                   ),
                 ),
+                if (!_isSr)
                 GestureDetector(
                   onTap: () => _editPurchasePriceEditMode(item),
                   child: Row(
@@ -1663,13 +1793,13 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
         Get.snackbar('ত্রুটি'.tr, 'মেমো নাম্বার দিতে হবে'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
         return;
       }
-      setState(() => _currentStatus = 'dispatched');
-      await controller.dispatchOrder(
-        orderId: widget.order.id,
-        items: widget.order.items.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList(),
-        memoNumber: memo,
-      );
-      Get.snackbar('সফল'.tr, '${'স্টক আউট সম্পন্ন হয়েছে'.tr}\nমেমো: $memo', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFFD97706), colorText: Colors.white);
+      try {
+        await controller.dispatchOrder(orderId: widget.order.id, memoNumber: memo);
+        if (mounted) setState(() => _currentStatus = 'dispatched');
+        Get.snackbar('সফল'.tr, '${'স্টক আউট সম্পন্ন হয়েছে'.tr}\nমেমো: $memo', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFFD97706), colorText: Colors.white);
+      } catch (e) {
+        _showOpError('স্টক আউট হয়নি'.tr, e);
+      }
     }
     memoCtrl.dispose();
   }
@@ -1679,9 +1809,15 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   Future<void> _showDeliveryPaymentDialog(String previousStatus) async {
     final alreadyDelivered = previousStatus == 'delivered';
     final scheme = Theme.of(context).colorScheme;
+    // Show the figures from the customer's real current due, the same value
+    // the delivery transaction will start from.
+    final freshDue = await controller.fetchUserDue(_currentUserId);
+    if (!mounted) return;
+    if (freshDue != null) setState(() => _currentUserDue = freshDue);
     final total = _savedTotal;
-    final orderDue = total - _currentPaid;
-    final previousDue = alreadyDelivered && _currentPreviousDue > 0 ? _currentPreviousDue : _currentUserDue;
+    // On a re-open this order is already inside the customer's due.
+    final orderDue = alreadyDelivered ? 0 : total - _currentPaid - _currentDiscountAmount;
+    final previousDue = _currentUserDue;
     final grandTotal = (orderDue.toInt() + previousDue).clamp(0, 9999999);
 
     final payCtrl = TextEditingController();
@@ -1730,16 +1866,15 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: scheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(12), border: Border.all(color: scheme.outlineVariant.withAlpha(80))), child: Column(children: [
               Row(children: [const Icon(Icons.receipt_long_rounded, size: 16, color: Color(0xFF0891B2)), const SizedBox(width: 6), Text('মেমো হিসাব'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF0891B2)))]),
               const SizedBox(height: 8),
-              _dialogPayRow('পূর্বের বাকি'.tr, '৳ ${_fmt.format(previousDue)}', const Color(0xFFDC2626)),
-              const SizedBox(height: 4),
-              _dialogPayRow('আজকের অর্ডার'.tr, '৳ ${_fmt.format(orderDue.toInt())}', const Color(0xFF0891B2)),
+              _dialogPayRow(alreadyDelivered ? 'বর্তমান বাকি'.tr : 'পূর্বের বাকি'.tr, '৳ ${_fmt.format(previousDue)}', const Color(0xFFDC2626)),
+              if (!alreadyDelivered) ...[const SizedBox(height: 4), _dialogPayRow('আজকের অর্ডার'.tr, '৳ ${_fmt.format(orderDue.toInt())}', const Color(0xFF0891B2))],
               if (saleReturnTotal > 0) ...[const SizedBox(height: 4), _dialogPayRow('ফেরত বাদ'.tr, '− ৳ ${_fmt.format(saleReturnTotal)}', const Color(0xFF8B5CF6))],
               const SizedBox(height: 4), Container(height: 1, color: scheme.outlineVariant),
               const SizedBox(height: 4),
               _dialogPayRow('দিতে হবে'.tr, '৳ ${_fmt.format(totalPayable)}', const Color(0xFF0891B2), bold: true),
               if (discountAmount > 0) ...[const SizedBox(height: 4), _dialogPayRow('ডিসকাউন্ট'.tr, '− ৳ ${_fmt.format(discountAmount.toInt())}', const Color(0xFFD97706))],
-              if (paidNow > 0) ...[const SizedBox(height: 4), _dialogPayRow('আজকের জমা'.tr, '৳ ${_fmt.format(totalPaidNow.toInt())}', const Color(0xFF16A34A))],
-              if (totalPaidNow > 0) ...[const SizedBox(height: 4), _dialogPayRow('আজকের বাকি'.tr, '৳ ${_fmt.format((total.toInt() - totalPaidNow.toInt() - discountAmount.toInt()).clamp(0, 9999999))}', const Color(0xFFDC2626))],
+              if (totalPaidNow > 0) ...[const SizedBox(height: 4), _dialogPayRow('আজকের জমা'.tr, '৳ ${_fmt.format(totalPaidNow.toInt())}', const Color(0xFF16A34A))],
+              if (totalPaidNow > 0 && !alreadyDelivered) ...[const SizedBox(height: 4), _dialogPayRow('আজকের বাকি'.tr, '৳ ${_fmt.format((orderDue.toInt() - totalPaidNow.toInt() - discountAmount.toInt()).clamp(0, 9999999))}', const Color(0xFFDC2626))],
               if (totalDeduction > 0) Padding(padding: const EdgeInsets.only(top: 4), child: _dialogPayRow('  (রিপ্লেস জমা হিসাবে)', '৳ ${_fmt.format(totalDeduction)}', const Color(0xFF16A34A), small: true)),
               const SizedBox(height: 4), Container(height: 1, color: scheme.outlineVariant),
               const SizedBox(height: 4),
@@ -1893,223 +2028,130 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       ),
     );
 
-    if (confirmed == true) {
-      Navigator.of(context).pop();
-      if (!mounted) return;
-      
-      final overlay = OverlayEntry(
-        builder: (context) => Container(
-          color: Colors.black54,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(color: Colors.white),
-                SizedBox(height: 16),
-                Text('ডেলিভারি প্রসেসিং হচ্ছে...'.tr, style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-              ],
-            ),
+    if (confirmed != true) {
+      for (final r in returnItems) { r.dispose(); }
+      for (final r in _saleReturnItems) { r.dispose(); }
+      payCtrl.dispose(); memoCtrl.dispose(); discountCtrl.dispose(); for (final r in paymentRows) { r.dispose(); }
+      return;
+    }
+
+    // Snapshot everything the dialog collected, then release its controllers.
+    final paymentEntries = paymentRows.where((r) => (num.tryParse(r.amountCtrl.text.trim()) ?? 0) > 0).map((r) => <String, dynamic>{
+      'amount': num.tryParse(r.amountCtrl.text.trim()) ?? 0,
+      'method': r.method.isNotEmpty ? r.method : _handLabel,
+    }).toList();
+    final primaryMethod = paymentEntries.isNotEmpty ? (paymentEntries.first['method'] as String?) ?? _handLabel : _handLabel;
+    final discountAmount = num.tryParse(discountCtrl.text.trim()) ?? 0;
+    final memo = memoCtrl.text.trim();
+    final replaceLines = returnItems.map((r) => ReplaceLine(
+      productId: r.product.id,
+      productName: r.product.name,
+      quantity: r.quantity,
+      resolutionType: r.resolutionType,
+      deductionAmount: r.resolutionType == 'money_deduct' ? r.deductionAmount : 0,
+    )).toList();
+    final returnLines = _saleReturnItems.map((r) => ReturnLine(
+      productId: r.product.id,
+      productName: r.product.name,
+      image: r.product.images.isNotEmpty ? r.product.images.first : '',
+      quantity: r.quantity,
+      unitPrice: r.unitPrice,
+    )).toList();
+    final pendingIds = pendingReplaces.where((r) => selectedPendingIds.contains(r.id)).map((r) => r.id).toList();
+    for (final r in returnItems) { r.dispose(); }
+    for (final r in _saleReturnItems) { r.dispose(); }
+    payCtrl.dispose(); memoCtrl.dispose(); discountCtrl.dispose(); for (final r in paymentRows) { r.dispose(); }
+    if (!mounted) return;
+
+    // The page stays open until the transaction finishes, so its state can be
+    // updated and a failure can be shown here.
+    final overlay = OverlayEntry(
+      builder: (context) => Container(
+        color: Colors.black54,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Colors.white),
+              SizedBox(height: 16),
+              Text('ডেলিভারি প্রসেসিং হচ্ছে...'.tr, style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600, decoration: TextDecoration.none)),
+            ],
           ),
         ),
+      ),
+    );
+    Overlay.of(context).insert(overlay);
+
+    try {
+      final s = await controller.completeDelivery(
+        orderId: widget.order.id,
+        expectAlreadyDelivered: alreadyDelivered,
+        deliveredBySrId: widget.srDocId,
+        deliveryDate: deliveryDate,
+        payments: paymentEntries,
+        paymentMethod: primaryMethod,
+        discount: discountAmount,
+        localMemo: memo,
+        replaceLines: replaceLines,
+        returnLines: returnLines,
+        pendingReplaceIds: pendingIds,
       );
-      Overlay.of(context).insert(overlay);
-      
-      bool stockOutDone = false;
-      
-      try {
-        final paidNow = paymentRows.fold<num>(0, (s, r) => s + (num.tryParse(r.amountCtrl.text.trim()) ?? 0));
-        final paymentEntries = paymentRows.where((r) => (num.tryParse(r.amountCtrl.text.trim()) ?? 0) > 0).map((r) => {
-          'amount': num.tryParse(r.amountCtrl.text.trim()) ?? 0,
-          'method': r.method,
-        }).toList();
-        final primaryMethod = paymentEntries.isNotEmpty ? (paymentEntries.first['method'] as String?) ?? _handLabel : _handLabel;
-        final totalDeduction = returnItems.where((r) => r.resolutionType == 'money_deduct').fold<int>(0, (s, r) => s + r.deductionAmount);
-        final saleReturnTotal = _saleReturnItems.fold<num>(0, (s, r) => s + r.totalPrice).toInt();
-        final discountAmount = num.tryParse(discountCtrl.text.trim()) ?? 0;
-        final memo = memoCtrl.text.trim();
-        final totalPaidNow = paidNow.toInt() + totalDeduction + saleReturnTotal;
-        final newDue = (grandTotal - totalPaidNow - discountAmount.toInt()).clamp(0, 9999999);
-        final totalPaid = _currentPaid.toInt() + totalPaidNow;
-        final warnings = <String>[];
-        final _to = const Duration(seconds: 30);
-
-        if (!alreadyDelivered) {
-          try {
-            setState(() { _currentStatus = 'delivered'; _deliveredAt = deliveryDate; });
-          } catch (_) {}
-          try {
-            await controller.updateOrderStatus(widget.order.id, 'delivered', previousStatus: previousStatus, deliveredBySrId: widget.srDocId, deliveryDate: deliveryDate, items: _savedItems.map((i) => {'productId': i.productId, 'quantity': i.quantity}).toList()).timeout(_to);
-            stockOutDone = true;
-          } catch (e) {
-            warnings.add('স্টক আউট ব্যর্থ'.tr);
-          }
-        } else {
-          stockOutDone = true;
-        }
-
-        try {
-          final orderUpdates = <String, dynamic>{};
-          if (totalPaid != _currentPaid) {
-            orderUpdates['paidAmount'] = totalPaid;
-          }
-          if (discountAmount > 0) {
-            orderUpdates['discountAmount'] = discountAmount;
-          }
-          orderUpdates['payments'] = paymentEntries;
-          orderUpdates['paymentMethod'] = primaryMethod;
-          orderUpdates['localMemo'] = memo.isNotEmpty ? memo : FieldValue.delete();
-          if (_currentUserId.isNotEmpty) {
-            orderUpdates['previousDue'] = _currentUserDue;
-          }
-          if (saleReturnTotal > 0) {
-            orderUpdates['returnAmount'] = saleReturnTotal;
-          }
-          if (totalDeduction > 0) {
-            orderUpdates['deductionAmount'] = totalDeduction;
-          }
-          if (orderUpdates.isNotEmpty) {
-            await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update(orderUpdates).timeout(_to);
-          }
-          setState(() {
-            _currentPaid = totalPaid;
-            _paidCtrl.text = totalPaid.toStringAsFixed(0);
-            _currentPayments = paymentEntries;
-            _currentPaymentMethod = primaryMethod;
-            _currentLocalMemo = memo;
-            _currentDeductionAmount = totalDeduction;
-            _currentReturnAmount = saleReturnTotal;
-            _currentDiscountAmount = discountAmount;
-          });
-        } catch (e) {
-          warnings.add('অর্ডার আপডেট ব্যর্থ'.tr);
-        }
-
-        try {
-          if (_currentUserId.isNotEmpty) {
-            await controller.updateUserDue(_currentUserId, newDue.toInt()).timeout(_to);
-            setState(() => _currentUserDue = newDue.toInt());
-          }
-        } catch (e) {
-          warnings.add('বাকি আপডেট ব্যর্থ'.tr);
-        }
-        
-        try {
-          if (_saleReturnItems.isNotEmpty) {
-            final sc = Get.find<StockInController>();
-            await sc.addMultipleStockIn(date: deliveryDate, source: _currentShopName, note: '${'অর্ডার'.tr} #${widget.order.id} — ফেরত', updatePurchasePrice: false, items: _saleReturnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'image': i.product.images.isNotEmpty ? i.product.images.first : '', 'quantity': i.quantity, 'unitPrice': i.unitPrice}).toList()).timeout(_to);
-            for (final item in _saleReturnItems) { item.dispose(); }
-          }
-        } catch (e) {
-          warnings.add('ফেরত প্রডাক্ট স্টকে যোগ করা যায়নি'.tr);
-        }
-        
-        try {
-          if (selectedPendingIds.isNotEmpty && _rc != null) {
-            for (final r in pendingReplaces) {
-              if (selectedPendingIds.contains(r.id)) {
-                await _rc!.deliverToCustomer(entry: r, note: '${'অর্ডার'.tr} #${widget.order.id} এর সাথে ডেলিভারি');
-              }
-            }
-            await _rc!.fetchEntries(force: true);
-          }
-        } catch (e) {
-          warnings.add('রিপ্লেস ডেলিভারি সম্পন্ন হয়নি'.tr);
-        }
-        
-        try {
-          if (returnItems.isNotEmpty && _rc != null) {
-            for (final item in returnItems.where((i) => i.resolutionType != 'replace_given')) {
-              await _rc!.addCustomerIn(productId: item.product.id, productName: item.product.name, quantity: item.quantity, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: item.resolutionType, deductionAmount: item.deductionAmount, note: '${'ডেলিভারি'.tr} #${widget.order.id} এ ফেরত', date: DateTime.now());
-            }
-            final stockBatch = FirebaseFirestore.instance.batch();
-            bool hasStockChanges = false;
-            for (final item in returnItems.where((i) => i.resolutionType == 'product_replace')) {
-              stockBatch.update(FirebaseFirestore.instance.collection('products').doc(item.product.id), {'stock': FieldValue.increment(-item.quantity)});
-              hasStockChanges = true;
-            }
-            if (hasStockChanges) {
-              await stockBatch.commit();
-              try {
-                final pc = Get.find<ProductController>();
-                for (final item in returnItems.where((i) => i.resolutionType == 'product_replace')) {
-                  pc.updateStockLocally(item.product.id, -item.quantity);
-                }
-              } catch (_) {}
-            }
-            final replaceItemsData = returnItems.map((i) => {'productId': i.product.id, 'productName': i.product.name, 'quantity': i.quantity, 'resolutionType': i.resolutionType, 'deductionAmount': i.deductionAmount}).toList();
-            await controller.updateReplaceItemsLocally(widget.order.id, replaceItemsData);
-            setState(() => _currentReplaceItems = replaceItemsData);
-            if (_rc != null) await _rc!.fetchEntries(force: true);
-          }
-        } catch (e) {
-          warnings.add('রিপ্লেস প্রসেসিং সম্পন্ন হয়নি'.tr);
-        }
-        
-        try {
-          final idx = controller.orders.indexWhere((o) => o.id == widget.order.id);
-          if (idx != -1) {
-            final o = controller.orders[idx];
-            controller.orders[idx] = OrderModel(
-              id: o.id,
-              createdAt: o.createdAt,
-              items: o.items,
-              status: _currentStatus,
-              totalAmount: o.totalAmount,
-              paidAmount: totalPaid,
-              shopName: o.shopName,
-              shopAddress: o.shopAddress,
-              shopPhone: o.shopPhone,
-              userId: o.userId,
-              orderedBy: o.orderedBy,
-              orderedByEmail: o.orderedByEmail,
-              deliveredBySrId: widget.srDocId ?? o.deliveredBySrId,
-              commissionConfirmed: o.commissionConfirmed,
-              scheduledDeliveryDate: o.scheduledDeliveryDate,
-              deliveryAssignedSrId: o.deliveryAssignedSrId,
-              deliveryAssignedSrName: o.deliveryAssignedSrName,
-              memoNumber: o.memoNumber,
-              dispatchedAt: o.dispatchedAt,
-              dispatchedBy: o.dispatchedBy,
-              deliveredAt: _deliveredAt,
-              localMemo: memo,
-              replaceItems: _currentReplaceItems,
-              isDueCollection: o.isDueCollection,
-              returnAmount: saleReturnTotal,
-              deductionAmount: totalDeduction,
-              previousDue: _currentPreviousDue,
-              discountAmount: discountAmount,
-              paymentMethod: primaryMethod,
-              payments: paymentEntries,
-              userPhone: o.userPhone,
-              userDue: newDue.toInt(),
-            );
-            controller.orders.refresh();
-          }
-        } catch (_) {}
-        
-        final msgParts = <String>['ডেলিভারি সম্পন্ন হয়েছে'.tr];
-        if (selectedPendingIds.isNotEmpty) msgParts.add('${selectedPendingIds.length} ${'টি রিপ্লেস ডেলিভারি'.tr}');
-        if (returnItems.isNotEmpty) msgParts.add('${returnItems.length} ${'টি ফেরত রিপ্লেস'.tr}');
-        if (_saleReturnItems.isNotEmpty) msgParts.add('${_saleReturnItems.length} টি ফেরত প্রডাক্ট স্টকে');
-        if (discountAmount.toInt() > 0) msgParts.add('ডিসকাউন্ট ৳${_fmt.format(discountAmount.toInt())}');
-        msgParts.add('নতুন বাকি ৳${_fmt.format(newDue.toInt())}');
-        
-        if (warnings.isEmpty) {
-          Get.snackbar('সফল'.tr, msgParts.join(' • '), snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 5), backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
-        } else {
-          Get.snackbar('সতর্কতা'.tr, '${msgParts.join(' • ')}\n${warnings.join(', ')}', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 6), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
-        }
-      } catch (e) {
-        if (stockOutDone) {
-          Get.snackbar('সতর্কতা'.tr, 'ডেলিভারি সম্পন্ন হয়েছে কিছু আপডেট ব্যর্থ হয়েছে'.tr, snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 5), backgroundColor: const Color(0xFFF59E0B), colorText: Colors.white);
-        } else {
-          Get.snackbar('ত্রুটি'.tr, '${'ডেলিভারি সম্পন্ন হয়নি'.tr}: $e', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 4), backgroundColor: Colors.red, colorText: Colors.white);
-        }
-      } finally {
-        try { overlay.remove(); } catch (_) {}
+      overlay.remove();
+      if (mounted) {
+        setState(() {
+          _currentStatus = 'delivered';
+          if (!alreadyDelivered) _deliveredAt = deliveryDate;
+        });
+        _applyMoneyState(s);
       }
+
+      final msgParts = <String>['ডেলিভারি সম্পন্ন হয়েছে'.tr];
+      final delivered = pendingIds.length - s.skippedPendingReplaces;
+      if (delivered > 0) msgParts.add('$delivered ${'টি রিপ্লেস ডেলিভারি'.tr}');
+      if (replaceLines.isNotEmpty) msgParts.add('${replaceLines.length} ${'টি ফেরত রিপ্লেস'.tr}');
+      if (returnLines.isNotEmpty) msgParts.add('${returnLines.length} টি ফেরত প্রডাক্ট স্টকে');
+      if (discountAmount.toInt() > 0) msgParts.add('ডিসকাউন্ট ৳${_fmt.format(discountAmount.toInt())}');
+      if (s.newUserDue != null) {
+        msgParts.add('নতুন বাকি ৳${_fmt.format(s.newUserDue)}');
+      } else {
+        // No customer linked (or the customer record is gone), so there is
+        // no due to update — say so instead of leaving it unnoticed.
+        msgParts.add('⚠ কাস্টমারের বাকি আপডেট হয়নি — অর্ডারে কাস্টমার যুক্ত নেই');
+      }
+      if (s.skippedPendingReplaces > 0) {
+        msgParts.add('${s.skippedPendingReplaces} টি রিপ্লেস আগেই হস্তান্তর হয়েছিল, বাদ দেওয়া হয়েছে');
+      }
+      Get.snackbar('সফল'.tr, msgParts.join(' • '), snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 5), backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      overlay.remove();
+      final reason = e is OrderOpException ? e.message : '$e';
+      Get.snackbar('ত্রুটি'.tr, '${'ডেলিভারি সম্পন্ন হয়নি — কোনো পরিবর্তন সেভ হয়নি'.tr}\n$reason', snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 6), backgroundColor: Colors.red, colorText: Colors.white);
     }
-    payCtrl.dispose(); memoCtrl.dispose(); discountCtrl.dispose(); for (final r in paymentRows) { r.dispose(); }
+  }
+
+  /// Copies an operation's committed money state into the page.
+  void _applyMoneyState(OrderMoneyState s) {
+    if (!mounted) return;
+    setState(() {
+      _currentPaid = s.paidAmount;
+      _paidCtrl.text = s.paidAmount.toStringAsFixed(0);
+      _currentDiscountAmount = s.discountAmount;
+      _currentDeductionAmount = s.deductionAmount;
+      _currentReturnAmount = s.returnAmount;
+      if (s.previousDue > 0) _currentPreviousDue = s.previousDue;
+      if (s.payments.isNotEmpty) _currentPayments = s.payments;
+      if (s.paymentMethod.isNotEmpty) _currentPaymentMethod = s.paymentMethod;
+      _currentLocalMemo = s.localMemo;
+      _currentReplaceItems = s.replaceItems;
+      _currentReturnItems = s.returnItems;
+      if (s.newUserDue != null) _currentUserDue = s.newUserDue!;
+    });
+  }
+
+  void _showOpError(String title, Object e) {
+    final reason = e is OrderOpException ? e.message : '$e';
+    Get.snackbar(title, reason, snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 5), backgroundColor: Colors.red, colorText: Colors.white);
   }
 
   Widget _dialogPayRow(String label, String value, Color valueColor, {bool bold = false, bool small = false}) {
@@ -2250,7 +2292,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                                           if (p.brandName.isNotEmpty) ...[const SizedBox(width: 8), Text(p.brandName, style: const TextStyle(fontSize: 11, color: Colors.grey))],
                                         ]),
                                       ])),
-                                      const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                                      _stockBadge(p.stock), const SizedBox(width: 4), const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                                     ]),
                                   ),
                                 );
@@ -2307,7 +2349,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   ),
                   if (res == 'money_deduct') ...[
                     const SizedBox(height: 16),
-                    Text('টাকার পরিমাণ'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
+                    Text('টাকার পরিমাণ (প্রতি পিস)'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: scheme.onSurfaceVariant)),
                     const SizedBox(height: 8),
                     TextField(
                       controller: dedC, keyboardType: TextInputType.number,
@@ -2321,7 +2363,6 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     onPressed: () {
                       final ded = res == 'money_deduct' ? (int.tryParse(dedC.text.trim()) ?? sel!.wholesalePrice.toInt()) : 0;
                       setSt(() { returnItems.add(_ReplaceReturnItem(product: sel!, quantity: qty, resolutionType: res, deductionAmount: ded * qty)); });
-                      dedC.dispose();
                       Navigator.pop(ctx);
                     },
                     icon: const Icon(Icons.add_rounded), label: Text('যোগ করুন'.tr),
@@ -2334,7 +2375,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           ),
         );
       }),
-    );
+    ).whenComplete(dedC.dispose);
   }
 
   // ── Return product bottom sheet ─────────────────────────────
@@ -2426,7 +2467,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                                           if (p.brandName.isNotEmpty) ...[const SizedBox(width: 8), Text(p.brandName, style: const TextStyle(fontSize: 11, color: Colors.grey))],
                                         ]),
                                       ])),
-                                      const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                                      _stockBadge(p.stock), const SizedBox(width: 4), const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                                     ]),
                                   ),
                                 );
@@ -2491,7 +2532,6 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     onPressed: () {
                       final price = num.tryParse(priceC.text.trim()) ?? sel!.wholesalePrice;
                       setSt(() { saleReturnItems.add(_ReturnItem(product: sel!, quantity: qt, unitPrice: price)); });
-                      priceC.dispose();
                       Navigator.pop(ctx);
                     },
                     icon: const Icon(Icons.add_rounded), label: Text('যোগ করুন'.tr),
@@ -2504,7 +2544,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           ),
         );
       }),
-    );
+    ).whenComplete(priceC.dispose);
   }
 
   Widget _paymentMethodDropdown2(StateSetter setSt, _PaymentRow row) {
@@ -2969,9 +3009,9 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
           const SizedBox(height: 4),
           _payRow('মোট দেনা'.tr, '৳ ${_fmt.format((total.toInt() + _currentPreviousDue))}', const Color(0xFF0891B2), bold: true),
-          if (_currentDeductionAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('রিপ্লেস বাবদ বাদ'.tr, '− ৳ ${_fmt.format(_currentDeductionAmount.toInt())}', const Color(0xFFDC2626))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'রিপ্লেস বাবদ সম্পাদন'.tr, onPressed: _editDeductionAmount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editDeductionAmount, icon: const Icon(Icons.add_rounded, size: 14), label: Text('রিপ্লেস বাবদ যোগ'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
-          if (_currentReturnAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('ফেরত বাদ'.tr, '− ৳ ${_fmt.format(_currentReturnAmount.toInt())}', const Color(0xFF8B5CF6))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'ফেরত বাদ সম্পাদন'.tr, onPressed: _editReturnAmount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editReturnAmount, icon: const Icon(Icons.add_rounded, size: 14), label: Text('ফেরত বাদ যোগ'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
-          if (_currentDiscountAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('ডিসকাউন্ট'.tr, '− ৳ ${_fmt.format(_currentDiscountAmount.toInt())}', const Color(0xFFD97706))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'ডিসকাউন্ট সম্পাদন'.tr, onPressed: _editDiscount)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editDiscount, icon: const Icon(Icons.add_rounded, size: 14), label: Text('ডিসকাউন্ট যোগ'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+          if (_currentDeductionAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('রিপ্লেস বাবদ বাদ'.tr, '− ৳ ${_fmt.format(_currentDeductionAmount.toInt())}', const Color(0xFFDC2626))), if (!_isSr) IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'রিপ্লেস বাবদ সম্পাদন'.tr, onPressed: _editDeductionAmount)])] else if (!_isSr) Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editDeductionAmount, icon: const Icon(Icons.add_rounded, size: 14), label: Text('রিপ্লেস বাবদ যোগ'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+          if (_currentReturnAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('ফেরত বাদ'.tr, '− ৳ ${_fmt.format(_currentReturnAmount.toInt())}', const Color(0xFF8B5CF6))), if (!_isSr) IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'ফেরত বাদ সম্পাদন'.tr, onPressed: _editReturnAmount)])] else if (!_isSr) Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editReturnAmount, icon: const Icon(Icons.add_rounded, size: 14), label: Text('ফেরত বাদ যোগ'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
+          if (_currentDiscountAmount > 0) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('ডিসকাউন্ট'.tr, '− ৳ ${_fmt.format(_currentDiscountAmount.toInt())}', const Color(0xFFD97706))), if (!_isSr) IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'ডিসকাউন্ট সম্পাদন'.tr, onPressed: _editDiscount)])] else if (!_isSr) Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editDiscount, icon: const Icon(Icons.add_rounded, size: 14), label: Text('ডিসকাউন্ট যোগ'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
           const SizedBox(height: 4),
           Container(height: 1, color: scheme.outlineVariant.withAlpha(60)),
           const SizedBox(height: 4),
@@ -3023,7 +3063,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
           if (_currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).isNotEmpty)
             _payRow('পেমেন্ট মাধ্যম'.tr, _currentPayments.where((p) => ((p['amount'] as num?)?.toInt() ?? 0) > 0).map((p) { final m = (p['method'] ?? '').toString(); final label = m.isNotEmpty ? m : _handLabel; return '$label (৳${_fmt.format((p['amount'] as num?)?.toInt() ?? 0)})'; }).join(', '), const Color(0xFF7C3AED))
           else
-            Row(children: [Expanded(child: _payRow('পেমেন্ট মাধ্যম'.tr, _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : _handLabel, const Color(0xFF7C3AED))), IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'মাধ্যম পরিবর্তন'.tr, onPressed: _editPaymentMethod)]),
+            Row(children: [Expanded(child: _payRow('পেমেন্ট মাধ্যম'.tr, _currentPaymentMethod.isNotEmpty ? _currentPaymentMethod : _handLabel, const Color(0xFF7C3AED))), if (!_isSr) IconButton(icon: const Icon(Icons.edit_rounded, size: 14), visualDensity: VisualDensity.compact, tooltip: 'মাধ্যম পরিবর্তন'.tr, onPressed: _editPaymentMethod)]),
           if (_currentLocalMemo.isNotEmpty) ...[const SizedBox(height: 4), Row(children: [Expanded(child: _payRow('লোকাল মেমো'.tr, '#$_currentLocalMemo', const Color(0xFF0891B2))), IconButton(icon: const Icon(Icons.edit_rounded, size: 16), visualDensity: VisualDensity.compact, tooltip: 'লোকাল মেমো আপডেট'.tr, onPressed: _editLocalMemo)])] else Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editLocalMemo, icon: const Icon(Icons.add_rounded, size: 14), label: Text('লোকাল মেমো যোগ'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
           if (_currentReplaceItems.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -3059,7 +3099,22 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
               ]),
             ),
           ],
-          if (_currentStatus == 'delivered' && !widget.order.isDueCollection) ...[
+          if (_currentReturnItems.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: const Color(0xFF8B5CF6).withAlpha(12), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF8B5CF6).withAlpha(40))),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [const Icon(Icons.keyboard_return_rounded, size: 15, color: Color(0xFF8B5CF6)), const SizedBox(width: 6), Text('${'ফেরত প্রডাক্ট'.tr} (${_currentReturnItems.length}${'টি'.tr})', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF8B5CF6)))]),
+                const SizedBox(height: 6),
+                ..._currentReturnItems.map((r) => Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text('• ${r['productName'] ?? ''} × ${r['quantity'] ?? 0} — ৳${_fmt.format(((r['totalPrice'] as num?) ?? 0).round())} ${'স্টকে ফেরত'.tr}', style: const TextStyle(fontSize: 11, color: Color(0xFF8B5CF6))),
+                )),
+              ]),
+            ),
+          ],
+          if (_currentStatus == 'delivered' && !widget.order.isDueCollection && !_isSr) ...[
             const SizedBox(height: 4),
             Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: _editPaidAmount, icon: const Icon(Icons.edit_rounded, size: 14), label: Text('জমা সম্পাদন'.tr, style: TextStyle(fontSize: 11)), style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4)))),
             const SizedBox(height: 4),
@@ -3067,7 +3122,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
             const Divider(height: 20),
             _profitSection(scheme),
           ],
-          if (_currentStatus != 'delivered') ...[const Divider(height: 20), TextField(controller: _paidCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(labelText: 'নতুন জমার পরিমাণ আপডেট করুন'.tr, prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12))), const SizedBox(height: 10), SizedBox(width: double.infinity, child: ElevatedButton.icon(onPressed: () async { final amount = num.tryParse(_paidCtrl.text.trim()) ?? _currentPaid; await controller.updatePaidAmount(widget.order.id, amount); setState(() => _currentPaid = amount); Get.snackbar('আপডেট হয়েছে'.tr, 'পেমেন্ট তথ্য সেভ হয়েছে'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white); }, icon: const Icon(Icons.payments_rounded), label: Text('পেমেন্ট আপডেট করুন'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))))],
+          if (_currentStatus != 'delivered' && !_isSr) ...[const Divider(height: 20), TextField(controller: _paidCtrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(labelText: 'নতুন জমার পরিমাণ আপডেট করুন'.tr, prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12))), const SizedBox(height: 10), SizedBox(width: double.infinity, child: ElevatedButton.icon(onPressed: () async { final amount = num.tryParse(_paidCtrl.text.trim()) ?? _currentPaid; await controller.updatePaidAmount(widget.order.id, amount); setState(() => _currentPaid = amount); Get.snackbar('আপডেট হয়েছে'.tr, 'পেমেন্ট তথ্য সেভ হয়েছে'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white); }, icon: const Icon(Icons.payments_rounded), label: Text('পেমেন্ট আপডেট করুন'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)))))],
         ]),
       ),
     );
@@ -3078,10 +3133,34 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     final ded = _currentDeductionAmount.toInt();
     final ret = _currentReturnAmount.toInt();
     final disc = _currentDiscountAmount.toInt();
-    final netSales = (tot - ded - ret - disc).clamp(0, 9999999).toInt();
-    num cost = 0;
-    try { final pc = Get.find<ProductController>(); for (final item in _savedItems) { num c = item.purchasePrice; if (c <= 0) { final p = pc.products.firstWhereOrNull((p) => p.id == item.productId); if (p != null) c = p.purchasePrice; } cost += c * item.quantity; } } catch (_) {}
-    final profit = (netSales - cost.toInt()).clamp(0, 9999999);
+    // Same calculation as every other page (see OrderProfit): returned
+    // products and defective units taken against a replace credit are back
+    // with the shop, so their purchase value is not a loss.
+    num currentCost(String id) {
+      try {
+        return Get.find<ProductController>()
+                .products
+                .firstWhereOrNull((p) => p.id == id)
+                ?.purchasePrice ??
+            0;
+      } catch (_) {
+        return 0;
+      }
+    }
+    final money = computeOrderProfit(
+      totalAmount: tot,
+      discountAmount: _currentDiscountAmount,
+      deductionAmount: _currentDeductionAmount,
+      returnAmount: _currentReturnAmount,
+      items: [for (final i in _savedItems) i.toMap()],
+      returnItems: _currentReturnItems,
+      replaceItems: _currentReplaceItems,
+      currentCost: currentCost,
+    );
+    final netSales = money.netSales.round();
+    final cost = money.purchaseCost;
+    final recovered = money.recovered;
+    final profit = money.profit.round(); // may be a loss
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('লাভের হিসাব'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)), const SizedBox(height: 10),
       _payRow('মোট অর্ডার'.tr, '৳ ${_fmt.format(tot.toInt())}', const Color(0xFF0891B2)),
@@ -3091,9 +3170,10 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
       const SizedBox(height: 6),
       _payRow('নেট বিক্রি'.tr, '৳ ${_fmt.format(netSales)}', netSales > 0 ? const Color(0xFF0891B2) : Colors.grey),
       if (cost > 0) ...[const SizedBox(height: 4), _payRow('ক্রয় মূল্য'.tr, '− ৳ ${_fmt.format(cost.toInt())}', const Color(0xFFDC2626))],
+      if (recovered > 0) ...[const SizedBox(height: 4), _payRow('ফেরত আসা পণ্যের মূল্য'.tr, '+ ৳ ${_fmt.format(recovered.round())}', const Color(0xFF16A34A))],
       const SizedBox(height: 6),
-      _payRow('নিট লাভ'.tr, '৳ ${_fmt.format(profit)}', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
-      if (cost > 0) ...[const SizedBox(height: 4), Builder(builder: (_) { final gpct = cost > 0 ? (profit / cost * 100).toStringAsFixed(2) : '0.00'; return _payRow('লাভের হার'.tr, '$gpct%', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)); })],
+      _payRow(profit < 0 ? 'নিট লোকসান'.tr : 'নিট লাভ'.tr, '৳ ${_fmt.format(profit.abs())}', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)),
+      if (netSales > 0) ...[const SizedBox(height: 4), Builder(builder: (_) { final gpct = (profit / netSales * 100).toStringAsFixed(2); return _payRow('লাভের হার'.tr, '$gpct%', profit > 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626)); })],
     ]);
   }
 
@@ -3220,38 +3300,51 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     ctrl.dispose();
   }
 
+  /// Applies a manual money correction; the customer's due moves by the
+  /// difference (see OrderController.adjustOrderAmounts). Returns success.
+  Future<bool> _adjustAmounts({num? paidAmount, num? discountAmount, num? deductionAmount, num? returnAmount, int? previousDue}) async {
+    try {
+      final s = await controller.adjustOrderAmounts(widget.order.id, paidAmount: paidAmount, discountAmount: discountAmount, deductionAmount: deductionAmount, returnAmount: returnAmount, previousDue: previousDue);
+      _applyMoneyState(s);
+      return true;
+    } catch (e) {
+      _showOpError('সেভ হয়নি'.tr, e);
+      return false;
+    }
+  }
+
   void _editPaidAmount() async {
     final ctrl = TextEditingController(text: _currentPaid.toStringAsFixed(0));
     final ok = await Get.dialog<bool>(AlertDialog(title: Text('জমা সম্পাদন'.tr, style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: const TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)), ElevatedButton(onPressed: () => Get.back(result: true), child: Text('আপডেট'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
-    if (ok == true) { final amt = num.tryParse(ctrl.text.trim()) ?? _currentPaid; await controller.updatePaidAmount(widget.order.id, amt); final nd = (_currentPreviousDue + _savedTotal.toInt() - amt.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentPaid = amt; _paidCtrl.text = amt.toStringAsFixed(0); _currentUserDue = nd; }); }
+    if (ok == true) { final amt = num.tryParse(ctrl.text.trim()) ?? _currentPaid; await _adjustAmounts(paidAmount: amt); }
     ctrl.dispose();
   }
 
   void _editPreviousDue() async {
     final ctrl = TextEditingController(text: _currentPreviousDue.toString());
     final ok = await Get.dialog<bool>(AlertDialog(title: Text('পূর্বের বাকি সম্পাদন'.tr, style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)), ElevatedButton(onPressed: () => Get.back(result: true), child: Text('সেভ'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
-    if (ok == true) { final v = int.tryParse(ctrl.text.trim()) ?? _currentPreviousDue; await FirebaseFirestore.instance.collection('orders').doc(widget.order.id).update({'previousDue': v}); final nd = (v + _savedTotal.toInt() - _currentPaid.toInt() - _currentDiscountAmount.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentPreviousDue = v; _currentUserDue = nd; }); }
+    if (ok == true) { final v = int.tryParse(ctrl.text.trim()) ?? _currentPreviousDue; if (await _adjustAmounts(previousDue: v) && mounted) setState(() => _currentPreviousDue = v); }
     ctrl.dispose();
   }
 
   void _editDiscount() async {
     final ctrl = TextEditingController(text: _currentDiscountAmount.toStringAsFixed(0));
     final ok = await Get.dialog<bool>(AlertDialog(title: Text('ডিসকাউন্ট সম্পাদন'.tr, style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.numberWithOptions(decimal: true), autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)), ElevatedButton(onPressed: () => Get.back(result: true), child: Text('আপডেট'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white))]));
-    if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? _currentDiscountAmount; await controller.saveDiscountAmount(widget.order.id, v); final nd = (_currentPreviousDue + _savedTotal.toInt() - _currentPaid.toInt() - v.toInt()).clamp(0, 9999999); if (_currentUserId.isNotEmpty) await controller.updateUserDue(_currentUserId, nd); setState(() { _currentDiscountAmount = v; _currentUserDue = nd; }); }
+    if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? _currentDiscountAmount; await _adjustAmounts(discountAmount: v); }
     ctrl.dispose();
   }
 
   void _editDeductionAmount() async {
     final ctrl = TextEditingController(text: _currentDeductionAmount.toStringAsFixed(0));
     final ok = await Get.dialog<bool>(AlertDialog(title: Text('রিপ্লেস বাবদ সম্পাদন'.tr, style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)), ElevatedButton(onPressed: () => Get.back(result: true), child: Text('আপডেট'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED), foregroundColor: Colors.white))]));
-    if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? 0; await controller.saveDeductionAmount(widget.order.id, v); setState(() => _currentDeductionAmount = v); }
+    if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? _currentDeductionAmount; await _adjustAmounts(deductionAmount: v); }
     ctrl.dispose();
   }
 
   void _editReturnAmount() async {
     final ctrl = TextEditingController(text: _currentReturnAmount.toStringAsFixed(0));
     final ok = await Get.dialog<bool>(AlertDialog(title: Text('ফেরত বাদ সম্পাদন'.tr, style: TextStyle(fontWeight: FontWeight.w800)), content: TextField(controller: ctrl, keyboardType: TextInputType.number, autofocus: true, decoration: InputDecoration(prefixText: '৳ ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))), actions: [TextButton(onPressed: () => Get.back(result: false), child: Text('বাতিল'.tr)), ElevatedButton(onPressed: () => Get.back(result: true), child: Text('আপডেট'.tr), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6), foregroundColor: Colors.white))]));
-    if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? 0; await controller.saveReturnAmount(widget.order.id, v); setState(() => _currentReturnAmount = v); }
+    if (ok == true) { final v = num.tryParse(ctrl.text.trim()) ?? _currentReturnAmount; await _adjustAmounts(returnAmount: v); }
     ctrl.dispose();
   }
 
@@ -3342,8 +3435,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
   Future<void> _removeReplaceItem(int index, Map<String, dynamic> item) async {
     final name = item['productName'] ?? '';
     final qty = item['quantity'] ?? 0;
-    final type = item['resolutionType'] ?? '';
-    
+
     final ok = await _confirm(
       'রিপ্লেস সরাবেন?'.tr,
       '"$name" × $qty ${'রিপ্লেস আইটেম সরিয়ে দিতে চান'.tr}?',
@@ -3351,56 +3443,18 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     if (ok != true) return;
 
     try {
-      // Restore stock if it was deducted (product_replace or replace_given)
-      if (type == 'product_replace' || type == 'replace_given') {
-        final productId = item['productId'] ?? '';
-        if (productId.isNotEmpty) {
-          await FirebaseFirestore.instance
-              .collection('products')
-              .doc(productId)
-              .update({'stock': FieldValue.increment(qty)});
-          try {
-            Get.find<ProductController>().fetchProducts(forceRefresh: true);
-          } catch (_) {}
-        }
-      }
-
-      // Remove from replace entries if it was added (money_deduct or product_replace)
-      if (type == 'money_deduct' || type == 'product_replace') {
-        try {
-          AdminReplaceController rc;
-          try {
-            rc = Get.find<AdminReplaceController>();
-          } catch (_) {
-            rc = Get.put(AdminReplaceController());
-          }
-          // Find and delete the matching customer-in entry
-          final matchingEntry = rc.entries.firstWhereOrNull((e) =>
-              e.productId == (item['productId'] ?? '') &&
-              e.customerId == _currentUserId &&
-              e.quantity == qty &&
-              !e.deliveredToCustomer);
-          if (matchingEntry != null) {
-            await rc.deleteEntry(matchingEntry);
-          }
-          await rc.fetchEntries(force: true);
-        } catch (_) {}
-      }
-
-      final newList = List<Map<String, dynamic>>.from(_currentReplaceItems);
-      newList.removeAt(index);
-      await controller.updateReplaceItemsLocally(widget.order.id, newList);
-      setState(() => _currentReplaceItems = newList);
-
-      Get.snackbar('সফল'.tr, 'রিপ্লেস আইটেম সরানো হয়েছে'.tr,
+      final s = await controller.removeReplaceFromOrder(orderId: widget.order.id, item: item);
+      _applyMoneyState(s);
+      // Lines saved by older app versions don't record whether their money
+      // was credited, so their amount is left for a manual check.
+      final legacyMoney = item['accounted'] != true && item['resolutionType'] == 'money_deduct';
+      Get.snackbar('সফল'.tr, legacyMoney ? '${'রিপ্লেস আইটেম সরানো হয়েছে'.tr}\n${'পুরনো এন্ট্রি — "রিপ্লেস বাবদ" টাকার পরিমাণ মিলিয়ে নিন'.tr}' : 'রিপ্লেস আইটেম সরানো হয়েছে'.tr,
           snackPosition: SnackPosition.BOTTOM,
+          duration: Duration(seconds: legacyMoney ? 6 : 3),
           backgroundColor: const Color(0xFF16A34A),
           colorText: Colors.white);
     } catch (e) {
-      Get.snackbar('ত্রুটি'.tr, '${'সরানো যায়নি'.tr}: $e',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white);
+      _showOpError('সরানো যায়নি'.tr, e);
     }
   }
 
@@ -3410,6 +3464,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     String res = 'replace_given';
     final dedC = TextEditingController();
     int qty = 1;
+    bool adding = false;
 
     await showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
@@ -3443,7 +3498,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                       const SizedBox(height: 3),
                       Text('৳${_fmt.format(p.wholesalePrice)}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF0891B2))),
                     ])),
-                    const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                    _stockBadge(p.stock), const SizedBox(width: 4), const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                   ])));
                 })),
               ] else ...[
@@ -3474,7 +3529,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                     value: res,
                     decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12)),
                     items: [
-                      DropdownMenuItem(value: 'replace_given', child: Text('রিপ্লেস দিতে হবে'.tr, style: TextStyle(fontSize: 13))),
+                      DropdownMenuItem(value: 'replace_given', child: Text('রিপ্লেস দেওয়া হল'.tr, style: TextStyle(fontSize: 13))),
                       DropdownMenuItem(value: 'product_replace', child: Text('রিপ্লেস নেওয়া হল'.tr, style: TextStyle(fontSize: 13))),
                       DropdownMenuItem(value: 'money_deduct', child: Text('টাকা কাটা'.tr, style: TextStyle(fontSize: 13))),
                     ],
@@ -3482,7 +3537,7 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   ),
                   if (res == 'money_deduct') ...[
                     const SizedBox(height: 16),
-                    Text('টাকার পরিমাণ'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    Text('টাকার পরিমাণ (প্রতি পিস)'.tr, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 8),
                     TextField(controller: dedC, keyboardType: TextInputType.number, decoration: InputDecoration(prefixText: '৳ ', hintText: 'টাকার পরিমাণ লিখুন'.tr, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12))),
                   ],
@@ -3493,26 +3548,20 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                         Get.snackbar('ত্রুটি'.tr, 'আগে ক্রেতা নির্বাচন করুন'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
                         return;
                       }
+                      if (adding) return;
                       final ded = res == 'money_deduct' ? (int.tryParse(dedC.text.trim()) ?? sel!.wholesalePrice.toInt()) : 0;
-                      final replaceItem = {'productId': sel!.id, 'productName': sel!.name, 'quantity': qty, 'resolutionType': res, 'deductionAmount': ded * qty};
+                      sheetSt(() => adding = true);
                       try {
-                        if (res == 'replace_given' || res == 'product_replace') {
-                          await FirebaseFirestore.instance.collection('products').doc(sel!.id).update({'stock': FieldValue.increment(-qty)});
-                          try { Get.find<ProductController>().fetchProducts(forceRefresh: true); } catch (_) {}
-                        }
-                        if (res != 'replace_given') {
-                          AdminReplaceController rc;
-                          try { rc = Get.find<AdminReplaceController>(); } catch (_) { rc = Get.put(AdminReplaceController()); }
-                          await rc.addCustomerIn(productId: sel!.id, productName: sel!.name, quantity: qty, customerId: _currentUserId, customerName: _currentShopName, customerPhone: _currentShopPhone, customerAddress: _currentShopAddress, customerResolutionType: res, deductionAmount: ded * qty, note: '${'অর্ডার'.tr} #${widget.order.id} — ${'রিপ্লেস'.tr}', date: DateTime.now());
-                          await rc.fetchEntries(force: true);
-                        }
-                        final newList = [..._currentReplaceItems, replaceItem];
-                        await controller.updateReplaceItemsLocally(widget.order.id, newList);
-                        setState(() => _currentReplaceItems = newList);
-                        Navigator.pop(ctx);
+                        final s = await controller.addReplaceToOrder(
+                          orderId: widget.order.id,
+                          line: ReplaceLine(productId: sel!.id, productName: sel!.name, quantity: qty, resolutionType: res, deductionAmount: ded * qty),
+                        );
+                        _applyMoneyState(s);
+                        if (ctx.mounted) Navigator.pop(ctx);
                         Get.snackbar('সফল'.tr, 'রিপ্লেস প্রডাক্ট যোগ হয়েছে'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFF16A34A), colorText: Colors.white);
                       } catch (e) {
-                        Get.snackbar('ত্রুটি'.tr, '${'যোগ হয়নি'.tr}: $e', snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+                        if (ctx.mounted) sheetSt(() => adding = false);
+                        _showOpError('যোগ হয়নি'.tr, e);
                       }
                     },
                     icon: const Icon(Icons.add_rounded), label: Text('যোগ করুন'.tr),
@@ -3590,8 +3639,6 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                         setState(() {
                           _currentUserId = newUserId;
                           _currentShopName = newShopName;
-                          _currentShopPhone = newShopPhone;
-                          _currentShopAddress = newShopAddress;
                           _currentPreviousDue = newDue;
                           _currentUserDue = newDue;
                         });

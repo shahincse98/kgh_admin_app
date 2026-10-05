@@ -59,7 +59,7 @@ class UserListView extends StatelessWidget {
 
     if (ok != true) return;
     final newAmt = int.parse(ctrl.text.trim());
-    await controller.updateTotalDue(user.id, newAmt);
+    await controller.updateTotalDue(user.id, newAmt, changedByName: 'Admin');
   }
 
   @override
