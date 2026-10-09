@@ -601,11 +601,6 @@ class DispatchView extends GetView<DispatchController> {
   }
 
   Future<void> _showBulkDispatchDialog(ColorScheme scheme) async {
-    final memoCtrl = TextEditingController(
-      text:
-          '#MEM${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-    );
-
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -674,31 +669,6 @@ class DispatchView extends GetView<DispatchController> {
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
-              Text(
-                'মেমো / চালান নাম্বার'.tr,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black54,
-                ),
-              ),
-              const SizedBox(height: 4),
-              TextField(
-                controller: memoCtrl,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'সকল অর্ডারের জন্য মেমো নাম্বার'.tr,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                ),
-              ),
               const SizedBox(height: 10),
               Text(
                 '${'সতর্কতা'.tr}: ${controller.selectedOrderIds.length} ${'টি অর্ডার'.tr} Dispatch ${'করলে স্টক কেটে যাবে'.tr}।',
@@ -735,17 +705,6 @@ class DispatchView extends GetView<DispatchController> {
     );
 
     if (confirmed == true) {
-      final memo = memoCtrl.text.trim();
-      if (memo.isEmpty) {
-        Get.snackbar(
-          'ত্রুটি'.tr,
-          'মেমো নাম্বার দিতে হবে'.tr,
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        return;
-      }
       Get.snackbar(
         'প্রক্রিয়াধীন'.tr,
         'Dispatch করা হচ্ছে…'.tr,
@@ -753,17 +712,16 @@ class DispatchView extends GetView<DispatchController> {
         backgroundColor: const Color(0xFFD97706),
         colorText: Colors.white,
       );
-      await controller.dispatchSelected(memoNumber: memo);
+      await controller.dispatchSelected();
       Get.closeCurrentSnackbar();
       Get.snackbar(
         'সফল'.tr,
-        '${controller.selectedOrderIds.length} ${'টি অর্ডার'.tr} Dispatch হয়েছে\nমেমো: $memo',
+        '${controller.selectedOrderIds.length} ${'টি অর্ডার'.tr} Dispatch হয়েছে',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: const Color(0xFF16A34A),
         colorText: Colors.white,
       );
     }
-    memoCtrl.dispose();
   }
 }
 

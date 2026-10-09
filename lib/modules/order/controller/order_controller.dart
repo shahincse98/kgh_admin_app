@@ -189,13 +189,48 @@ class OrderController extends GetxController {
   /// in Firestore (read inside a transaction), not from what the screen last
   /// saw, so a double tap or a second device can never cut or restore stock
   /// twice. Delivery itself goes through [completeDelivery].
-  Future<void> updateOrderStatus(String id, String status,
+  ///
+  /// Taking a delivered order back (to pending / approved / dispatched /
+  /// cancelled) also undoes everything the delivery wrote, in the same
+  /// transaction: the customer's due, the money taken, discount, replace and
+  /// return lines (with their replace entries and stock-in entries). Returns
+  /// the order's money after that, or null when nothing but the status moved.
+  Future<OrderMoneyState?> updateOrderStatus(String id, String status,
       {String? deliveredBySrId, DateTime? deliveryDate}) async {
     final orderRef = _db.collection('orders').doc(id);
     var applied = _ProductDeltas();
+    var userId = '';
+    int? newDue;
+    OrderMoneyState? reverted;
+    var removedStockIns = <String>[];
+    var removedReplaceEntries = false;
+
+    // Resolved before the transaction (reads must come first). Only a
+    // delivered order being taken back needs the customer and its entries.
+    final orderBefore = (await orderRef.get()).data();
+    final undoesDelivery = orderBefore != null &&
+        _statusOf(orderBefore) == 'delivered' &&
+        status != 'delivered';
+    final customerId =
+        undoesDelivery ? await _resolveCustomerId(orderBefore) : '';
+    final replaceEntryIds = <String>[];
+    if (undoesDelivery) {
+      for (final item in _mapsOf(orderBefore['replaceItems'])) {
+        var entryId = (item['replaceEntryId'] ?? '').toString();
+        if (entryId.isEmpty &&
+            (item['resolutionType'] ?? '') != 'replace_given') {
+          entryId = await _findLegacyReplaceEntry(id, item) ?? '';
+        }
+        if (entryId.isNotEmpty) replaceEntryIds.add(entryId);
+      }
+    }
 
     await _db.runTransaction((tx) async {
       final deltas = _ProductDeltas();
+      removedStockIns = [];
+      removedReplaceEntries = false;
+      newDue = null;
+      reverted = null;
       final o = (await tx.get(orderRef)).data();
       if (o == null) throw OrderOpException('অর্ডারটি পাওয়া যায়নি'.tr);
       final prev = _statusOf(o);
@@ -225,7 +260,111 @@ class OrderController extends GetxController {
               needsStockDeduction ? -item.quantity : item.quantity);
         }
       }
+
+      // ── Undo the delivery (reads first, writes after) ──
+      final undo = prev == 'delivered' && status != 'delivered';
+      DocumentReference<Map<String, dynamic>>? userRef;
+      DocumentSnapshot<Map<String, dynamic>>? userSnap;
+      final entrySnaps = <DocumentSnapshot<Map<String, dynamic>>>[];
+      final stockInSnaps = <DocumentSnapshot<Map<String, dynamic>>>[];
+      final replaceItems = _mapsOf(o['replaceItems']);
+      final returnItems = _mapsOf(o['returnItems']);
+      if (undo) {
+        userId = customerId;
+        if (userId.isNotEmpty) {
+          userRef = _db.collection('users').doc(userId);
+          userSnap = await tx.get(userRef);
+        }
+        for (final entryId in replaceEntryIds) {
+          final snap =
+              await tx.get(_db.collection('admin_replace_entries').doc(entryId));
+          if (snap.data()?['status'] == 'resolved') {
+            throw OrderOpException(
+                'এই অর্ডারের একটি রিপ্লেস রিপ্লেস পেজে ইতিমধ্যে সমাধান হয়েছে — আগে সেখান থেকে ঠিক করুন'
+                    .tr);
+          }
+          entrySnaps.add(snap);
+        }
+        for (final r in returnItems) {
+          final stockInId = (r['stockInId'] ?? '').toString();
+          if (stockInId.isEmpty) continue;
+          stockInSnaps.add(await tx.get(_db.collection('stock_ins').doc(stockInId)));
+        }
+
+        // Stock the replace lines took out comes back; returns that went
+        // back into stock leave again.
+        for (final r in replaceItems) {
+          final type = (r['resolutionType'] ?? '').toString();
+          if (type == 'product_replace' || type == 'replace_given') {
+            deltas.addStock(
+                (r['productId'] ?? '').toString(), _num(r['quantity']).round());
+          }
+        }
+        for (final e in entrySnaps) {
+          final d = e.data();
+          if (d == null) continue;
+          deltas.addReplaceCount((d['productId'] ?? '').toString(),
+              -_num(d['quantity']).round());
+        }
+        for (final sn in stockInSnaps) {
+          final d = sn.data();
+          if (d == null) continue;
+          deltas.addStock((d['productId'] ?? '').toString(),
+              -_num(d['quantity']).round());
+        }
+      }
       deltas.keepOnly(await _existingProducts(tx, deltas.ids));
+
+      if (undo) {
+        // What this order added to the customer's due: its total less what
+        // was paid or credited (payments, replace, returns) and discounted.
+        final total = _num(o['totalAmount']);
+        final contribution =
+            total - _num(o['paidAmount']) - _num(o['discountAmount']);
+        if (userSnap != null && userSnap.exists) {
+          newDue = _clampDue(_num(userSnap.data()!['totalDue']) - contribution);
+          tx.update(userRef!, {'totalDue': newDue});
+        }
+        data.addAll({
+          'paidAmount': 0,
+          'discountAmount': 0,
+          'deductionAmount': 0,
+          'returnAmount': 0,
+          'payments': <Map<String, dynamic>>[],
+          'replaceItems': <Map<String, dynamic>>[],
+          'returnItems': <Map<String, dynamic>>[],
+          'paymentDays': FieldValue.delete(),
+          'paymentMethod': FieldValue.delete(),
+          'previousDue': FieldValue.delete(),
+          'deliveredAt': FieldValue.delete(),
+          'deliveredBySrId': FieldValue.delete(),
+          // Kept for the record, since the lists above are cleared.
+          'revertedDelivery': {
+            'at': Timestamp.fromDate(DateTime.now()),
+            'toStatus': status,
+            'totalAmount': total,
+            'paidAmount': _num(o['paidAmount']),
+            'discountAmount': _num(o['discountAmount']),
+            'dueReversed': contribution,
+            'payments': _mapsOf(o['payments']),
+          },
+        });
+        for (final e in entrySnaps) {
+          if (e.exists) {
+            tx.delete(e.reference);
+            removedReplaceEntries = true;
+          }
+        }
+        for (final sn in stockInSnaps) {
+          if (sn.exists) {
+            tx.delete(sn.reference);
+            removedStockIns.add(sn.id);
+          }
+        }
+        reverted = _moneyStateOf({
+          'localMemo': o['localMemo'],
+        }, newUserDue: newDue);
+      }
 
       tx.update(orderRef, data);
       _writeProductDeltas(tx, deltas);
@@ -233,7 +372,14 @@ class OrderController extends GetxController {
     });
 
     _applyProductDeltasLocally(applied);
-    await _afterOrderWrite(id);
+    await _afterOrderWrite(id, userId: userId, newDue: newDue);
+    if (removedReplaceEntries) _refreshReplaceEntries();
+    if (removedStockIns.isNotEmpty && Get.isRegistered<StockInController>()) {
+      Get.find<StockInController>()
+          .entries
+          .removeWhere((e) => removedStockIns.contains(e.id));
+    }
+    return reverted;
   }
 
   /// Update the deliveredAt timestamp for an order (edit delivery date).
@@ -363,10 +509,7 @@ class OrderController extends GetxController {
   /// Stock-out (dispatch). Runs in a transaction that re-reads the order, so
   /// an order that was already dispatched/delivered is refused instead of
   /// having its stock cut a second time.
-  Future<void> dispatchOrder({
-    required String orderId,
-    required String memoNumber,
-  }) async {
+  Future<void> dispatchOrder({required String orderId}) async {
     final currentUser = await _getCurrentUserId();
     final orderRef = _db.collection('orders').doc(orderId);
     var applied = _ProductDeltas();
@@ -389,7 +532,6 @@ class OrderController extends GetxController {
 
       tx.update(orderRef, {
         'status': 'dispatched',
-        'memoNumber': memoNumber,
         'dispatchedAt': FieldValue.serverTimestamp(),
         'dispatchedBy': currentUser,
       });

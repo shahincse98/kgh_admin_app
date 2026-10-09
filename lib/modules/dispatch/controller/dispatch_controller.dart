@@ -53,7 +53,7 @@ class DispatchController extends GetxController {
       loadError.value = '$e';
     }
 
-    // Delivered but never dispatched (no memo), last 30 days. Only the date
+    // Delivered but never dispatched, last 30 days. Only the date
     // is filtered in the query — adding the status would need a composite
     // index — so the status is checked here.
     try {
@@ -65,7 +65,11 @@ class DispatchController extends GetxController {
       final delivered = <OrderModel>[];
       for (final doc in snap.docs) {
         final order = OrderModel.fromFirestore(doc);
-        if (order.status == 'delivered' && order.memoNumber.isEmpty) {
+        // Dispatch no longer takes a memo, so "dispatched" is told by its
+        // time; older dispatches also have a memo number.
+        if (order.status == 'delivered' &&
+            order.dispatchedAt == null &&
+            order.memoNumber.isEmpty) {
           delivered.add(order);
         }
       }
@@ -117,7 +121,7 @@ class DispatchController extends GetxController {
       .where((o) => selectedOrderIds.contains(o.id))
       .fold(0, (s, o) => s + o.items.length);
 
-  Future<void> dispatchSelected({required String memoNumber}) async {
+  Future<void> dispatchSelected() async {
     final oc = Get.find<OrderController>();
     final selected = orders
         .where((o) => selectedOrderIds.contains(o.id))
@@ -125,7 +129,7 @@ class DispatchController extends GetxController {
 
     for (final order in selected) {
       try {
-        await oc.dispatchOrder(orderId: order.id, memoNumber: memoNumber);
+        await oc.dispatchOrder(orderId: order.id);
       } on OrderOpException {
         // Already dispatched/delivered elsewhere — its stock is already out.
       }

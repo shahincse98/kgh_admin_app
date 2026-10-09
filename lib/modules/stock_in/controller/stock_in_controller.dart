@@ -107,6 +107,17 @@ class StockInController extends GetxController {
     return map.values.toList()..sort((a, b) => b.date.compareTo(a.date));
   }
 
+  /// Every entry of one date and source, whatever the list's search or
+  /// product filter shows, so a date's page always holds its whole list.
+  List<StockInModel> groupEntries(DateTime date, String source) {
+    final day = date.toIso8601String().substring(0, 10);
+    return entries
+        .where((e) =>
+            e.date.toIso8601String().substring(0, 10) == day &&
+            e.source == source)
+        .toList();
+  }
+
   Future<void> addStockIn({
     required String productId,
     required String productName,

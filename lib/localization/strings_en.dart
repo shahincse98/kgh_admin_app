@@ -871,6 +871,8 @@ const Map<String, String> enUS = {
   'কোনো নোট থাকলে লিখুন': 'Add a note if you have one',
   'প্রডাক্ট নাম, সোর্স বা নোট দিয়ে খুঁজুন…':
       'Search by product name, source or note…',
+  'নাম, ব্র্যান্ড বা কোড দিয়ে খুঁজুন': 'Search by name, brand or code',
+  'মিলেছে': 'Matched',
 
   // ── সাপ্লাইয়ার / Supplier ──
   'নতুন সাপ্লাইয়ার': 'New supplier',

@@ -796,13 +796,29 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                         if (prev == 'delivered') {
                           final ok = await _confirm(
                             'সতর্কতা'.tr,
-                            'ডেলিভার্ড অর্ডারের স্ট্যাটাস বদলালে শুধু অর্ডারের প্রডাক্ট স্টকে ফেরত যাবে। কাস্টমারের বাকি, জমা, রিপ্লেস ও ফেরতের হিসাব আপনাআপনি উল্টাবে না — সেগুলো হাতে ঠিক করতে হবে। চালিয়ে যাবেন?'.tr,
+                            'ডেলিভার্ড অর্ডারের স্ট্যাটাস বদলালে ডেলিভারির সব হিসাব উল্টে যাবে: প্রডাক্ট স্টকে ফিরবে, কাস্টমারের বাকি আগের অবস্থায় যাবে, এবং এই অর্ডারের জমা, ডিসকাউন্ট, রিপ্লেস ও ফেরত মুছে যাবে। চালিয়ে যাবেন?'.tr,
                           );
                           if (ok != true) return;
                         }
                         setState(() => _currentStatus = s);
                         try {
-                          await controller.updateOrderStatus(widget.order.id, s);
+                          final undone = await controller.updateOrderStatus(widget.order.id, s);
+                          if (undone != null && mounted) {
+                            // The delivery was undone: show the order without
+                            // its money, and the customer's due as it is now.
+                            setState(() {
+                              _currentPaid = 0;
+                              _paidCtrl.text = '0';
+                              _currentDiscountAmount = 0;
+                              _currentDeductionAmount = 0;
+                              _currentReturnAmount = 0;
+                              _currentPreviousDue = 0;
+                              _currentPayments = [];
+                              _currentReplaceItems = [];
+                              _currentReturnItems = [];
+                              if (undone.newUserDue != null) _currentUserDue = undone.newUserDue!;
+                            });
+                          }
                         } catch (e) {
                           if (mounted) setState(() => _currentStatus = prev);
                           _showOpError('স্ট্যাটাস বদলানো যায়নি'.tr, e);
@@ -1712,10 +1728,6 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
 
   Future<void> _showDispatchDialog(String previousStatus) async {
     final scheme = Theme.of(context).colorScheme;
-    final memoCtrl = TextEditingController(
-      text: '#MEM${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-    );
-
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -1749,20 +1761,6 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
-              Text('মেমো / চালান নাম্বার'.tr,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
-              const SizedBox(height: 4),
-              TextField(
-                controller: memoCtrl,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'মেমো নাম্বার লিখুন'.tr,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                ),
-              ),
               const SizedBox(height: 10),
               Text(
                 'সতর্কতা: Dispatch করলে স্টক কেটে যাবে। এটি undo করা যাবে না।'.tr,
@@ -1788,20 +1786,14 @@ class _OrderDetailsViewState extends State<OrderDetailsView> {
     );
 
     if (confirmed == true) {
-      final memo = memoCtrl.text.trim();
-      if (memo.isEmpty) {
-        Get.snackbar('ত্রুটি'.tr, 'মেমো নাম্বার দিতে হবে'.tr, snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
-        return;
-      }
       try {
-        await controller.dispatchOrder(orderId: widget.order.id, memoNumber: memo);
+        await controller.dispatchOrder(orderId: widget.order.id);
         if (mounted) setState(() => _currentStatus = 'dispatched');
-        Get.snackbar('সফল'.tr, '${'স্টক আউট সম্পন্ন হয়েছে'.tr}\nমেমো: $memo', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFFD97706), colorText: Colors.white);
+        Get.snackbar('সফল'.tr, '${'স্টক আউট সম্পন্ন হয়েছে'.tr}', snackPosition: SnackPosition.BOTTOM, backgroundColor: const Color(0xFFD97706), colorText: Colors.white);
       } catch (e) {
         _showOpError('স্টক আউট হয়নি'.tr, e);
       }
     }
-    memoCtrl.dispose();
   }
 
   // ── Delivery confirmation + payment dialog ─────────────────

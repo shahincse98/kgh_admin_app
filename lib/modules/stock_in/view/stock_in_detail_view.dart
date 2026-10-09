@@ -24,26 +24,47 @@ class _StockInDetailViewState extends State<StockInDetailView> {
   // Mutable copy of the group's entries so UI reflects add/edit/delete
   late List<StockInModel> _entries;
 
+  // Search within this date's list, to match it against the paper memo.
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
   @override
   void initState() {
     super.initState();
-    _entries = List<StockInModel>.from(widget.group.entries);
+    // The whole date's list, even when the list page was searched/filtered.
+    _entries = controller.groupEntries(widget.group.date, widget.group.source);
+    if (_entries.isEmpty) {
+      _entries = List<StockInModel>.from(widget.group.entries);
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   void _refreshEntries() {
-    final key =
-        '${widget.group.date.toIso8601String().substring(0, 10)}|${widget.group.source}';
-    final updated = controller.filteredGroups.firstWhereOrNull(
-      (g) => '${g.date.toIso8601String().substring(0, 10)}|${g.source}' == key,
-    );
-    if (updated != null) {
-      setState(() {
-        _entries = List<StockInModel>.from(updated.entries);
-      });
+    final updated =
+        controller.groupEntries(widget.group.date, widget.group.source);
+    if (updated.isNotEmpty) {
+      setState(() => _entries = updated);
     } else {
       // Group became empty — pop back
       if (mounted) Get.back();
     }
+  }
+
+  /// Name, brand, code or model of the product, or the entry's note.
+  bool _matches(StockInModel e, Map<String, ProductModel> products) {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    final p = products[e.productId];
+    return [
+      e.productName,
+      e.note,
+      if (p != null) ...[p.brandName, p.productCode, p.productModel],
+    ].any((s) => s.toLowerCase().contains(q));
   }
 
   @override
@@ -52,6 +73,13 @@ class _StockInDetailViewState extends State<StockInDetailView> {
     final dateFmt = DateFormat('dd MMMM yyyy');
     final totalQty = _entries.fold(0, (s, e) => s + e.quantity);
     final totalValue = _entries.fold<num>(0, (s, e) => s + e.totalPrice);
+    final searching = _query.trim().isNotEmpty;
+    final products = searching
+        ? {for (final p in pc.products) p.id: p}
+        : const <String, ProductModel>{};
+    final visible = searching
+        ? _entries.where((e) => _matches(e, products)).toList()
+        : _entries;
 
     return Scaffold(
       backgroundColor: scheme.surfaceContainerLowest,
@@ -83,7 +111,23 @@ class _StockInDetailViewState extends State<StockInDetailView> {
             const SizedBox(height: 14),
             _sectionTitle('প্রডাক্টসমূহ'.tr, scheme),
             const SizedBox(height: 8),
-            ..._entries.map((e) => _entryCard(e, scheme)),
+            _searchField(scheme),
+            if (searching) ...[
+              const SizedBox(height: 8),
+              _matchSummary(visible, scheme),
+            ],
+            const SizedBox(height: 8),
+            if (searching && visible.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text(
+                    'কোনো প্রডাক্ট পাওয়া যায়নি'.tr,
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ),
+            ...visible.map((e) => _entryCard(e, scheme)),
             const SizedBox(height: 12),
             _addProductButton(scheme),
             if (widget.group.note.isNotEmpty) ...[
@@ -163,6 +207,48 @@ class _StockInDetailViewState extends State<StockInDetailView> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _searchField(ColorScheme scheme) {
+    return TextField(
+      controller: _searchCtrl,
+      onChanged: (v) => setState(() => _query = v),
+      decoration: InputDecoration(
+        hintText: 'নাম, ব্র্যান্ড বা কোড দিয়ে খুঁজুন'.tr,
+        prefixIcon: const Icon(Icons.search_rounded),
+        suffixIcon: _query.isEmpty
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () => setState(() {
+                  _searchCtrl.clear();
+                  _query = '';
+                }),
+              ),
+        filled: true,
+        fillColor: scheme.surface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+      ),
+    );
+  }
+
+  /// How many of the date's products match, with their pieces and value.
+  Widget _matchSummary(List<StockInModel> visible, ColorScheme scheme) {
+    final qty = visible.fold(0, (s, e) => s + e.quantity);
+    final value = visible.fold<num>(0, (s, e) => s + e.totalPrice);
+    return Text(
+      '${'মিলেছে'.tr}: ${visible.length} / ${_entries.length}'
+      ' • $qty pcs • ৳ ${_fmt.format(value.toInt())}',
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: scheme.onSurface.withAlpha(160),
       ),
     );
   }

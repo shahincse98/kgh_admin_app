@@ -109,6 +109,66 @@ void main() {
     expect(ret['stockInId'], stockIns.docs.single.id);
   });
 
+  test('cancelling a delivered order undoes stock, due, replace and return', () async {
+    await deliverFull();
+    // another order changed the due meanwhile — only this order's part goes
+    await db.collection('users').doc('u1').update({'totalDue': 1100});
+
+    final s = await oc.updateOrderStatus('o1', 'cancelled');
+
+    // this order had added 1000 − 600 paid/credited − 50 discount = 350
+    expect(await dueOf('u1'), 750);
+    expect(s!.newUserDue, 750);
+    expect(await stockOf('A'), 10); // 2 back, the 1 returned leaves again
+    expect(await stockOf('B'), 10);
+    expect(await stockOf('C'), 10);
+    expect(await stockOf('D'), 10);
+    expect(await replaceCountOf('B'), 0);
+    expect(await replaceCountOf('C'), 0);
+    expect((await db.collection('admin_replace_entries').get()).docs, isEmpty);
+    expect((await db.collection('stock_ins').get()).docs, isEmpty);
+
+    final o = await doc('orders', 'o1');
+    expect(o['status'], 'cancelled');
+    expect(o['paidAmount'], 0);
+    expect(o['discountAmount'], 0);
+    expect(o['deductionAmount'], 0);
+    expect(o['returnAmount'], 0);
+    expect(o['payments'], isEmpty);
+    expect(o['replaceItems'], isEmpty);
+    expect(o['returnItems'], isEmpty);
+    expect(o.containsKey('deliveredAt'), isFalse);
+    expect(o.containsKey('previousDue'), isFalse);
+    expect((o['revertedDelivery'] as Map)['dueReversed'], 350);
+
+    // doing it again changes nothing
+    expect(await oc.updateOrderStatus('o1', 'cancelled'), isNull);
+    expect(await dueOf('u1'), 750);
+    expect(await stockOf('A'), 10);
+  });
+
+  test('a delivered order can be delivered again after being taken back', () async {
+    await deliverFull();
+    await oc.updateOrderStatus('o1', 'pending');
+    expect(await dueOf('u1'), 500);
+    await deliverFull();
+    expect(await dueOf('u1'), 850);
+    expect(await stockOf('A'), 9);
+  });
+
+  test('a resolved replace entry stops the order from being taken back', () async {
+    await deliverFull();
+    final b = (await db.collection('admin_replace_entries').get())
+        .docs
+        .firstWhere((d) => d['productId'] == 'B');
+    await b.reference.update({'status': 'resolved'});
+    await expectLater(oc.updateOrderStatus('o1', 'cancelled'),
+        throwsA(isA<OrderOpException>()));
+    expect((await doc('orders', 'o1'))['status'], 'delivered');
+    expect(await dueOf('u1'), 850);
+    expect(await stockOf('A'), 9);
+  });
+
   test('second delivery of the same order is refused and changes nothing', () async {
     await deliverFull();
     await expectLater(deliverFull(), throwsA(isA<OrderOpException>()));
@@ -119,9 +179,9 @@ void main() {
   });
 
   test('dispatched order is not stock-cut again on delivery', () async {
-    await oc.dispatchOrder(orderId: 'o1', memoNumber: 'M1');
+    await oc.dispatchOrder(orderId: 'o1');
     expect(await stockOf('A'), 8);
-    await expectLater(oc.dispatchOrder(orderId: 'o1', memoNumber: 'M1'),
+    await expectLater(oc.dispatchOrder(orderId: 'o1'),
         throwsA(isA<OrderOpException>()));
     expect(await stockOf('A'), 8);
     await oc.completeDelivery(
@@ -259,7 +319,7 @@ void main() {
   });
 
   test('status revert restores item stock once', () async {
-    await oc.dispatchOrder(orderId: 'o1', memoNumber: 'M');
+    await oc.dispatchOrder(orderId: 'o1');
     await oc.updateOrderStatus('o1', 'cancelled');
     await oc.updateOrderStatus('o1', 'cancelled');
     expect(await stockOf('A'), 10);
