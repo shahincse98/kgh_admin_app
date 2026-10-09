@@ -308,7 +308,8 @@ class OrderController extends GetxController {
         }
         for (final sn in stockInSnaps) {
           final d = sn.data();
-          if (d == null) continue;
+          // An inactive stock-in list never put the return into stock.
+          if (d == null || d['active'] == false) continue;
           deltas.addStock((d['productId'] ?? '').toString(),
               -_num(d['quantity']).round());
         }

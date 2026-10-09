@@ -5,6 +5,7 @@ import '../controller/stock_in_controller.dart';
 import '../../product/controller/product_controller.dart';
 import '../../product/model/product_model.dart';
 import 'stock_in_detail_view.dart';
+import 'stock_in_selection.dart';
 import '../../../widgets/responsive.dart';
 import 'package:kgh_admin_app/widgets/app_drawer.dart';
 
@@ -15,7 +16,9 @@ class StockInView extends StatefulWidget {
   State<StockInView> createState() => _StockInViewState();
 }
 
-class _StockInViewState extends State<StockInView> {
+class _StockInViewState extends State<StockInView>
+    with StockInListSelection<StockInView> {
+  @override
   final controller = Get.find<StockInController>();
   final pc = Get.find<ProductController>();
   static final _fmt = NumberFormat('#,##,##0');
@@ -35,46 +38,49 @@ class _StockInViewState extends State<StockInView> {
     return Scaffold(
       drawer: appDrawerFor(context),
       backgroundColor: scheme.surfaceContainerLowest,
-      appBar: AppBar(
-        title: Obx(
-          () => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('স্টক ইন'.tr, style: TextStyle(fontWeight: FontWeight.w800)),
-              Text(
-                '${controller.filteredGroups.length} ${'টি এন্ট্রি'.tr}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: scheme.onSurface.withAlpha(160),
-                ),
+      appBar: selecting
+          ? selectionAppBar()
+          : AppBar(
+            title: Obx(
+              () => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('স্টক ইন'.tr, style: TextStyle(fontWeight: FontWeight.w800)),
+                  Text(
+                    '${controller.filteredGroups.length} ${'টি এন্ট্রি'.tr}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurface.withAlpha(160),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              startSelectingButton(),
+              IconButton(
+                icon: const Icon(Icons.filter_list_rounded),
+                tooltip: 'ফিল্টার'.tr,
+                onPressed: () => _showFilterSheet(scheme),
+              ),
+              Obx(
+                () => controller.loading.value
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.refresh_rounded),
+                        onPressed: () => controller.fetchEntries(),
+                      ),
               ),
             ],
           ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list_rounded),
-            tooltip: 'ফিল্টার'.tr,
-            onPressed: () => _showFilterSheet(scheme),
-          ),
-          Obx(
-            () => controller.loading.value
-                ? const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : IconButton(
-                    icon: const Icon(Icons.refresh_rounded),
-                    onPressed: () => controller.fetchEntries(),
-                  ),
-          ),
-        ],
-      ),
       body: ResponsiveWrapper(
         child: Column(
           children: [
@@ -128,15 +134,17 @@ class _StockInViewState extends State<StockInView> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddStockInSheet(context, scheme),
-        backgroundColor: const Color(0xFF16A34A),
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: Text(
-          'স্টক ইন যোগ'.tr,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-        ),
-      ),
+      floatingActionButton: selecting
+          ? null
+          : FloatingActionButton.extended(
+            onPressed: () => _showAddStockInSheet(context, scheme),
+            backgroundColor: const Color(0xFF16A34A),
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: Text(
+              'স্টক ইন যোগ'.tr,
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+            ),
+          ),
     );
   }
 
@@ -165,7 +173,7 @@ class _StockInViewState extends State<StockInView> {
 
   Widget _summaryBar(ColorScheme scheme) {
     return Obx(() {
-      if (controller.totalEntries == 0) return const SizedBox.shrink();
+      if (controller.filteredEntries.isEmpty) return const SizedBox.shrink();
       return Container(
         margin: const EdgeInsets.fromLTRB(12, 4, 12, 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -187,7 +195,9 @@ class _StockInViewState extends State<StockInView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'মোট কেনা'.tr,
+                    controller.hasInactiveFiltered
+                        ? '${'মোট কেনা'.tr} (${'ইনএকটিভ বাদে'.tr})'
+                        : 'মোট কেনা'.tr,
                     style: TextStyle(fontSize: 11, color: Color(0xFF166534)),
                   ),
                   Text(
@@ -231,17 +241,22 @@ class _StockInViewState extends State<StockInView> {
     final dateFmt = DateFormat('dd MMM yyyy');
     final dayFmt = DateFormat('dd');
     final monFmt = DateFormat('MMM');
+    // An inactive list stays on the page but greyed, out of the main stock.
+    final accent = group.active
+        ? const Color(0xFF16A34A)
+        : scheme.onSurface.withAlpha(110);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: selectionShape(group, scheme),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () async {
+        onTap: () => onListTap(group, () async {
           await Get.to(() => StockInDetailView(group: group));
           controller.fetchEntries();
-        },
+        }),
+        onLongPress: () => onListLongPress(group),
         // বাঁ পাশের সবুজ তারিখ-ব্লকটি Stack দিয়ে আঁকা হয়, ফলে IntrinsicHeight
         // লাগে না। IntrinsicHeight মাপার সময় লেখা কয় লাইনে মুড়বে তার হিসাব
         // প্রকৃত লেআউটের সাথে মেলে না, তাই সরু স্ক্রিনে কার্ড উপচে পড়ত।
@@ -252,7 +267,7 @@ class _StockInViewState extends State<StockInView> {
               top: 0,
               bottom: 0,
               width: 56,
-              child: ColoredBox(color: const Color(0xFF16A34A).withAlpha(15)),
+              child: ColoredBox(color: accent.withAlpha(15)),
             ),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -265,18 +280,18 @@ class _StockInViewState extends State<StockInView> {
                     children: [
                       Text(
                         dayFmt.format(group.date),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF16A34A),
+                          color: accent,
                         ),
                       ),
                       Text(
                         monFmt.format(group.date).toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF16A34A),
+                          color: accent,
                         ),
                       ),
                     ],
@@ -335,13 +350,17 @@ class _StockInViewState extends State<StockInView> {
                                   color: scheme.onSurface.withAlpha(140),
                                 ),
                               ),
+                            if (!group.active) ...[
+                              const SizedBox(width: 6),
+                              const StockInInactiveBadge(),
+                            ],
                             const Spacer(),
                             Text(
                               '৳ ${_fmt.format(group.totalValue.toInt())}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
-                                color: Color(0xFF16A34A),
+                                color: accent,
                               ),
                             ),
                           ],
@@ -407,31 +426,33 @@ class _StockInViewState extends State<StockInView> {
                         ],
                         const SizedBox(height: 6),
                         InkWell(
-                          onTap: () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: group.date,
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime.now().add(
-                                const Duration(days: 1),
-                              ),
-                            );
-                            if (picked != null && picked != group.date) {
-                              await controller.updateGroupDate(
-                                oldDate: group.date,
-                                source: group.source,
-                                newDate: picked,
-                              );
-                              controller.fetchEntries();
-                              Get.snackbar(
-                                'তারিখ আপডেট হয়েছে'.tr,
-                                _dayFmt.format(picked),
-                                snackPosition: SnackPosition.BOTTOM,
-                                backgroundColor: const Color(0xFF2563EB),
-                                colorText: Colors.white,
-                              );
-                            }
-                          },
+                          onTap: selecting
+                              ? null
+                              : () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: group.date,
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime.now().add(
+                                    const Duration(days: 1),
+                                  ),
+                                );
+                                if (picked != null && picked != group.date) {
+                                  await controller.updateGroupDate(
+                                    oldDate: group.date,
+                                    source: group.source,
+                                    newDate: picked,
+                                  );
+                                  controller.fetchEntries();
+                                  Get.snackbar(
+                                    'তারিখ আপডেট হয়েছে'.tr,
+                                    _dayFmt.format(picked),
+                                    snackPosition: SnackPosition.BOTTOM,
+                                    backgroundColor: const Color(0xFF2563EB),
+                                    colorText: Colors.white,
+                                  );
+                                }
+                              },
                           borderRadius: BorderRadius.circular(6),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -473,10 +494,7 @@ class _StockInViewState extends State<StockInView> {
                     ),
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(right: 4),
-                  child: Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                ),
+                selectionTrailing(group),
               ],
             ),
           ],
@@ -1451,7 +1469,7 @@ class _StockInViewState extends State<StockInView> {
       final pid = controller.selectedProductId.value;
       final pname = controller.selectedProductName.value;
       if (pid.isEmpty) return const SizedBox.shrink();
-      final filtered = controller.filteredEntries;
+      final filtered = controller.activeFilteredEntries;
       final totalQty = filtered.fold(0, (s, e) => s + e.quantity);
       return Container(
         margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),

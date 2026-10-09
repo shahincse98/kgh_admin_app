@@ -14,6 +14,11 @@ class StockInModel {
   final DateTime createdAt;
   final String createdBy;
 
+  /// An active entry's pieces are in the product's main stock; an inactive
+  /// one stays on the list but is not counted. Entries saved before this
+  /// field existed have no value and count as active.
+  final bool active;
+
   StockInModel({
     required this.id,
     required this.productId,
@@ -27,6 +32,7 @@ class StockInModel {
     required this.date,
     required this.createdAt,
     this.createdBy = '',
+    this.active = true,
   });
 
   factory StockInModel.fromFirestore(DocumentSnapshot doc) {
@@ -44,6 +50,23 @@ class StockInModel {
       date: (data['date'] as Timestamp).toDate(),
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       createdBy: data['createdBy'] ?? '',
+      active: data['active'] != false,
     );
   }
+
+  StockInModel copyWith({DateTime? date, bool? active}) => StockInModel(
+        id: id,
+        productId: productId,
+        productName: productName,
+        image: image,
+        quantity: quantity,
+        unitPrice: unitPrice,
+        totalPrice: totalPrice,
+        source: source,
+        note: note,
+        date: date ?? this.date,
+        createdAt: createdAt,
+        createdBy: createdBy,
+        active: active ?? this.active,
+      );
 }

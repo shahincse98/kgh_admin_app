@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controller/stock_in_controller.dart';
 import '../model/stock_in_model.dart';
+import 'stock_in_selection.dart';
 import '../../product/controller/product_controller.dart';
 import '../../product/model/product_model.dart';
 import '../../../widgets/responsive.dart';
@@ -27,6 +28,11 @@ class _StockInDetailViewState extends State<StockInDetailView> {
   // Search within this date's list, to match it against the paper memo.
   final _searchCtrl = TextEditingController();
   String _query = '';
+
+  // While the list is being switched on/off or deleted.
+  bool _busy = false;
+
+  bool get _listActive => _entries.any((e) => e.active);
 
   @override
   void initState() {
@@ -102,12 +108,28 @@ class _StockInDetailViewState extends State<StockInDetailView> {
               ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_sweep_rounded),
+            color: Colors.red.shade400,
+            tooltip: 'পুরো লিস্ট ডিলিট'.tr,
+            onPressed: _busy ? null : _confirmDeleteList,
+          ),
+        ],
+        bottom: _busy
+            ? const PreferredSize(
+                preferredSize: Size.fromHeight(3),
+                child: LinearProgressIndicator(minHeight: 3),
+              )
+            : null,
       ),
       body: ResponsiveWrapper(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 90),
           children: [
             _summaryCard(scheme, _entries.length, totalQty, totalValue),
+            const SizedBox(height: 10),
+            _activeCard(scheme),
             const SizedBox(height: 14),
             _sectionTitle('প্রডাক্টসমূহ'.tr, scheme),
             const SizedBox(height: 8),
@@ -209,6 +231,140 @@ class _StockInDetailViewState extends State<StockInDetailView> {
         ),
       ),
     );
+  }
+
+  /// The list's on/off switch: only an active list is in the main stock.
+  Widget _activeCard(ColorScheme scheme) {
+    final active = _listActive;
+    final color = active ? const Color(0xFF16A34A) : scheme.onSurfaceVariant;
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: color.withAlpha(50)),
+      ),
+      child: SwitchListTile(
+        value: active,
+        onChanged: _busy ? null : _toggleActive,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        secondary: Icon(
+          active ? Icons.check_circle_rounded : Icons.pause_circle_rounded,
+          color: color,
+        ),
+        title: Text(
+          active ? 'একটিভ'.tr : 'ইনএকটিভ'.tr,
+          style: TextStyle(fontWeight: FontWeight.w800, color: color),
+        ),
+        subtitle: Text(
+          active
+              ? 'এই লিস্টের পরিমাণ মেইন স্টকে যোগ আছে'.tr
+              : 'এই লিস্টের পরিমাণ মেইন স্টকে গোনা হচ্ছে না'.tr,
+          style: const TextStyle(fontSize: 12),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggleActive(bool value) async {
+    final qty = _entries
+        .where((e) => e.active != value)
+        .fold(0, (s, e) => s + e.quantity);
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: Text(
+          value ? 'লিস্টটি একটিভ করবেন?'.tr : 'লিস্টটি ইনএকটিভ করবেন?'.tr,
+        ),
+        content: Text(
+          value
+              ? '$qty pcs ${'মেইন স্টকে যোগ হবে'.tr}।'
+              : '$qty pcs ${'মেইন স্টক থেকে বাদ যাবে'.tr}।',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text('না'.tr),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: true),
+            child: Text('হ্যাঁ'.tr),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _busy = true);
+    try {
+      await controller.setGroupActive(
+        widget.group.date,
+        widget.group.source,
+        value,
+      );
+      Get.snackbar(
+        value ? 'লিস্ট একটিভ হয়েছে'.tr : 'লিস্ট ইনএকটিভ হয়েছে'.tr,
+        'মেইন স্টক আপডেট হয়েছে'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF16A34A),
+        colorText: Colors.white,
+      );
+    } catch (_) {
+      Get.snackbar(
+        'ত্রুটি'.tr,
+        'স্টক আপডেট করা যায়নি'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+    if (mounted) {
+      setState(() => _busy = false);
+      _refreshEntries();
+    }
+  }
+
+  /// Deletes every entry of this date's list. An active list asks whether
+  /// its pieces also leave the main stock or only the records go, e.g. old
+  /// lists whose stock was already counted again by hand.
+  Future<void> _confirmDeleteList() async {
+    final qty = _entries.fold(0, (s, e) => s + e.quantity);
+    final adjustStock = await askDeleteStockInLists(
+      title: 'পুরো লিস্ট ডিলিট করবেন?'.tr,
+      summary: '${_entries.length} ${'টি প্রডাক্ট'.tr} | $qty pcs — '
+          '${'লিস্টটি স্থায়ীভাবে মুছে যাবে'.tr}।',
+      anyActive: _listActive,
+      inactiveNote: 'লিস্টটি ইনএকটিভ, তাই মেইন স্টক বদলাবে না।'.tr,
+    );
+    if (adjustStock == null) return;
+
+    setState(() => _busy = true);
+    try {
+      await controller.deleteGroup(
+        widget.group.date,
+        widget.group.source,
+        adjustStock: adjustStock,
+      );
+      // Leave the page before the snackbar: Get.back() would close it.
+      if (mounted) Get.back();
+      Get.snackbar(
+        'ডিলিট হয়েছে'.tr,
+        adjustStock ? 'স্টক এডজাস্ট হয়েছে'.tr : 'মেইন স্টক বদলায়নি'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF16A34A),
+        colorText: Colors.white,
+      );
+    } catch (_) {
+      Get.snackbar(
+        'ত্রুটি'.tr,
+        'লিস্ট ডিলিট করা যায়নি'.tr,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      if (mounted) {
+        setState(() => _busy = false);
+        _refreshEntries();
+      }
+    }
   }
 
   Widget _searchField(ColorScheme scheme) {
@@ -648,7 +804,7 @@ class _StockInDetailViewState extends State<StockInDetailView> {
       if (mounted) {
         Get.snackbar(
           'আপডেট হয়েছে'.tr,
-          'স্টক এডজাস্ট হয়েছে'.tr,
+          entry.active ? 'স্টক এডজাস্ট হয়েছে'.tr : 'মেইন স্টক বদলায়নি'.tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF2563EB),
           colorText: Colors.white,
@@ -668,7 +824,7 @@ class _StockInDetailViewState extends State<StockInDetailView> {
       AlertDialog(
         title: Text('ডিলিট করবেন?'.tr),
         content: Text(
-          '"${entry.productName}" +${entry.quantity} ${'ডিলিট করবেন'.tr}?\n${'সতর্কতা'.tr}: ${'স্টক কমে যাবে'.tr}।',
+          '"${entry.productName}" +${entry.quantity} ${'ডিলিট করবেন'.tr}?\n${'সতর্কতা'.tr}: ${entry.active ? 'স্টক কমে যাবে'.tr : 'স্টক অপরিবর্তিত থাকবে'.tr}।',
         ),
         actions: [
           TextButton(
@@ -691,7 +847,7 @@ class _StockInDetailViewState extends State<StockInDetailView> {
       if (mounted) {
         Get.snackbar(
           'ডিলিট হয়েছে'.tr,
-          'স্টক এডজাস্ট হয়েছে'.tr,
+          entry.active ? 'স্টক এডজাস্ট হয়েছে'.tr : 'মেইন স্টক বদলায়নি'.tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: const Color(0xFF16A34A),
           colorText: Colors.white,
@@ -899,6 +1055,7 @@ class _StockInDetailViewState extends State<StockInDetailView> {
                                       source: widget.group.source,
                                       note: widget.group.note,
                                       date: widget.group.date,
+                                      active: _listActive,
                                     );
                                   }
                                   if (mounted) {
@@ -921,6 +1078,38 @@ class _StockInDetailViewState extends State<StockInDetailView> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Marks a stock-in list that is switched off and not in the main stock.
+class StockInInactiveBadge extends StatelessWidget {
+  const StockInInactiveBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.pause_circle_rounded, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            'ইনএকটিভ'.tr,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }

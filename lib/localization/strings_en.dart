@@ -1017,4 +1017,43 @@ const Map<String, String> enUS = {
   'স্ন্যাপশট কপি হয়েছে': 'snapshot copied',
   'ডিফল্ট ক্রয়মূল্য': 'Default cost price',
   'Approved অর্ডার': 'Approved orders',
+  // ── স্টক ইন লিস্ট একটিভ / ইনএকটিভ ──
+  'পুরো লিস্ট ডিলিট': 'Delete whole list',
+  'একটিভ': 'Active',
+  'ইনএকটিভ': 'Inactive',
+  'এই লিস্টের পরিমাণ মেইন স্টকে যোগ আছে':
+      'This list\'s quantities are counted in the main stock',
+  'এই লিস্টের পরিমাণ মেইন স্টকে গোনা হচ্ছে না':
+      'This list\'s quantities are not counted in the main stock',
+  'লিস্টটি একটিভ করবেন?': 'Make this list active?',
+  'লিস্টটি ইনএকটিভ করবেন?': 'Make this list inactive?',
+  'মেইন স্টকে যোগ হবে': 'will be added to the main stock',
+  'মেইন স্টক থেকে বাদ যাবে': 'will be taken out of the main stock',
+  'লিস্ট একটিভ হয়েছে': 'List is now active',
+  'লিস্ট ইনএকটিভ হয়েছে': 'List is now inactive',
+  'মেইন স্টক আপডেট হয়েছে': 'Main stock updated',
+  'স্টক আপডেট করা যায়নি': 'Could not update the stock',
+  'পুরো লিস্ট ডিলিট করবেন?': 'Delete the whole list?',
+  'লিস্টটি স্থায়ীভাবে মুছে যাবে':
+      'the list will be permanently deleted',
+  'স্টক থেকেও বাদ দিলে এই পরিমাণ মেইন স্টক থেকে কমে যাবে। শুধু রেকর্ড মুছলে মেইন স্টক যেমন আছে তেমনই থাকবে।':
+      'Removing from stock too lowers the main stock by these quantities. Deleting only the records leaves the main stock as it is.',
+  'লিস্টটি ইনএকটিভ, তাই মেইন স্টক বদলাবে না।':
+      'This list is inactive, so the main stock will not change.',
+  'শুধু রেকর্ড মুছুন': 'Delete records only',
+  'স্টক থেকেও বাদ দিন': 'Remove from stock too',
+  'মেইন স্টক বদলায়নি': 'Main stock unchanged',
+  'লিস্ট ডিলিট করা যায়নি': 'Could not delete the list',
+  'ইনএকটিভ বাদে': 'excluding inactive',
+  'লিস্ট সিলেক্ট করুন': 'Select lists',
+  'টি লিস্ট সিলেক্টেড': ' lists selected',
+  'সব বাদ দিন': 'Clear selection',
+  'সিলেক্ট করা লিস্ট ডিলিট': 'Delete selected lists',
+  'সিলেক্ট করা লিস্ট ডিলিট করবেন?': 'Delete the selected lists?',
+  'টি লিস্ট': ' lists',
+  'লিস্টগুলো স্থায়ীভাবে মুছে যাবে':
+      'the lists will be permanently deleted',
+  'লিস্টগুলো ইনএকটিভ, তাই মেইন স্টক বদলাবে না।':
+      'These lists are inactive, so the main stock will not change.',
+  'টি লিস্ট ডিলিট হয়েছে': ' lists deleted',
 };
